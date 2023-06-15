@@ -1,0 +1,147 @@
+
+<!DOCTYPE html dir="ltr" lang="en">
+<html>
+    <head>
+        <meta charset="utf-8" name="viewport" content="width=device-width, initial-scale=1.0 ">
+
+        <title>Home - CashCushion</title>
+        <link rel="styelsheet" href="https://fonts.googleapis.com/css?family=Open+Sans+Condensed:300|Sonsie+One" type="text/css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="stylesheet" href="/static/style.css">
+
+        <!-- the below three lines are a fix to get HTML5 semantic elements working in old versions of Internet Explorer-->
+        <!--[if lt IE 9]>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv.js"></script>
+        <![endif]-->
+    </head>
+    
+    <div>
+        
+            
+        
+    </div>    
+    
+    <body>
+        <div> 
+            <section class="content">
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+            <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>    
+            
+                <div class="topnav" id="myTopnav">
+                    <a href="/" class="active" id="cashcushion" >CashCushion</a>
+                    <a href="/">Home</a>
+                    <a href="/link" class="active"> Link Accounts</a>
+                    <a href="/transactions"> Transactions</a>
+                    <a href="/logout" id="bannerLogout">Sign Out</a>
+                    <img id="profilePic" src=https://lh3.googleusercontent.com/a/AATXAJxUS-OeaBDiqSIpFYCzNLwIugbNPM2k9fZLPQ1_=s96-c>
+                    <a href="javascript:void(0);" class="icon" onclick="navFunction()">
+                      <i class="fa fa-bars"></i>
+                    </a>
+                  </div>
+                
+                <div class="box1">
+                    <center>
+                    <h5>Link Accounts Here</h5>
+                    <p>These are the accounts you have already linked</p>
+                    
+                    
+                        <div class="box">
+                            ins_109508
+                            
+                                <li> Plaid Checking 0000 </li>
+                            
+                                <li> Plaid Saving 1111 </li>
+                            
+                        </div>
+                    
+
+                    <p></p>
+                    <p></p>
+
+                    <button id="link-button">Link Account</button>
+                        
+                        <script type="text/javascript">
+                            (async function($) {
+                            var handler = Plaid.create({
+                                // Create a new link_token to initialize Link
+                                token: (await $.post('/link/create_link_token')).link_token,
+                                receivedRedirectUri: null,
+                                onLoad: function() {
+                                // Optional, called when Link loads
+                                },
+                                onSuccess: function(public_token, metadata) {
+                                // Send the public_token to your app server.
+                                // The metadata object contains info about the institution the
+                                // user selected and the account ID or IDs, if the
+                                // Account Select view is enabled.
+                                $.post('/link/exchange_public_token', {
+                                    public_token: public_token, metadata,
+                                    },
+                                    function (result) {
+                                        if (result == true) {
+                                            alert("Tried to load a duplicate account, can't do that")
+                                        }
+                                    }
+                                );
+                                },
+                                onExit: function(err, metadata) {
+                                // The user exited the Link flow.
+                                if (err != null) {
+                                    // The user encountered a Plaid API error prior to exiting.
+                                }
+                                // metadata contains information about the institution
+                                // that the user selected and the most recent API request IDs.
+                                // Storing this information can be helpful for support.
+                                },
+                                onEvent: function(eventName, metadata) {
+                                // Optionally capture Link flow events, streamed through
+                                // this callback as your users connect an Item to Plaid.
+                                // For example:
+                                // eventName = "TRANSITION_VIEW"
+                                // metadata  = {
+                                //   link_session_id: "123-abc",
+                                //   mfa_type:        "questions",
+                                //   timestamp:       "2017-09-14T14:42:19.350Z",
+                                //   view_name:       "MFA",
+                                // }
+                                }
+                            });
+
+                            $('#link-button').on('click', function(e) {
+                                handler.open();
+                            });
+                            })(jQuery);
+                    </script>
+                    </center>
+                </div>
+                
+                <div class="box2">
+                    <center>
+                    <h5>Refresh Transasctions</h5>
+                    <form action="/link/transactions" method="post">
+                        <button name="forwardBtn" type="submit">Forward</button>
+                    </form></center></div>
+                
+                <div class="box3">
+                    <center>
+                    <h5>Delete User Data from DBs</h5>
+                    <form action="/link/deleteuser" method="post">
+                        <button name="deleteBtn" type="submit">Delete</button>
+                    </form></center></div>
+                
+                <script>
+                function navFunction() {
+                var x = document.getElementById("myTopnav");
+                if (x.className === "topnav") {
+                x.className += " responsive";
+                } else {
+                x.className = "topnav";
+                }
+                }
+                </script>
+
+
+            </section>
+        </div>
+    </body>
+</html>
