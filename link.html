@@ -1,85 +1,93 @@
+
 <!DOCTYPE html dir="ltr" lang="en">
 <html>
+    <head>
+        <meta charset="utf-8" name="viewport" content="width=device-width, initial-scale=1.0 ">
 
-<head>
-  <meta charset="utf-8" name="viewport" content="width=device-width, initial-scale=1.0 ">
+        <title>Home - CashCushion</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="stylesheet" href="/static/style.css">
 
-  <title>Accounts - CashCushion</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-  <link rel="stylesheet" href="/static/style.css">
-
-  <!-- the below three lines are a fix to get HTML5 semantic elements working in old versions of Internet Explorer-->
-  <!--[if lt IE 9]>
+        <!-- the below three lines are a fix to get HTML5 semantic elements working in old versions of Internet Explorer-->
+        <!--[if lt IE 9]>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv.js"></script>
         <![endif]-->
-</head>
+    </head>
+    <body>
+        
+    
+        
+    
 
-<body>
-  <div>
+        
     <section class="content">
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-      <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+        <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>    
 
-      <div class="topnav" id="myTopnav">
-        <a href="/" class="active" id="cashcushion">CashCushion</a>
-        <a href="/">Home</a>
-        <a href="/link" class="active"> Linked Accounts</a>
-        <a href="/transactions"> Transactions</a>
-        <a href="/logout" id="bannerLogout">Sign Out</a>
-        <img id="profilePic" src=https://lh3.googleusercontent.com/a/AATXAJxUS-OeaBDiqSIpFYCzNLwIugbNPM2k9fZLPQ1_=s96-c>
-        <a href="javascript:void(0);" class="icon" onclick="navFunction()">
-          <i class="fa fa-bars"></i>
-        </a>
-      </div>
-
-      <div>
+        <div class="topnav" id="myTopnav">
+            <a href="/" class="active" id="cashcushion" >CashCushion</a>
+            <a href="/">Home</a>
+            <a href="/link" class="active"> Link Accounts</a>
+            <a href="/transactions"> Transactions</a>
+            <a href="/logout" id="bannerLogout">Sign Out</a>
+            <img id="profilePic" src=https://lh3.googleusercontent.com/a/AATXAJxUS-OeaBDiqSIpFYCzNLwIugbNPM2k9fZLPQ1_=s96-c>
+            <a href="javascript:void(0);" class="icon" onclick="navFunction()">
+                <i class="fa fa-bars"></i>
+            </a>                     
+        </div>
+            
         <h2>Linked Accounts</h2>
-
-        <div class="row" class="box">
-          <div class="column" class="box">
-            <div class="card" class="box">
-              <div class="unhealthy">
-                <div class="reauthenticate">Automatic updates stopped, account login required.</div>
-                <button class="reauthenticate">Reauthenticate Account</button>
-                <br></br>
-              <p class="title">Platypus Bank</p>
-              <button id="unlink-button">Remove Bank</button>
-              <br></br>
-              <p>Plaid Checking 0000</p>
-              <p>Plaid Saving 1111</p>
-              <button id="update-button">Add/Remove Accounts</button>
+                
+        <div class="row">
+            
+            <div class="column">
+                <div class="card">
+                    <div class="ITEM_LOGIN_REQUIRED">
+                        <div class="reauthenticate">Automatic updates stopped, account login required.</div>
+                            <button class="reauthenticate">Reauthenticate Account</button>
+                            <br></br>
+                        </div>
+                    </div>    
+                    <p class="title">ins_109508</p>
+                    <button id="unlink-button">Remove Bank</button>
+                    <br></br>
+                    
+                    <p> Plaid Checking 0000 </p>
+                    
+                    <p> Plaid Saving 1111 </p>
+                    
+                    <button id="update-button">Add/Remove Accounts</button>
+                </div>
             </div>
-          </div>
-
-          <div class="column" class="box">
-            <div class="card" class="box">
-              <p class="title">Link New Bank</p>
-              <button id="link-button">Link Account</button>
+            
+            
+            <div class="column">
+                <div class="card">
+                    <p class="title">Link New Bank</p>
+                    <button id="link-button">Link Account</button>
+                </div>
             </div>
-          </div>
-
-        <div class="column" class="box">
-            <div class="card" class="box">
-              <p class="title">Refresh Transactions</p>
-              <form action="/link/transactions" method="post">
-          <button name="forwardBtn" type="submit">Forward</button>
-            </form>
+        
+            <div class="column">
+                <div class="card">
+                    <p class="title">Refresh Transactions</p>
+                    <form action="/link/transactions" method="post">
+                    <button name="forwardBtn" type="submit">Forward</button>
+                    </form>
+                </div>
             </div>
-          </div>
-
-        <div class="column" class="box">
-            <div class="card" class="box">
-              <p class="title">Clear User Data</p>
-              <form action="/link/deleteuser" method="post">
-              <button name="deleteBtn" type="submit">Delete</button>
-            </form>
+        
+            <div class="column">
+                <div class="card">
+                    <p class="title">Clear User Data</p>
+                    <form action="/link/deleteuser" method="post">
+                    <button name="deleteBtn" type="submit">Delete</button>
+                </form>
+                </div>
             </div>
-          </div>
         </div>
     </section>
-  </div>
-  
-  <script type="text/javascript" , src="static/script.js"></script>
-</body>
 
+        <script type="text/javascript" , src="static/script.js"></script>
+    </body>
 </html>
