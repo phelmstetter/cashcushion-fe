@@ -33,7 +33,7 @@ export async function saveUserToFirestore(user: {
 }): Promise<void> {
   try {
     console.log('Saving user to Firestore:', user.uid);
-    const userRef = doc(db, 'firestore-users', user.uid);
+    const userRef = doc(db, 'users', user.uid);
     
     const userData: UserData = {
       user_id: user.uid,
@@ -51,7 +51,7 @@ export async function saveUserToFirestore(user: {
 }
 
 export async function getUserFromFirestore(userId: string): Promise<UserData | null> {
-  const userRef = doc(db, 'firestore-users', userId);
+  const userRef = doc(db, 'users', userId);
   const docSnap = await getDoc(userRef);
   
   if (docSnap.exists()) {
