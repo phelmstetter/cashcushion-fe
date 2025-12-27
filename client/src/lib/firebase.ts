@@ -28,11 +28,10 @@ export async function saveUserToFirestore(user: {
   email: string | null;
   photoURL: string | null;
 }): Promise<void> {
-  const userRef = doc(db, 'firestore-users', user.uid);
-  
-  const existingDoc = await getDoc(userRef);
-  
-  if (!existingDoc.exists()) {
+  try {
+    console.log('Saving user to Firestore:', user.uid);
+    const userRef = doc(db, 'firestore-users', user.uid);
+    
     const userData: UserData = {
       user_id: user.uid,
       email: user.email || '',
@@ -40,12 +39,11 @@ export async function saveUserToFirestore(user: {
       plaid_sync_error: false
     };
     
-    await setDoc(userRef, userData);
-  } else {
-    await setDoc(userRef, {
-      email: user.email || '',
-      profile_pic: user.photoURL || ''
-    }, { merge: true });
+    await setDoc(userRef, userData, { merge: true });
+    console.log('User saved successfully to firestore-users');
+  } catch (error) {
+    console.error('Error saving user to Firestore:', error);
+    throw error;
   }
 }
 
