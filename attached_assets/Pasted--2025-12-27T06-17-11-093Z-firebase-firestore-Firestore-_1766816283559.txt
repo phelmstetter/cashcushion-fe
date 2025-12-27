@@ -1,0 +1,55 @@
+[2025-12-27T06:17:11.093Z]  @firebase/firestore: Firestore (12.6.0): FirestoreClient Received user= hmXQNq3GQYfppZqW7MT2E8hnWPH2
+injected.js:37 [2025-12-27T06:17:11.093Z]  @firebase/firestore: Firestore (12.6.0): RemoteStore RemoteStore received new credentials
+injected.js:37 [2025-12-27T06:17:11.094Z]  @firebase/firestore: Firestore (12.6.0): SyncEngine User change. New user: uid:hmXQNq3GQYfppZqW7MT2E8hnWPH2
+injected.js:37 [2025-12-27T06:17:11.094Z]  @firebase/firestore: Firestore (12.6.0): MemoryPersistence Starting transaction: Handle user change
+injected.js:37 Saving user to Firestore: hmXQNq3GQYfppZqW7MT2E8hnWPH2
+injected.js:37 [2025-12-27T06:17:11.096Z]  @firebase/firestore: Firestore (12.6.0): MemoryPersistence Starting transaction: Get next mutation batch
+injected.js:37 [2025-12-27T06:17:11.096Z]  @firebase/firestore: Firestore (12.6.0): MemoryPersistence Starting transaction: Locally write mutations
+injected.js:37 [2025-12-27T06:17:11.097Z]  @firebase/firestore: Firestore (12.6.0): MemoryPersistence Starting transaction: Get next mutation batch
+injected.js:37 [2025-12-27T06:17:11.098Z]  @firebase/firestore: Firestore (12.6.0): MemoryPersistence Starting transaction: Get next mutation batch
+injected.js:37 [2025-12-27T06:17:11.098Z]  @firebase/firestore: Firestore (12.6.0): WebChannelConnection Creating RPC 'Write' stream 0x35742e59: https://firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel {"httpSessionIdParam":"gsessionid","initMessageHeaders":{"X-Goog-Api-Client":"gl-js/ fire/12.6.0","Content-Type":"text/plain","X-Firebase-GMPID":"1:997725898327:web:db20df8a604cbf40adc512","Authorization":"Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6Ijk4OGQ1YTM3OWI3OGJkZjFlNTBhNDA5MTEzZjJiMGM3NWU0NTJlNDciLCJ0eXAiOiJKV1QifQ.eyJuYW1lIjoiV2luc3RvbiBIZWxtc3RldHRlciIsInBpY3R1cmUiOiJodHRwczovL2xoMy5nb29nbGV1c2VyY29udGVudC5jb20vYS9BQ2c4b2NLWFdReDVEZG90ZjZpak1jY21rNUFNVzlmSEhIdDMweHBLX3lGdVJZZEdibHZkUFE9czk2LWMiLCJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vY2FzaGN1c2hpb24iLCJhdWQiOiJjYXNoY3VzaGlvbiIsImF1dGhfdGltZSI6MTc2NjgxNjIzMCwidXNlcl9pZCI6ImhtWFFOcTNHUVlmcHBacVc3TVQyRThobldQSDIiLCJzdWIiOiJobVhRTnEzR1FZZnBwWnFXN01UMkU4aG5XUEgyIiwiaWF0IjoxNzY2ODE2MjMwLCJleHAiOjE3NjY4MTk4MzAsImVtYWlsIjoid2luc3Rvbi5oZWxtc3RldHRlckBnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZmlyZWJhc2UiOnsiaWRlbnRpdGllcyI6eyJnb29nbGUuY29tIjpbIjExNjcwOTQzNzUzNzM5OTMyNDk3MCJdLCJlbWFpbCI6WyJ3aW5zdG9uLmhlbG1zdGV0dGVyQGdtYWlsLmNvbSJdfSwic2lnbl9pbl9wcm92aWRlciI6Imdvb2dsZS5jb20ifX0.IIdzTam72DC1dKXHZE2ZvqxzwCQZb_ODt4c1T1hodn0JeLmKUBRx5SbzzqnCIYqYYKxp3TH-mEN_VDh9zO4k8zfbwNIMPpsu8yghV2UEGwFwdrVOOr_GwPV3WCGUtsn1vu1ICKj3bjXKEjDywM0-I4sVU4wjFuaNJP3Fuo5wANEukZqn7NM0IEtxFybw8BnA3m259ijNZlDjQ2RwVDAVvugTJnMH86SMYBAAZ6Q-TFN6Zugrb0Hp6KJAA16GV3paPkhWQ7igkLjxSqc-81rTVFPKRB7YAtAbmfyuj-pUm0jhA_lK5AyHtmuq0MZyZaD4iVM3XnIH5I-G-462ITGw3A"},"messageUrlParams":{"database":"projects/cashcushion/databases/(default)"},"sendRawJson":true,"supportsCrossDomainXhr":true,"internalChannelParams":{"forwardChannelRequestTimeoutMs":600000},"forceLongPolling":false,"detectBufferingProxy":true,"useFetchStreams":true,"encodeInitMessageHeaders":true}
+injected.js:37 [2025-12-27T06:17:11.109Z]  @firebase/firestore: Firestore (12.6.0): WebChannelConnection Opening RPC 'Write' stream 0x35742e59 transport.
+injected.js:37 [2025-12-27T06:17:11.110Z]  @firebase/firestore: Firestore (12.6.0): WebChannelConnection RPC 'Write' stream 0x35742e59 sending: {"database":"projects/cashcushion/databases/(default)"}
+injected.js:37 [2025-12-27T06:17:11.289Z]  @firebase/firestore: Firestore (12.6.0): WebChannelConnection RPC 'Write' stream 0x35742e59 transport opened.
+injected.js:37 [2025-12-27T06:17:12.009Z]  @firebase/firestore: Firestore (12.6.0): WebChannelConnection RPC 'Write' stream 0x35742e4b detected buffering proxy
+injected.js:37 [2025-12-27T06:17:12.009Z]  @firebase/firestore: Firestore (12.6.0): WebChannelConnection RPC 'Write' stream 0x35742e4c detected buffering proxy
+injected.js:37 [2025-12-27T06:17:12.009Z]  @firebase/firestore: Firestore (12.6.0): WebChannelConnection RPC 'Write' stream 0x35742e4d detected buffering proxy
+injected.js:37 [2025-12-27T06:17:12.010Z]  @firebase/firestore: Firestore (12.6.0): WebChannelConnection RPC 'Write' stream 0x35742e4e detected buffering proxy
+injected.js:37 [2025-12-27T06:17:12.010Z]  @firebase/firestore: Firestore (12.6.0): WebChannelConnection RPC 'Write' stream 0x35742e4f detected buffering proxy
+injected.js:37 [2025-12-27T06:17:12.011Z]  @firebase/firestore: Firestore (12.6.0): WebChannelConnection RPC 'Write' stream 0x35742e50 detected buffering proxy
+injected.js:37 [2025-12-27T06:17:12.011Z]  @firebase/firestore: Firestore (12.6.0): WebChannelConnection RPC 'Write' stream 0x35742e51 detected buffering proxy
+injected.js:37 [2025-12-27T06:17:12.012Z]  @firebase/firestore: Firestore (12.6.0): WebChannelConnection RPC 'Write' stream 0x35742e52 detected buffering proxy
+injected.js:37 [2025-12-27T06:17:12.013Z]  @firebase/firestore: Firestore (12.6.0): WebChannelConnection RPC 'Write' stream 0x35742e53 detected buffering proxy
+injected.js:37 [2025-12-27T06:17:12.013Z]  @firebase/firestore: Firestore (12.6.0): WebChannelConnection RPC 'Write' stream 0x35742e54 detected buffering proxy
+injected.js:37 [2025-12-27T06:17:12.013Z]  @firebase/firestore: Firestore (12.6.0): WebChannelConnection RPC 'Write' stream 0x35742e55 detected buffering proxy
+injected.js:37 [2025-12-27T06:17:12.014Z]  @firebase/firestore: Firestore (12.6.0): WebChannelConnection RPC 'Write' stream 0x35742e56 detected buffering proxy
+injected.js:37 [2025-12-27T06:17:12.014Z]  @firebase/firestore: Firestore (12.6.0): WebChannelConnection RPC 'Write' stream 0x35742e57 detected buffering proxy
+injected.js:37 [2025-12-27T06:17:12.014Z]  @firebase/firestore: Firestore (12.6.0): WebChannelConnection RPC 'Write' stream 0x35742e58 detected buffering proxy
+injected.js:37 [2025-12-27T06:17:12.015Z]  @firebase/firestore: Firestore (12.6.0): WebChannelConnection RPC 'Write' stream 0x35742e59 detected buffering proxy
+injected.js:37 [2025-12-27T06:17:12.084Z]  @firebase/firestore: Firestore (12.6.0): WebChannelConnection RPC 'Write' stream 0x35742e59 received: {"streamId":"0","streamToken":"GRBoQgKB9LW1"}
+injected.js:37 [2025-12-27T06:17:12.085Z]  @firebase/firestore: Firestore (12.6.0): WebChannelConnection RPC 'Write' stream 0x35742e59 sending: {"streamToken":"GRBoQgKB9LW1","writes":[{"update":{"name":"projects/cashcushion/databases/(default)/documents/firestore-users/hmXQNq3GQYfppZqW7MT2E8hnWPH2","fields":{"user_id":{"stringValue":"hmXQNq3GQYfppZqW7MT2E8hnWPH2"},"email":{"stringValue":"winston.helmstetter@gmail.com"},"profile_pic":{"stringValue":"https://lh3.googleusercontent.com/a/ACg8ocKXWQx5Ddotf6ijMccmk5AMW9fHHHt30xpK_yFuRYdGblvdPQ=s96-c"},"plaid_sync_error":{"booleanValue":false}}},"updateMask":{"fieldPaths":["email","plaid_sync_error","profile_pic","user_id"]}}]}
+injected.js:37 [2025-12-27T06:17:12.210Z]  @firebase/firestore: Firestore (12.6.0): WebChannelConnection RPC 'Write' stream 0x35742e59 received error: {"code":403,"message":"Missing or insufficient permissions.","status":"PERMISSION_DENIED"}
+injected.js:37 [2025-12-27T06:17:12.213Z]  @firebase/firestore: Firestore (12.6.0): PersistentStream close with error: FirebaseError: [code=permission-denied]: Missing or insufficient permissions.
+injected.js:37 [2025-12-27T06:17:12.214Z]  @firebase/firestore: Firestore (12.6.0): MemoryPersistence Starting transaction: Reject batch
+injected.js:37 Error saving user to Firestore: FirebaseError: Missing or insufficient permissions.
+(anonymous) @ injected.js:37
+saveUserToFirestore @ firebase.ts:48
+await in saveUserToFirestore
+handleGoogleSignIn @ Login.tsx:17
+await in handleGoogleSignIn
+callCallback2 @ chunk-LPF6KSF2.js?v=954b8dcd:3680
+invokeGuardedCallbackDev @ chunk-LPF6KSF2.js?v=954b8dcd:3705
+invokeGuardedCallback @ chunk-LPF6KSF2.js?v=954b8dcd:3739
+invokeGuardedCallbackAndCatchFirstError @ chunk-LPF6KSF2.js?v=954b8dcd:3742
+executeDispatch @ chunk-LPF6KSF2.js?v=954b8dcd:7046
+processDispatchQueueItemsInOrder @ chunk-LPF6KSF2.js?v=954b8dcd:7066
+processDispatchQueue @ chunk-LPF6KSF2.js?v=954b8dcd:7075
+dispatchEventsForPlugins @ chunk-LPF6KSF2.js?v=954b8dcd:7083
+(anonymous) @ chunk-LPF6KSF2.js?v=954b8dcd:7206
+batchedUpdates$1 @ chunk-LPF6KSF2.js?v=954b8dcd:18966
+batchedUpdates @ chunk-LPF6KSF2.js?v=954b8dcd:3585
+dispatchEventForPluginEventSystem @ chunk-LPF6KSF2.js?v=954b8dcd:7205
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-LPF6KSF2.js?v=954b8dcd:5484
+dispatchEvent @ chunk-LPF6KSF2.js?v=954b8dcd:5478
+dispatchDiscreteEvent @ chunk-LPF6KSF2.js?v=954b8dcd:5455Understand this error
+injected.js:37 [2025-12-27T06:17:12.215Z]  @firebase/firestore: Firestore (12.6.0): MemoryPersistence Starting transaction: Get next mutation batch
