@@ -1,19 +1,30 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, saveUserToFirestore } from "@/lib/firebase";
 
 const Login = () => {
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const [, setLocation] = useLocation();
 
   const handleGoogleSignIn = async () => {
     const provider = new GoogleAuthProvider();
+    setLoading(true);
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      
+      await saveUserToFirestore({
+        uid: result.user.uid,
+        email: result.user.email,
+        photoURL: result.user.photoURL
+      });
+      
       setLocation("/home");
     } catch (error: any) {
       setError(error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -27,9 +38,10 @@ const Login = () => {
             <button 
               className="auth-button google" 
               onClick={handleGoogleSignIn}
+              disabled={loading}
               data-testid="button-google-signin"
             >
-              Sign in with Google
+              {loading ? "Signing in..." : "Sign in with Google"}
             </button>
           </div>
           {error && <p className="error-message" data-testid="text-error">{error}</p>}
