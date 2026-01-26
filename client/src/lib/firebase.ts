@@ -1,6 +1,19 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
+import { 
+  getFirestore, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  collection, 
+  query, 
+  orderBy, 
+  limit, 
+  startAfter, 
+  getDocs,
+  QueryDocumentSnapshot,
+  DocumentData
+} from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_API_KEY,
@@ -56,4 +69,60 @@ export async function getUserFromFirestore(userId: string): Promise<UserData | n
   }
   
   return null;
+}
+
+export interface Transaction {
+  id: string;
+  amount: number;
+  date: string;
+  counterparty_name: string;
+  logo_url?: string;
+}
+
+export interface TransactionsResult {
+  transactions: Transaction[];
+  lastDoc: QueryDocumentSnapshot<DocumentData> | null;
+  hasMore: boolean;
+}
+
+export async function getTransactions(
+  lastDoc?: QueryDocumentSnapshot<DocumentData> | null,
+  pageSize: number = 20
+): Promise<TransactionsResult> {
+  const transactionsRef = collection(db, 'transactions');
+  
+  let q;
+  if (lastDoc) {
+    q = query(
+      transactionsRef,
+      orderBy('date', 'desc'),
+      startAfter(lastDoc),
+      limit(pageSize)
+    );
+  } else {
+    q = query(
+      transactionsRef,
+      orderBy('date', 'desc'),
+      limit(pageSize)
+    );
+  }
+  
+  const querySnapshot = await getDocs(q);
+  const transactions: Transaction[] = [];
+  
+  querySnapshot.forEach((doc) => {
+    const data = doc.data();
+    transactions.push({
+      id: doc.id,
+      amount: data.amount,
+      date: data.date,
+      counterparty_name: data.counterparty_name || data.name || 'Unknown',
+      logo_url: data.logo_url
+    });
+  });
+  
+  const lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1] || null;
+  const hasMore = querySnapshot.docs.length === pageSize;
+  
+  return { transactions, lastDoc: lastVisible, hasMore };
 }
