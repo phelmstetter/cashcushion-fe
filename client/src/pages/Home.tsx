@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { signOut } from "firebase/auth";
 import { auth, getTransactions, Transaction } from "@/lib/firebase";
 import { useLocation } from "wouter";
@@ -11,23 +11,18 @@ import { Loader2 } from "lucide-react";
 const Home = () => {
   const [, setLocation] = useLocation();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const lastDocRef = useRef<QueryDocumentSnapshot<DocumentData> | null>(null);
 
   const handleSignOut = async () => {
     await signOut(auth);
     setLocation("/login");
   };
 
-  const lastDocRef = useRef<QueryDocumentSnapshot<DocumentData> | null>(null);
-  const loadingRef = useRef(false);
-  const hasMoreRef = useRef(true);
-
-  const loadTransactions = useCallback(async (isInitial = false) => {
-    if (loadingRef.current || (!hasMoreRef.current && !isInitial)) return;
+  const loadTransactions = async (isInitial = false) => {
+    if (loading || (!hasMore && !isInitial)) return;
     
     const userId = auth.currentUser?.uid;
     if (!userId) {
@@ -35,7 +30,6 @@ const Home = () => {
       return;
     }
     
-    loadingRef.current = true;
     setLoading(true);
     try {
       const result = await getTransactions(userId, isInitial ? null : lastDocRef.current);
@@ -47,38 +41,18 @@ const Home = () => {
       }
       
       lastDocRef.current = result.lastDoc;
-      setLastDoc(result.lastDoc);
-      hasMoreRef.current = result.hasMore;
       setHasMore(result.hasMore);
     } catch (error) {
       console.error("Error loading transactions:", error);
     } finally {
-      loadingRef.current = false;
       setLoading(false);
       if (isInitial) setInitialLoading(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
     loadTransactions(true);
-  }, [loadTransactions]);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMoreRef.current && !loadingRef.current) {
-          loadTransactions();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    if (loadMoreRef.current) {
-      observer.observe(loadMoreRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, [loadTransactions]);
+  }, []);
 
   const formatAmount = (amount: number) => {
     const flippedAmount = -amount;
@@ -185,17 +159,22 @@ const Home = () => {
               );
             })}
             
-            <div ref={loadMoreRef} className="py-4">
-              {loading && (
-                <div className="flex justify-center">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              )}
-              {!hasMore && transactions.length > 0 && (
-                <p className="text-center text-sm text-muted-foreground">
+            <div className="py-4 flex justify-center">
+              {loading ? (
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              ) : hasMore ? (
+                <Button 
+                  variant="outline" 
+                  onClick={() => loadTransactions()}
+                  data-testid="button-load-more"
+                >
+                  Load More
+                </Button>
+              ) : transactions.length > 0 ? (
+                <p className="text-sm text-muted-foreground">
                   No more transactions
                 </p>
-              )}
+              ) : null}
             </div>
           </div>
         )}
