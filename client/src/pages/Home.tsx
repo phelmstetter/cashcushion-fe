@@ -15,6 +15,7 @@ const Home = () => {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const lastDocRef = useRef<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const loadingRef = useRef(false);
 
   const handleSignOut = async () => {
     await signOut(auth);
@@ -22,7 +23,7 @@ const Home = () => {
   };
 
   const loadTransactions = async (isInitial = false) => {
-    if (loading || (!hasMore && !isInitial)) return;
+    if (loadingRef.current) return;
     
     const userId = auth.currentUser?.uid;
     if (!userId) {
@@ -30,6 +31,7 @@ const Home = () => {
       return;
     }
     
+    loadingRef.current = true;
     setLoading(true);
     try {
       const result = await getTransactions(userId, isInitial ? null : lastDocRef.current);
@@ -45,6 +47,7 @@ const Home = () => {
     } catch (error) {
       console.error("Error loading transactions:", error);
     } finally {
+      loadingRef.current = false;
       setLoading(false);
       if (isInitial) setInitialLoading(false);
     }
