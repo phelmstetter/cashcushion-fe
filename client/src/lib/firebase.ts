@@ -122,6 +122,7 @@ export async function getTransactions(
       amount: data.amount,
       date: data.date,
       counterparty_name: data.counterparty_name || data.name || 'Unknown',
+      merchant_name: data.merchant_name,
       logo_url: data.logo_url
     });
   });
