@@ -83,14 +83,15 @@ const Home = () => {
 
   const formatAmount = (amount: number) => {
     const isNegative = amount < 0;
+    const flippedAmount = -amount;
     const formatted = new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
-    }).format(Math.abs(amount));
+    }).format(Math.abs(flippedAmount));
     
     return {
-      display: isNegative ? `-${formatted}` : `+${formatted}`,
-      className: isNegative ? 'text-destructive' : 'text-primary'
+      display: flippedAmount >= 0 ? formatted : `+${formatted}`,
+      className: isNegative ? 'text-foreground' : 'text-primary'
     };
   };
 
