@@ -88,7 +88,10 @@ const Home = () => {
       currency: 'USD'
     }).format(Math.abs(flippedAmount));
     
-    return flippedAmount >= 0 ? `+${formatted}` : formatted;
+    return {
+      display: flippedAmount >= 0 ? `+${formatted}` : formatted,
+      isPositive: flippedAmount >= 0
+    };
   };
 
   const formatDate = (dateString: string) => {
@@ -148,7 +151,7 @@ const Home = () => {
         ) : (
           <div className="space-y-2">
             {transactions.map((transaction) => {
-              const amountDisplay = formatAmount(transaction.amount);
+              const { display: amountDisplay, isPositive } = formatAmount(transaction.amount);
               
               const displayName = transaction.merchant_name || transaction.counterparty_name;
               
@@ -171,7 +174,7 @@ const Home = () => {
                     </div>
                     
                     <div className="text-right shrink-0">
-                      <p className="font-semibold tabular-nums" data-testid={`text-amount-${transaction.id}`}>
+                      <p className={`font-semibold tabular-nums ${isPositive ? 'text-primary' : ''}`} data-testid={`text-amount-${transaction.id}`}>
                         {amountDisplay}
                       </p>
                       <p className="text-sm text-muted-foreground" data-testid={`text-date-${transaction.id}`}>
