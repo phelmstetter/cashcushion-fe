@@ -168,7 +168,7 @@ const Home = () => {
                     </Avatar>
                     
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate" data-testid={`text-counterparty-${transaction.id}`}>
+                      <p className="font-medium line-clamp-2" data-testid={`text-counterparty-${transaction.id}`}>
                         {displayName}
                       </p>
                     </div>
