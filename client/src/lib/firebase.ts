@@ -11,6 +11,7 @@ import {
   limit, 
   startAfter, 
   getDocs,
+  where,
   QueryDocumentSnapshot,
   DocumentData
 } from 'firebase/firestore';
@@ -86,6 +87,7 @@ export interface TransactionsResult {
 }
 
 export async function getTransactions(
+  userId: string,
   lastDoc?: QueryDocumentSnapshot<DocumentData> | null,
   pageSize: number = 20
 ): Promise<TransactionsResult> {
@@ -95,6 +97,7 @@ export async function getTransactions(
   if (lastDoc) {
     q = query(
       transactionsRef,
+      where('user_id', '==', userId),
       orderBy('date', 'desc'),
       startAfter(lastDoc),
       limit(pageSize)
@@ -102,6 +105,7 @@ export async function getTransactions(
   } else {
     q = query(
       transactionsRef,
+      where('user_id', '==', userId),
       orderBy('date', 'desc'),
       limit(pageSize)
     );

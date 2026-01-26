@@ -26,9 +26,15 @@ const Home = () => {
   const loadTransactions = useCallback(async (isInitial = false) => {
     if (loading || (!hasMore && !isInitial)) return;
     
+    const userId = auth.currentUser?.uid;
+    if (!userId) {
+      setInitialLoading(false);
+      return;
+    }
+    
     setLoading(true);
     try {
-      const result = await getTransactions(isInitial ? null : lastDoc);
+      const result = await getTransactions(userId, isInitial ? null : lastDoc);
       
       if (isInitial) {
         setTransactions(result.transactions);
