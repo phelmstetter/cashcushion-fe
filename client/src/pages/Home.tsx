@@ -153,7 +153,7 @@ const Home = () => {
             {transactions.map((transaction) => {
               const { display: amountDisplay, className: amountClass } = formatAmount(transaction.amount);
               
-              const displayName = transaction.merchant || transaction.counterparty_name;
+              const displayName = transaction.merchant_name || transaction.counterparty_name;
               
               return (
                 <Card key={transaction.id} className="hover-elevate" data-testid={`card-transaction-${transaction.id}`}>
