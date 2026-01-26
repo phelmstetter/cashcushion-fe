@@ -15,7 +15,6 @@ const Home = () => {
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const handleSignOut = async () => {
@@ -23,8 +22,12 @@ const Home = () => {
     setLocation("/login");
   };
 
+  const lastDocRef = useRef<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const loadingRef = useRef(false);
+  const hasMoreRef = useRef(true);
+
   const loadTransactions = useCallback(async (isInitial = false) => {
-    if (loading || (!hasMore && !isInitial)) return;
+    if (loadingRef.current || (!hasMoreRef.current && !isInitial)) return;
     
     const userId = auth.currentUser?.uid;
     if (!userId) {
@@ -32,9 +35,10 @@ const Home = () => {
       return;
     }
     
+    loadingRef.current = true;
     setLoading(true);
     try {
-      const result = await getTransactions(userId, isInitial ? null : lastDoc);
+      const result = await getTransactions(userId, isInitial ? null : lastDocRef.current);
       
       if (isInitial) {
         setTransactions(result.transactions);
@@ -42,28 +46,27 @@ const Home = () => {
         setTransactions(prev => [...prev, ...result.transactions]);
       }
       
+      lastDocRef.current = result.lastDoc;
       setLastDoc(result.lastDoc);
+      hasMoreRef.current = result.hasMore;
       setHasMore(result.hasMore);
     } catch (error) {
       console.error("Error loading transactions:", error);
     } finally {
+      loadingRef.current = false;
       setLoading(false);
       if (isInitial) setInitialLoading(false);
     }
-  }, [loading, hasMore, lastDoc]);
-
-  useEffect(() => {
-    loadTransactions(true);
   }, []);
 
   useEffect(() => {
-    if (observerRef.current) {
-      observerRef.current.disconnect();
-    }
+    loadTransactions(true);
+  }, [loadTransactions]);
 
-    observerRef.current = new IntersectionObserver(
+  useEffect(() => {
+    const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loading) {
+        if (entries[0].isIntersecting && hasMoreRef.current && !loadingRef.current) {
           loadTransactions();
         }
       },
@@ -71,15 +74,11 @@ const Home = () => {
     );
 
     if (loadMoreRef.current) {
-      observerRef.current.observe(loadMoreRef.current);
+      observer.observe(loadMoreRef.current);
     }
 
-    return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-      }
-    };
-  }, [hasMore, loading, loadTransactions]);
+    return () => observer.disconnect();
+  }, [loadTransactions]);
 
   const formatAmount = (amount: number) => {
     const flippedAmount = -amount;
