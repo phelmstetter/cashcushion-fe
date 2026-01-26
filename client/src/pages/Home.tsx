@@ -171,14 +171,16 @@ const Home = () => {
                       <p className="font-medium truncate" data-testid={`text-counterparty-${transaction.id}`}>
                         {displayName}
                       </p>
+                    </div>
+                    
+                    <div className="text-right shrink-0">
+                      <p className={`font-semibold tabular-nums ${amountClass}`} data-testid={`text-amount-${transaction.id}`}>
+                        {amountDisplay}
+                      </p>
                       <p className="text-sm text-muted-foreground" data-testid={`text-date-${transaction.id}`}>
                         {formatDate(transaction.date)}
                       </p>
                     </div>
-                    
-                    <p className={`font-semibold tabular-nums ${amountClass}`} data-testid={`text-amount-${transaction.id}`}>
-                      {amountDisplay}
-                    </p>
                   </CardContent>
                 </Card>
               );
