@@ -88,8 +88,7 @@ const Home = () => {
       currency: 'USD'
     }).format(Math.abs(flippedAmount));
     
-    const sign = flippedAmount >= 0 ? '+' : '-';
-    return `${sign}${formatted}`;
+    return flippedAmount >= 0 ? `+${formatted}` : formatted;
   };
 
   const formatDate = (dateString: string) => {
