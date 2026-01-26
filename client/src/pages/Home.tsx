@@ -82,17 +82,14 @@ const Home = () => {
   }, [hasMore, loading, loadTransactions]);
 
   const formatAmount = (amount: number) => {
-    const isNegative = amount < 0;
     const flippedAmount = -amount;
     const formatted = new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
     }).format(Math.abs(flippedAmount));
     
-    return {
-      display: flippedAmount >= 0 ? formatted : `+${formatted}`,
-      className: isNegative ? 'text-foreground' : 'text-primary'
-    };
+    const sign = flippedAmount >= 0 ? '+' : '-';
+    return `${sign}${formatted}`;
   };
 
   const formatDate = (dateString: string) => {
@@ -152,7 +149,7 @@ const Home = () => {
         ) : (
           <div className="space-y-2">
             {transactions.map((transaction) => {
-              const { display: amountDisplay, className: amountClass } = formatAmount(transaction.amount);
+              const amountDisplay = formatAmount(transaction.amount);
               
               const displayName = transaction.merchant_name || transaction.counterparty_name;
               
@@ -175,7 +172,7 @@ const Home = () => {
                     </div>
                     
                     <div className="text-right shrink-0">
-                      <p className={`font-semibold tabular-nums ${amountClass}`} data-testid={`text-amount-${transaction.id}`}>
+                      <p className="font-semibold tabular-nums" data-testid={`text-amount-${transaction.id}`}>
                         {amountDisplay}
                       </p>
                       <p className="text-sm text-muted-foreground" data-testid={`text-date-${transaction.id}`}>
