@@ -77,6 +77,7 @@ export interface Transaction {
   amount: number;
   date: string;
   counterparty_name: string;
+  merchant?: string;
   logo_url?: string;
 }
 

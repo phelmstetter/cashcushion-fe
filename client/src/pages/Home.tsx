@@ -153,21 +153,23 @@ const Home = () => {
             {transactions.map((transaction) => {
               const { display: amountDisplay, className: amountClass } = formatAmount(transaction.amount);
               
+              const displayName = transaction.merchant || transaction.counterparty_name;
+              
               return (
                 <Card key={transaction.id} className="hover-elevate" data-testid={`card-transaction-${transaction.id}`}>
                   <CardContent className="flex items-center gap-3 py-3 px-4">
                     <Avatar className="h-10 w-10 shrink-0">
                       {transaction.logo_url ? (
-                        <AvatarImage src={transaction.logo_url} alt={transaction.counterparty_name} />
+                        <AvatarImage src={transaction.logo_url} alt={displayName} />
                       ) : null}
                       <AvatarFallback className="text-xs">
-                        {getInitials(transaction.counterparty_name)}
+                        {getInitials(displayName)}
                       </AvatarFallback>
                     </Avatar>
                     
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate" data-testid={`text-counterparty-${transaction.id}`}>
-                        {transaction.counterparty_name}
+                        {displayName}
                       </p>
                       <p className="text-sm text-muted-foreground" data-testid={`text-date-${transaction.id}`}>
                         {formatDate(transaction.date)}
