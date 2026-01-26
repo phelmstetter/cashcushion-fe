@@ -98,7 +98,7 @@ export async function getTransactions(
     q = query(
       transactionsRef,
       where('user_id', '==', userId),
-      orderBy('date', 'desc'),
+      orderBy('date', 'asc'),
       startAfter(lastDoc),
       limit(pageSize)
     );
@@ -106,7 +106,7 @@ export async function getTransactions(
     q = query(
       transactionsRef,
       where('user_id', '==', userId),
-      orderBy('date', 'desc'),
+      orderBy('date', 'asc'),
       limit(pageSize)
     );
   }
