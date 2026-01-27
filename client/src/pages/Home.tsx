@@ -70,19 +70,113 @@ const Home = () => {
     loadInitialTransactions();
   }, []);
 
+  const formatAmount = (amount: number) => {
+    const flippedAmount = -amount;
+    const formatted = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(Math.abs(flippedAmount));
+    
+    return {
+      display: flippedAmount >= 0 ? `+${formatted}` : formatted,
+      isPositive: flippedAmount >= 0
+    };
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   return (
-    <div>
-      <button onClick={handleSignOut}>Sign Out</button>
-      <span> Count: {transactions.length} | Has More: {hasMore ? "yes" : "no"} </span>
-      {hasMore && (
-        <button onClick={loadMoreTransactions} disabled={loading}>
-          {loading ? "Loading..." : "Load More"}
-        </button>
-      )}
+    <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h1 style={{ margin: 0 }}>CashCushion ({transactions.length})</h1>
+        <button onClick={handleSignOut}>Sign Out</button>
+      </div>
+
       {initialLoading ? (
         <p>Loading...</p>
+      ) : transactions.length === 0 ? (
+        <p>No transactions found</p>
       ) : (
-        <pre>{JSON.stringify(transactions, null, 2)}</pre>
+        <>
+          {transactions.map((transaction) => {
+            const { display: amountDisplay, isPositive } = formatAmount(transaction.amount);
+            const displayName = transaction.merchant_name || transaction.counterparty_name;
+            
+            return (
+              <div key={transaction.id} style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px',
+                marginBottom: '8px',
+                backgroundColor: '#fff',
+                borderRadius: '8px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+              }}>
+                {transaction.logo_url ? (
+                  <img 
+                    src={transaction.logo_url} 
+                    alt={displayName}
+                    style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    backgroundColor: '#e0e0e0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}>
+                    {getInitials(displayName)}
+                  </div>
+                )}
+                
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 500 }}>{displayName}</div>
+                </div>
+                
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontWeight: 600, color: isPositive ? 'green' : 'inherit' }}>
+                    {amountDisplay}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#666' }}>
+                    {formatDate(transaction.date)}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          
+          <div style={{ textAlign: 'center', padding: '20px' }}>
+            {hasMore ? (
+              <button onClick={loadMoreTransactions} disabled={loading}>
+                {loading ? "Loading..." : "Load More"}
+              </button>
+            ) : (
+              <p style={{ color: '#666' }}>No more transactions</p>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
