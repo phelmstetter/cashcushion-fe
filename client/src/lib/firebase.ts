@@ -9,7 +9,9 @@ import {
   query, 
   orderBy, 
   limit, 
-  startAfter, 
+  startAfter,
+  endBefore,
+  limitToLast,
   getDocs,
   where,
   QueryDocumentSnapshot,
@@ -83,6 +85,7 @@ export interface Transaction {
 
 export interface TransactionsResult {
   transactions: Transaction[];
+  firstDoc: QueryDocumentSnapshot<DocumentData> | null;
   lastDoc: QueryDocumentSnapshot<DocumentData> | null;
   hasMore: boolean;
 }
@@ -127,8 +130,46 @@ export async function getTransactions(
     });
   });
   
+  const firstVisible = querySnapshot.docs[0] || null;
   const lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1] || null;
   const hasMore = querySnapshot.docs.length === pageSize;
   
-  return { transactions, lastDoc: lastVisible, hasMore };
+  return { transactions, firstDoc: firstVisible, lastDoc: lastVisible, hasMore };
+}
+
+export async function getPriorTransactions(
+  userId: string,
+  firstDoc: QueryDocumentSnapshot<DocumentData>,
+  pageSize: number = 20
+): Promise<TransactionsResult> {
+  const transactionsRef = collection(db, 'transactions');
+  
+  const q = query(
+    transactionsRef,
+    where('user_id', '==', userId),
+    orderBy('date', 'desc'),
+    endBefore(firstDoc),
+    limitToLast(pageSize)
+  );
+  
+  const querySnapshot = await getDocs(q);
+  const transactions: Transaction[] = [];
+  
+  querySnapshot.forEach((doc) => {
+    const data = doc.data();
+    transactions.push({
+      id: doc.id,
+      amount: data.amount,
+      date: data.date,
+      counterparty_name: data.counterparty_name || data.name || 'Unknown',
+      merchant_name: data.merchant_name,
+      logo_url: data.logo_url
+    });
+  });
+  
+  const firstVisible = querySnapshot.docs[0] || null;
+  const lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1] || null;
+  const hasMore = querySnapshot.docs.length === pageSize;
+  
+  return { transactions, firstDoc: firstVisible, lastDoc: lastVisible, hasMore };
 }
