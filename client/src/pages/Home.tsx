@@ -23,6 +23,7 @@ const Home = () => {
   };
 
   const loadTransactions = async (isInitial = false) => {
+    console.log('loadTransactions called, isInitial:', isInitial, 'loadingRef:', loadingRef.current);
     if (loadingRef.current) return;
     
     const userId = auth.currentUser?.uid;
@@ -35,11 +36,17 @@ const Home = () => {
     setLoading(true);
     try {
       const result = await getTransactions(userId, isInitial ? null : lastDocRef.current);
+      console.log('Got transactions:', result.transactions.length, 'hasMore:', result.hasMore);
       
       if (isInitial) {
+        console.log('Setting initial transactions');
         setTransactions(result.transactions);
       } else {
-        setTransactions(prev => [...prev, ...result.transactions]);
+        console.log('Appending transactions');
+        setTransactions(prev => {
+          console.log('Previous count:', prev.length, 'Adding:', result.transactions.length);
+          return [...prev, ...result.transactions];
+        });
       }
       
       lastDocRef.current = result.lastDoc;
