@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { signOut } from "firebase/auth";
 import { auth, getTransactions, Transaction } from "@/lib/firebase";
 import { useLocation } from "wouter";
-import { Button } from "@/components/ui/button";
 
 const Home = () => {
   const [, setLocation] = useLocation();
@@ -72,25 +71,18 @@ const Home = () => {
   }, []);
 
   return (
-    <div style={{ padding: "20px", fontFamily: "monospace" }}>
-      <div style={{ marginBottom: "20px" }}>
-        <Button onClick={handleSignOut}>Sign Out</Button>
-        <span style={{ marginLeft: "20px" }}>
-          Count: {transactions.length} | Has More: {hasMore ? "yes" : "no"}
-        </span>
-        {hasMore && (
-          <Button onClick={loadMoreTransactions} disabled={loading} style={{ marginLeft: "10px" }}>
-            {loading ? "Loading..." : "Load More"}
-          </Button>
-        )}
-      </div>
-      
+    <div>
+      <button onClick={handleSignOut}>Sign Out</button>
+      <span> Count: {transactions.length} | Has More: {hasMore ? "yes" : "no"} </span>
+      {hasMore && (
+        <button onClick={loadMoreTransactions} disabled={loading}>
+          {loading ? "Loading..." : "Load More"}
+        </button>
+      )}
       {initialLoading ? (
         <p>Loading...</p>
       ) : (
-        <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-all", fontSize: "12px" }}>
-          {JSON.stringify(transactions, null, 2)}
-        </pre>
+        <pre>{JSON.stringify(transactions, null, 2)}</pre>
       )}
     </div>
   );
