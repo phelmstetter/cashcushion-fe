@@ -22,46 +22,53 @@ const Home = () => {
     setLocation("/login");
   };
 
-  const loadTransactions = async (isInitial = false) => {
-    console.log('loadTransactions called, isInitial:', isInitial, 'loadingRef:', loadingRef.current);
-    if (loadingRef.current) return;
-    
+  const loadInitialTransactions = async () => {
     const userId = auth.currentUser?.uid;
     if (!userId) {
       setInitialLoading(false);
       return;
     }
     
-    loadingRef.current = true;
-    setLoading(true);
     try {
-      const result = await getTransactions(userId, isInitial ? null : lastDocRef.current);
-      console.log('Got transactions:', result.transactions.length, 'hasMore:', result.hasMore);
-      
-      if (isInitial) {
-        console.log('Setting initial transactions');
-        setTransactions(result.transactions);
-      } else {
-        console.log('Appending transactions');
-        setTransactions(prev => {
-          console.log('Previous count:', prev.length, 'Adding:', result.transactions.length);
-          return [...prev, ...result.transactions];
-        });
-      }
-      
+      const result = await getTransactions(userId, null);
+      setTransactions(result.transactions);
       lastDocRef.current = result.lastDoc;
       setHasMore(result.hasMore);
     } catch (error) {
-      console.error("Error loading transactions:", error);
+      console.error("Error loading initial transactions:", error);
+    } finally {
+      setInitialLoading(false);
+    }
+  };
+
+  const loadMoreTransactions = async () => {
+    if (loadingRef.current || !hasMore) return;
+    
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+    
+    loadingRef.current = true;
+    setLoading(true);
+    try {
+      const result = await getTransactions(userId, lastDocRef.current);
+      
+      if (result.transactions.length > 0) {
+        setTransactions(prev => [...prev, ...result.transactions]);
+        lastDocRef.current = result.lastDoc;
+        setHasMore(result.hasMore);
+      } else {
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error("Error loading more transactions:", error);
     } finally {
       loadingRef.current = false;
       setLoading(false);
-      if (isInitial) setInitialLoading(false);
     }
   };
 
   useEffect(() => {
-    loadTransactions(true);
+    loadInitialTransactions();
   }, []);
 
   const formatAmount = (amount: number) => {
@@ -175,7 +182,7 @@ const Home = () => {
               ) : hasMore ? (
                 <Button 
                   variant="outline" 
-                  onClick={() => loadTransactions()}
+                  onClick={loadMoreTransactions}
                   data-testid="button-load-more"
                 >
                   Load More
