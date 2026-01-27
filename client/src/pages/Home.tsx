@@ -43,7 +43,14 @@ const Home = () => {
   };
 
   const loadMoreTransactions = async () => {
-    if (loadingRef.current || !hasMore) return;
+    console.log('=== loadMoreTransactions called ===');
+    console.log('loadingRef.current:', loadingRef.current);
+    console.log('hasMore:', hasMore);
+    
+    if (loadingRef.current || !hasMore) {
+      console.log('Returning early - loading or no more');
+      return;
+    }
     
     const userId = auth.currentUser?.uid;
     if (!userId) return;
@@ -51,10 +58,17 @@ const Home = () => {
     loadingRef.current = true;
     setLoading(true);
     try {
+      console.log('Fetching with cursor:', cursorRef.current);
       const result = await getTransactions(userId, cursorRef.current);
+      console.log('Got result:', result.transactions.length, 'transactions');
       
       if (result.transactions.length > 0) {
-        setTransactions(prev => [...prev, ...result.transactions]);
+        setTransactions(prev => {
+          console.log('Previous transactions:', prev.length);
+          const newList = [...prev, ...result.transactions];
+          console.log('New total:', newList.length);
+          return newList;
+        });
         if (result.lastDate && result.lastId) {
           cursorRef.current = { date: result.lastDate, id: result.lastId };
         }
@@ -128,8 +142,10 @@ const Home = () => {
         </div>
       </header>
 
-      <main className="container py-6">
-        <h2 className="text-lg font-medium mb-4">Recent Transactions</h2>
+      <main className="container py-6 pt-8">
+        <h2 className="text-lg font-medium mb-4">
+          Transactions ({transactions.length})
+        </h2>
         
         {initialLoading ? (
           <div className="flex justify-center py-12">
