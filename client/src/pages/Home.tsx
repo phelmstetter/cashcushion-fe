@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { signOut } from "firebase/auth";
-import { auth, getTransactions, getPriorTransactions, Transaction } from "@/lib/firebase";
+import { auth, getTransactions, Transaction } from "@/lib/firebase";
 import { useLocation } from "wouter";
 import { QueryDocumentSnapshot, DocumentData } from "firebase/firestore";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,11 +12,8 @@ const Home = () => {
   const [, setLocation] = useLocation();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [hasMore, setHasMore] = useState(true);
-  const [hasPrior, setHasPrior] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [loadingPrior, setLoadingPrior] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const firstDocRef = useRef<QueryDocumentSnapshot<DocumentData> | null>(null);
   const lastDocRef = useRef<QueryDocumentSnapshot<DocumentData> | null>(null);
   const loadingRef = useRef(false);
 
@@ -41,11 +38,8 @@ const Home = () => {
       
       if (isInitial) {
         setTransactions(result.transactions);
-        firstDocRef.current = result.firstDoc;
-        setHasPrior(false);
       } else {
         setTransactions(prev => [...prev, ...result.transactions]);
-        setHasPrior(true);
       }
       
       lastDocRef.current = result.lastDoc;
@@ -56,32 +50,6 @@ const Home = () => {
       loadingRef.current = false;
       setLoading(false);
       if (isInitial) setInitialLoading(false);
-    }
-  };
-
-  const loadPriorTransactions = async () => {
-    if (loadingRef.current || !firstDocRef.current) return;
-    
-    const userId = auth.currentUser?.uid;
-    if (!userId) return;
-    
-    loadingRef.current = true;
-    setLoadingPrior(true);
-    try {
-      const result = await getPriorTransactions(userId, firstDocRef.current);
-      
-      if (result.transactions.length > 0) {
-        setTransactions(prev => [...result.transactions, ...prev]);
-        firstDocRef.current = result.firstDoc;
-        setHasPrior(result.hasMore);
-      } else {
-        setHasPrior(false);
-      }
-    } catch (error) {
-      console.error("Error loading prior transactions:", error);
-    } finally {
-      loadingRef.current = false;
-      setLoadingPrior(false);
     }
   };
 
@@ -158,19 +126,6 @@ const Home = () => {
           </Card>
         ) : (
           <div className="space-y-2">
-            <div className="py-2 flex justify-center">
-              {loadingPrior ? (
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              ) : hasPrior ? (
-                <Button 
-                  variant="outline" 
-                  onClick={loadPriorTransactions}
-                  data-testid="button-load-prior"
-                >
-                  Load Prior
-                </Button>
-              ) : null}
-            </div>
             {transactions.map((transaction) => {
               const { display: amountDisplay, isPositive } = formatAmount(transaction.amount);
               
