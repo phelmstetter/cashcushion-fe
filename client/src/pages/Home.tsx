@@ -109,7 +109,7 @@ const Home = () => {
     <div className="min-h-screen bg-background" data-testid="page-home">
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
         <div className="container flex items-center justify-between gap-2 py-3">
-          <h1 className="text-xl font-semibold">CashCushion</h1>
+          <h1 className="text-xl font-semibold">CashCushion <span className="text-sm font-normal text-muted-foreground">({transactions.length})</span></h1>
           <div className="flex items-center gap-2">
             {auth.currentUser && (
               <span className="text-sm text-muted-foreground hidden sm:inline" data-testid="text-user-email">
