@@ -128,9 +128,9 @@ const Home = () => {
         </div>
       </header>
 
-      <main className="container py-6 pt-8">
+      <main className="container py-6 pb-24">
         <h2 className="text-lg font-medium mb-4">
-          Transactions ({transactions.length})
+          Recent Transactions
         </h2>
         
         {initialLoading ? (
