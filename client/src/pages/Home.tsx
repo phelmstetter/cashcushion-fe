@@ -151,8 +151,14 @@ const Home = () => {
                   </div>
                 )}
                 
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 500 }}>{displayName}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ 
+                    fontWeight: 500,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden'
+                  }}>{displayName}</div>
                 </div>
                 
                 <div style={{ textAlign: 'right' }}>
