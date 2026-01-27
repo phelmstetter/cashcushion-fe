@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { signOut } from "firebase/auth";
 import { auth, getTransactions, Transaction } from "@/lib/firebase";
 import { useLocation } from "wouter";
@@ -11,6 +11,8 @@ const Home = () => {
   const [initialLoading, setInitialLoading] = useState(true);
   const cursorRef = useRef<{ date: string; id: string } | null>(null);
   const loadingRef = useRef(false);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const handleSignOut = async () => {
     await signOut(auth);
@@ -69,6 +71,31 @@ const Home = () => {
   useEffect(() => {
     loadInitialTransactions();
   }, []);
+
+  useEffect(() => {
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+    }
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingRef.current) {
+          loadMoreTransactions();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (sentinelRef.current) {
+      observerRef.current.observe(sentinelRef.current);
+    }
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, [hasMore, transactions.length]);
 
   const formatAmount = (amount: number) => {
     const flippedAmount = -amount;
@@ -173,14 +200,9 @@ const Home = () => {
             );
           })}
           
-          <div style={{ textAlign: 'center', padding: '20px' }}>
-            {hasMore ? (
-              <button onClick={loadMoreTransactions} disabled={loading}>
-                {loading ? "Loading..." : "Load More"}
-              </button>
-            ) : (
-              <p style={{ color: '#666' }}>No more transactions</p>
-            )}
+          <div ref={sentinelRef} style={{ textAlign: 'center', padding: '20px' }}>
+            {loading && <p>Loading...</p>}
+            {!hasMore && <p style={{ color: '#666' }}>No more transactions</p>}
           </div>
         </>
       )}
