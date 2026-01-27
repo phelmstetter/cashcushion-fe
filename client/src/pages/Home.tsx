@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { signOut } from "firebase/auth";
 import { auth, getTransactions, Transaction } from "@/lib/firebase";
 import { useLocation } from "wouter";
-import { QueryDocumentSnapshot, DocumentData } from "firebase/firestore";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -14,7 +13,7 @@ const Home = () => {
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const lastDocRef = useRef<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const cursorRef = useRef<{ date: string; id: string } | null>(null);
   const loadingRef = useRef(false);
 
   const handleSignOut = async () => {
@@ -32,7 +31,9 @@ const Home = () => {
     try {
       const result = await getTransactions(userId, null);
       setTransactions(result.transactions);
-      lastDocRef.current = result.lastDoc;
+      if (result.lastDate && result.lastId) {
+        cursorRef.current = { date: result.lastDate, id: result.lastId };
+      }
       setHasMore(result.hasMore);
     } catch (error) {
       console.error("Error loading initial transactions:", error);
@@ -50,11 +51,13 @@ const Home = () => {
     loadingRef.current = true;
     setLoading(true);
     try {
-      const result = await getTransactions(userId, lastDocRef.current);
+      const result = await getTransactions(userId, cursorRef.current);
       
       if (result.transactions.length > 0) {
         setTransactions(prev => [...prev, ...result.transactions]);
-        lastDocRef.current = result.lastDoc;
+        if (result.lastDate && result.lastId) {
+          cursorRef.current = { date: result.lastDate, id: result.lastId };
+        }
         setHasMore(result.hasMore);
       } else {
         setHasMore(false);

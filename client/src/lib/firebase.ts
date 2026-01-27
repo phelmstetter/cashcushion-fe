@@ -10,12 +10,8 @@ import {
   orderBy, 
   limit, 
   startAfter,
-  endBefore,
-  limitToLast,
   getDocs,
-  where,
-  QueryDocumentSnapshot,
-  DocumentData
+  where
 } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -85,25 +81,26 @@ export interface Transaction {
 
 export interface TransactionsResult {
   transactions: Transaction[];
-  firstDoc: QueryDocumentSnapshot<DocumentData> | null;
-  lastDoc: QueryDocumentSnapshot<DocumentData> | null;
+  lastDate: string | null;
+  lastId: string | null;
   hasMore: boolean;
 }
 
 export async function getTransactions(
   userId: string,
-  lastDoc?: QueryDocumentSnapshot<DocumentData> | null,
+  cursor?: { date: string; id: string } | null,
   pageSize: number = 20
 ): Promise<TransactionsResult> {
   const transactionsRef = collection(db, 'transactions');
   
   let q;
-  if (lastDoc) {
+  if (cursor) {
     q = query(
       transactionsRef,
       where('user_id', '==', userId),
       orderBy('date', 'desc'),
-      startAfter(lastDoc),
+      orderBy('__name__', 'desc'),
+      startAfter(cursor.date, cursor.id),
       limit(pageSize)
     );
   } else {
@@ -130,46 +127,13 @@ export async function getTransactions(
     });
   });
   
-  const firstVisible = querySnapshot.docs[0] || null;
-  const lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1] || null;
+  const lastTransaction = transactions[transactions.length - 1];
   const hasMore = querySnapshot.docs.length === pageSize;
   
-  return { transactions, firstDoc: firstVisible, lastDoc: lastVisible, hasMore };
-}
-
-export async function getPriorTransactions(
-  userId: string,
-  firstDoc: QueryDocumentSnapshot<DocumentData>,
-  pageSize: number = 20
-): Promise<TransactionsResult> {
-  const transactionsRef = collection(db, 'transactions');
-  
-  const q = query(
-    transactionsRef,
-    where('user_id', '==', userId),
-    orderBy('date', 'desc'),
-    endBefore(firstDoc),
-    limitToLast(pageSize)
-  );
-  
-  const querySnapshot = await getDocs(q);
-  const transactions: Transaction[] = [];
-  
-  querySnapshot.forEach((doc) => {
-    const data = doc.data();
-    transactions.push({
-      id: doc.id,
-      amount: data.amount,
-      date: data.date,
-      counterparty_name: data.counterparty_name || data.name || 'Unknown',
-      merchant_name: data.merchant_name,
-      logo_url: data.logo_url
-    });
-  });
-  
-  const firstVisible = querySnapshot.docs[0] || null;
-  const lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1] || null;
-  const hasMore = querySnapshot.docs.length === pageSize;
-  
-  return { transactions, firstDoc: firstVisible, lastDoc: lastVisible, hasMore };
+  return { 
+    transactions, 
+    lastDate: lastTransaction?.date || null,
+    lastId: lastTransaction?.id || null,
+    hasMore 
+  };
 }
