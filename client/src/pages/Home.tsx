@@ -2,10 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { signOut } from "firebase/auth";
 import { auth, getTransactions, Transaction } from "@/lib/firebase";
 import { useLocation } from "wouter";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Loader2 } from "lucide-react";
 
 const Home = () => {
   const [, setLocation] = useLocation();
@@ -63,7 +60,7 @@ const Home = () => {
         setHasMore(false);
       }
     } catch (error) {
-      // Silently handle errors - don't crash the app
+      console.error("Error loading more:", error);
     } finally {
       loadingRef.current = false;
       setLoading(false);
@@ -74,133 +71,27 @@ const Home = () => {
     loadInitialTransactions();
   }, []);
 
-  const formatAmount = (amount: number) => {
-    const flippedAmount = -amount;
-    const formatted = new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(Math.abs(flippedAmount));
-    
-    return {
-      display: flippedAmount >= 0 ? `+${formatted}` : formatted,
-      isPositive: flippedAmount >= 0
-    };
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  };
-
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(word => word[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
   return (
-    <div className="min-h-screen bg-background" data-testid="page-home">
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
-        <div className="container flex items-center justify-between gap-2 py-3">
-          <h1 className="text-xl font-semibold">CashCushion <span className="text-sm font-normal text-muted-foreground">({transactions.length})</span></h1>
-          <div className="flex items-center gap-2">
-            {auth.currentUser && (
-              <span className="text-sm text-muted-foreground hidden sm:inline" data-testid="text-user-email">
-                {auth.currentUser.email}
-              </span>
-            )}
-            <Button 
-              variant="outline"
-              size="sm"
-              onClick={handleSignOut}
-              data-testid="button-signout"
-            >
-              Sign Out
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <main className="container py-6 pb-24">
-        <h2 className="text-lg font-medium mb-4">
-          Recent Transactions
-        </h2>
-        
-        {initialLoading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : transactions.length === 0 ? (
-          <Card>
-            <CardContent className="py-8 text-center text-muted-foreground">
-              No transactions found
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-2">
-            {transactions.map((transaction) => {
-              const { display: amountDisplay, isPositive } = formatAmount(transaction.amount);
-              
-              const displayName = transaction.merchant_name || transaction.counterparty_name;
-              
-              return (
-                <Card key={transaction.id} className="hover-elevate" data-testid={`card-transaction-${transaction.id}`}>
-                  <CardContent className="flex items-center gap-3 py-3 px-4">
-                    <Avatar className="h-10 w-10 shrink-0">
-                      {transaction.logo_url ? (
-                        <AvatarImage src={transaction.logo_url} alt={displayName} />
-                      ) : null}
-                      <AvatarFallback className="text-xs">
-                        {getInitials(displayName)}
-                      </AvatarFallback>
-                    </Avatar>
-                    
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium line-clamp-2" data-testid={`text-counterparty-${transaction.id}`}>
-                        {displayName}
-                      </p>
-                    </div>
-                    
-                    <div className="text-right shrink-0">
-                      <p className={`font-semibold tabular-nums ${isPositive ? 'text-primary' : ''}`} data-testid={`text-amount-${transaction.id}`}>
-                        {amountDisplay}
-                      </p>
-                      <p className="text-sm text-muted-foreground" data-testid={`text-date-${transaction.id}`}>
-                        {formatDate(transaction.date)}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-            
-            <div className="py-4 flex justify-center">
-              {loading ? (
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              ) : hasMore ? (
-                <Button 
-                  variant="outline" 
-                  onClick={loadMoreTransactions}
-                  data-testid="button-load-more"
-                >
-                  Load More
-                </Button>
-              ) : transactions.length > 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No more transactions
-                </p>
-              ) : null}
-            </div>
-          </div>
+    <div style={{ padding: "20px", fontFamily: "monospace" }}>
+      <div style={{ marginBottom: "20px" }}>
+        <Button onClick={handleSignOut}>Sign Out</Button>
+        <span style={{ marginLeft: "20px" }}>
+          Count: {transactions.length} | Has More: {hasMore ? "yes" : "no"}
+        </span>
+        {hasMore && (
+          <Button onClick={loadMoreTransactions} disabled={loading} style={{ marginLeft: "10px" }}>
+            {loading ? "Loading..." : "Load More"}
+          </Button>
         )}
-      </main>
+      </div>
+      
+      {initialLoading ? (
+        <p>Loading...</p>
+      ) : (
+        <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-all", fontSize: "12px" }}>
+          {JSON.stringify(transactions, null, 2)}
+        </pre>
+      )}
     </div>
   );
 };
