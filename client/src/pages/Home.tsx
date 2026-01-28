@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { signOut } from "firebase/auth";
-import { auth, getTransactions, Transaction } from "@/lib/firebase";
+import { auth, getTransactions, Transaction, saveForecast } from "@/lib/firebase";
 import { useLocation } from "wouter";
 
 const Home = () => {
@@ -10,6 +10,9 @@ const Home = () => {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [forecastDate, setForecastDate] = useState('');
+  const [forecastAmount, setForecastAmount] = useState('');
+  const [saving, setSaving] = useState(false);
   const cursorRef = useRef<{ date: string; id: string } | null>(null);
   const loadingRef = useRef(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -252,6 +255,8 @@ const Home = () => {
               <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Date</label>
               <input 
                 type="date"
+                value={forecastDate}
+                onChange={(e) => setForecastDate(e.target.value)}
                 min={new Date().toISOString().split('T')[0]}
                 style={{
                   width: '100%',
@@ -269,6 +274,8 @@ const Home = () => {
                 type="number" 
                 step="0.01"
                 placeholder="0.00"
+                value={forecastAmount}
+                onChange={(e) => setForecastAmount(e.target.value)}
                 style={{
                   width: '100%',
                   padding: '8px',
@@ -279,9 +286,13 @@ const Home = () => {
               />
             </div>
             
-            <div style={{ marginTop: '20px', textAlign: 'right' }}>
+            <div style={{ marginTop: '20px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
               <button
-                onClick={() => setSelectedTransaction(null)}
+                onClick={() => {
+                  setSelectedTransaction(null);
+                  setForecastDate('');
+                  setForecastAmount('');
+                }}
                 style={{
                   padding: '8px 16px',
                   backgroundColor: '#666',
@@ -292,6 +303,43 @@ const Home = () => {
                 }}
               >
                 Close
+              </button>
+              <button
+                disabled={saving || !forecastDate || !forecastAmount}
+                onClick={async () => {
+                  if (!selectedTransaction || !auth.currentUser) return;
+                  setSaving(true);
+                  try {
+                    await saveForecast({
+                      user_id: auth.currentUser.uid,
+                      merchant_name: selectedTransaction.merchant_name || selectedTransaction.counterparty_name,
+                      merchant_entity_id: selectedTransaction.merchant_entity_id,
+                      date: forecastDate,
+                      amount: parseFloat(forecastAmount),
+                      created_at: new Date().toISOString()
+                    });
+                    setSelectedTransaction(null);
+                    setForecastDate('');
+                    setForecastAmount('');
+                    alert('Forecast saved!');
+                  } catch (error) {
+                    console.error('Error saving forecast:', error);
+                    alert('Error saving forecast');
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#4CAF50',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: saving || !forecastDate || !forecastAmount ? 'not-allowed' : 'pointer',
+                  opacity: saving || !forecastDate || !forecastAmount ? 0.6 : 1
+                }}
+              >
+                {saving ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>

@@ -11,7 +11,8 @@ import {
   limit, 
   startAfter,
   getDocs,
-  where
+  where,
+  addDoc
 } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -137,4 +138,19 @@ export async function getTransactions(
     lastId: lastTransaction?.id || null,
     hasMore 
   };
+}
+
+export interface Forecast {
+  user_id: string;
+  merchant_name: string;
+  merchant_entity_id?: string;
+  date: string;
+  amount: number;
+  created_at: string;
+}
+
+export async function saveForecast(forecast: Forecast): Promise<string> {
+  const forecastsRef = collection(db, 'forecasts');
+  const docRef = await addDoc(forecastsRef, forecast);
+  return docRef.id;
 }
