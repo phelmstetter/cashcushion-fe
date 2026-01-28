@@ -90,7 +90,7 @@ export interface TransactionsResult {
 
 export async function getTransactions(
   userId: string,
-  cursor?: { date: string; id: string } | null,
+  cursor?: { date: string } | null,
   pageSize: number = 20
 ): Promise<TransactionsResult> {
   const transactionsRef = collection(db, 'transactions');
@@ -101,8 +101,7 @@ export async function getTransactions(
       transactionsRef,
       where('user_id', '==', userId),
       orderBy('date', 'desc'),
-      orderBy('__name__', 'desc'),
-      startAfter(cursor.date, cursor.id),
+      startAfter(cursor.date),
       limit(pageSize)
     );
   } else {
@@ -110,7 +109,6 @@ export async function getTransactions(
       transactionsRef,
       where('user_id', '==', userId),
       orderBy('date', 'desc'),
-      orderBy('__name__', 'desc'),
       limit(pageSize)
     );
   }

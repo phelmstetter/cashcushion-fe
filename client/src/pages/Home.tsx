@@ -21,7 +21,7 @@ const Home = () => {
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const cursorRef = useRef<{ date: string; id: string } | null>(null);
+  const cursorRef = useRef<{ date: string } | null>(null);
   const loadingRef = useRef(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -57,8 +57,8 @@ const Home = () => {
       
       setTransactions(transResult.transactions);
       setForecasts(forecastsResult);
-      if (transResult.lastDate && transResult.lastId) {
-        cursorRef.current = { date: transResult.lastDate, id: transResult.lastId };
+      if (transResult.lastDate) {
+        cursorRef.current = { date: transResult.lastDate };
       }
       setHasMore(transResult.hasMore);
     } catch (error) {
@@ -81,8 +81,8 @@ const Home = () => {
       
       if (result.transactions.length > 0) {
         setTransactions(prev => [...prev, ...result.transactions]);
-        if (result.lastDate && result.lastId) {
-          cursorRef.current = { date: result.lastDate, id: result.lastId };
+        if (result.lastDate) {
+          cursorRef.current = { date: result.lastDate };
         }
         setHasMore(result.hasMore);
       } else {
