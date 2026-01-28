@@ -11,8 +11,7 @@ import {
   limit, 
   startAfter,
   getDocs,
-  where,
-  addDoc
+  where
 } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -90,7 +89,7 @@ export interface TransactionsResult {
 
 export async function getTransactions(
   userId: string,
-  cursor?: { date: string } | null,
+  cursor?: { date: string; id: string } | null,
   pageSize: number = 20
 ): Promise<TransactionsResult> {
   const transactionsRef = collection(db, 'transactions');
@@ -101,7 +100,8 @@ export async function getTransactions(
       transactionsRef,
       where('user_id', '==', userId),
       orderBy('date', 'desc'),
-      startAfter(cursor.date),
+      orderBy('__name__', 'desc'),
+      startAfter(cursor.date, cursor.id),
       limit(pageSize)
     );
   } else {
@@ -124,7 +124,6 @@ export async function getTransactions(
       date: data.date,
       counterparty_name: data.counterparty_name || data.name || 'Unknown',
       merchant_name: data.merchant_name,
-      merchant_entity_id: data.merchant_entity_id,
       logo_url: data.logo_url
     });
   });
@@ -138,49 +137,4 @@ export async function getTransactions(
     lastId: lastTransaction?.id || null,
     hasMore 
   };
-}
-
-export interface Forecast {
-  id?: string;
-  user_id: string;
-  amount: number;
-  date: string;
-  counterparty_name: string;
-  merchant_name?: string;
-  merchant_entity_id?: string;
-  logo_url?: string;
-}
-
-export async function saveForecast(forecast: Omit<Forecast, 'id'>): Promise<string> {
-  const forecastsRef = collection(db, 'forecasts');
-  const docRef = await addDoc(forecastsRef, forecast);
-  return docRef.id;
-}
-
-export async function getForecasts(userId: string): Promise<Forecast[]> {
-  const forecastsRef = collection(db, 'forecasts');
-  const q = query(
-    forecastsRef,
-    where('user_id', '==', userId),
-    orderBy('date', 'desc')
-  );
-  
-  const querySnapshot = await getDocs(q);
-  const forecasts: Forecast[] = [];
-  
-  querySnapshot.forEach((doc) => {
-    const data = doc.data();
-    forecasts.push({
-      id: doc.id,
-      user_id: data.user_id,
-      amount: data.amount,
-      date: data.date,
-      counterparty_name: data.counterparty_name,
-      merchant_name: data.merchant_name,
-      merchant_entity_id: data.merchant_entity_id,
-      logo_url: data.logo_url
-    });
-  });
-  
-  return forecasts;
 }

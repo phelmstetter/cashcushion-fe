@@ -1,74 +1,40 @@
-import { useState, useEffect, useRef } from "react";
-import { signOut, onAuthStateChanged } from "firebase/auth";
-import { auth, getTransactions, getForecasts, saveForecast, Transaction, Forecast } from "@/lib/firebase";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { signOut } from "firebase/auth";
+import { auth, getTransactions, Transaction } from "@/lib/firebase";
 import { useLocation } from "wouter";
-
-interface DisplayItem {
-  id: string;
-  amount: number;
-  date: string;
-  counterparty_name: string;
-  merchant_name?: string;
-  merchant_entity_id?: string;
-  logo_url?: string;
-  isForecast: boolean;
-}
 
 const Home = () => {
   const [, setLocation] = useLocation();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [forecasts, setForecasts] = useState<Forecast[]>([]);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const cursorRef = useRef<{ date: string } | null>(null);
+  const cursorRef = useRef<{ date: string; id: string } | null>(null);
   const loadingRef = useRef(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
-
-  const [modalOpen, setModalOpen] = useState(false);
-  const [forecastForm, setForecastForm] = useState({
-    amount: '',
-    date: '',
-    counterparty_name: '',
-    merchant_name: '',
-    merchant_entity_id: '',
-    logo_url: ''
-  });
-  const [saving, setSaving] = useState(false);
 
   const handleSignOut = async () => {
     await signOut(auth);
     setLocation("/login");
   };
 
-  const loadInitialData = async () => {
+  const loadInitialTransactions = async () => {
     const userId = auth.currentUser?.uid;
-    console.log("loadInitialData called, userId:", userId);
     if (!userId) {
-      console.log("No userId, skipping load");
       setInitialLoading(false);
       return;
     }
     
     try {
-      console.log("Fetching transactions for userId:", userId);
-      const [transResult, forecastsResult] = await Promise.all([
-        getTransactions(userId, null),
-        getForecasts(userId)
-      ]);
-      
-      console.log("Transactions fetched:", transResult.transactions.length);
-      console.log("Forecasts fetched:", forecastsResult.length);
-      
-      setTransactions(transResult.transactions);
-      setForecasts(forecastsResult);
-      if (transResult.lastDate) {
-        cursorRef.current = { date: transResult.lastDate };
+      const result = await getTransactions(userId, null);
+      setTransactions(result.transactions);
+      if (result.lastDate && result.lastId) {
+        cursorRef.current = { date: result.lastDate, id: result.lastId };
       }
-      setHasMore(transResult.hasMore);
+      setHasMore(result.hasMore);
     } catch (error) {
-      console.error("Error loading initial data:", error);
+      console.error("Error loading initial transactions:", error);
     } finally {
       setInitialLoading(false);
     }
@@ -87,8 +53,8 @@ const Home = () => {
       
       if (result.transactions.length > 0) {
         setTransactions(prev => [...prev, ...result.transactions]);
-        if (result.lastDate) {
-          cursorRef.current = { date: result.lastDate };
+        if (result.lastDate && result.lastId) {
+          cursorRef.current = { date: result.lastDate, id: result.lastId };
         }
         setHasMore(result.hasMore);
       } else {
@@ -103,12 +69,7 @@ const Home = () => {
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        loadInitialData();
-      }
-    });
-    return () => unsubscribe();
+    loadInitialTransactions();
   }, []);
 
   useEffect(() => {
@@ -136,59 +97,6 @@ const Home = () => {
     };
   }, [hasMore, transactions.length]);
 
-  const openForecastModal = (transaction: Transaction) => {
-    setForecastForm({
-      amount: String(Math.abs(transaction.amount)),
-      date: transaction.date,
-      counterparty_name: transaction.counterparty_name,
-      merchant_name: transaction.merchant_name || '',
-      merchant_entity_id: transaction.merchant_entity_id || '',
-      logo_url: transaction.logo_url || ''
-    });
-    setModalOpen(true);
-  };
-
-  const handleSaveForecast = async () => {
-    const userId = auth.currentUser?.uid;
-    if (!userId) return;
-    
-    const parsedAmount = parseFloat(forecastForm.amount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      alert('Please enter a valid positive amount');
-      return;
-    }
-    if (!forecastForm.date) {
-      alert('Please enter a date');
-      return;
-    }
-    if (!forecastForm.counterparty_name.trim()) {
-      alert('Please enter a name');
-      return;
-    }
-    
-    setSaving(true);
-    try {
-      const forecast: Omit<Forecast, 'id'> = {
-        user_id: userId,
-        amount: parsedAmount * -1,
-        date: forecastForm.date,
-        counterparty_name: forecastForm.counterparty_name.trim(),
-        merchant_name: forecastForm.merchant_name.trim() || undefined,
-        merchant_entity_id: forecastForm.merchant_entity_id || undefined,
-        logo_url: forecastForm.logo_url || undefined
-      };
-      
-      await saveForecast(forecast);
-      const updatedForecasts = await getForecasts(userId);
-      setForecasts(updatedForecasts);
-      setModalOpen(false);
-    } catch (error) {
-      console.error("Error saving forecast:", error);
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const formatAmount = (amount: number) => {
     const flippedAmount = -amount;
     const formatted = new Intl.NumberFormat('en-US', {
@@ -202,14 +110,13 @@ const Home = () => {
     };
   };
 
-  const formatDate = (dateString: string, isForecast: boolean) => {
+  const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    const formatted = date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric'
     });
-    return isForecast ? `${formatted} E` : formatted;
   };
 
   const getInitials = (name: string) => {
@@ -221,42 +128,37 @@ const Home = () => {
       .slice(0, 2);
   };
 
-  const allItems: DisplayItem[] = [
-    ...transactions.map(t => ({ ...t, isForecast: false })),
-    ...forecasts.map(f => ({ ...f, id: f.id!, isForecast: true }))
-  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
   return (
     <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h1 style={{ margin: 0 }}>CashCushion ({allItems.length})</h1>
+        <h1 style={{ margin: 0 }}>CashCushion ({transactions.length})</h1>
         <button onClick={handleSignOut}>Sign Out</button>
       </div>
 
       {initialLoading ? (
         <p>Loading...</p>
-      ) : allItems.length === 0 ? (
+      ) : transactions.length === 0 ? (
         <p>No transactions found</p>
       ) : (
         <>
-          {allItems.map((item) => {
-            const { display: amountDisplay, isPositive } = formatAmount(item.amount);
-            const displayName = item.merchant_name || item.counterparty_name;
+          {transactions.map((transaction) => {
+            const { display: amountDisplay, isPositive } = formatAmount(transaction.amount);
+            const displayName = transaction.merchant_name || transaction.counterparty_name;
             
             return (
-              <div key={`${item.isForecast ? 'f' : 't'}-${item.id}`} style={{
+              <div key={transaction.id} style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
                 padding: '12px',
                 marginBottom: '8px',
-                backgroundColor: item.isForecast ? '#e8f4e8' : '#fff',
+                backgroundColor: '#fff',
                 borderRadius: '8px',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
               }}>
-                {item.logo_url ? (
+                {transaction.logo_url ? (
                   <img 
-                    src={item.logo_url} 
+                    src={transaction.logo_url} 
                     alt={displayName}
                     style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }}
                   />
@@ -291,18 +193,9 @@ const Home = () => {
                     {amountDisplay}
                   </div>
                   <div style={{ fontSize: '12px', color: '#666' }}>
-                    {formatDate(item.date, item.isForecast)}
+                    {formatDate(transaction.date)}
                   </div>
                 </div>
-
-                {!item.isForecast && (
-                  <button 
-                    onClick={() => openForecastModal(item as Transaction)}
-                    style={{ padding: '4px 8px', fontSize: '12px' }}
-                  >
-                    +F
-                  </button>
-                )}
               </div>
             );
           })}
@@ -312,72 +205,6 @@ const Home = () => {
             {!hasMore && <p style={{ color: '#666' }}>No more transactions</p>}
           </div>
         </>
-      )}
-
-      {modalOpen && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: '#fff',
-            padding: '20px',
-            borderRadius: '8px',
-            width: '90%',
-            maxWidth: '400px'
-          }}>
-            <h2 style={{ marginTop: 0 }}>Create Forecast</h2>
-            
-            <div style={{ marginBottom: '12px' }}>
-              <label style={{ display: 'block', marginBottom: '4px' }}>Amount</label>
-              <input
-                type="number"
-                value={forecastForm.amount}
-                onChange={(e) => setForecastForm(f => ({ ...f, amount: e.target.value }))}
-                style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
-              />
-            </div>
-            
-            <div style={{ marginBottom: '12px' }}>
-              <label style={{ display: 'block', marginBottom: '4px' }}>Date</label>
-              <input
-                type="date"
-                value={forecastForm.date}
-                onChange={(e) => setForecastForm(f => ({ ...f, date: e.target.value }))}
-                style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
-              />
-            </div>
-            
-            <div style={{ marginBottom: '12px' }}>
-              <label style={{ display: 'block', marginBottom: '4px' }}>Name</label>
-              <input
-                type="text"
-                value={forecastForm.merchant_name || forecastForm.counterparty_name}
-                onChange={(e) => setForecastForm(f => ({ 
-                  ...f, 
-                  merchant_name: e.target.value,
-                  counterparty_name: e.target.value 
-                }))}
-                style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
-              />
-            </div>
-            
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button onClick={() => setModalOpen(false)}>Cancel</button>
-              <button onClick={handleSaveForecast} disabled={saving}>
-                {saving ? 'Saving...' : 'Save Forecast'}
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );
