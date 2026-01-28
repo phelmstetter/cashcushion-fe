@@ -196,6 +196,22 @@ const Home = () => {
                     {formatDate(transaction.date)}
                   </div>
                 </div>
+                
+                <button 
+                  style={{
+                    padding: '6px 10px',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    backgroundColor: '#4CAF50',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => console.log('Add forecast:', transaction.merchant_entity_id, transaction.merchant_name || transaction.counterparty_name)}
+                >
+                  +F
+                </button>
               </div>
             );
           })}
