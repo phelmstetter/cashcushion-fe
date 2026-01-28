@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { signOut } from "firebase/auth";
+import { signOut, onAuthStateChanged } from "firebase/auth";
 import { auth, getTransactions, getForecasts, saveForecast, Transaction, Forecast } from "@/lib/firebase";
 import { useLocation } from "wouter";
 
@@ -44,16 +44,22 @@ const Home = () => {
 
   const loadInitialData = async () => {
     const userId = auth.currentUser?.uid;
+    console.log("loadInitialData called, userId:", userId);
     if (!userId) {
+      console.log("No userId, skipping load");
       setInitialLoading(false);
       return;
     }
     
     try {
+      console.log("Fetching transactions for userId:", userId);
       const [transResult, forecastsResult] = await Promise.all([
         getTransactions(userId, null),
         getForecasts(userId)
       ]);
+      
+      console.log("Transactions fetched:", transResult.transactions.length);
+      console.log("Forecasts fetched:", forecastsResult.length);
       
       setTransactions(transResult.transactions);
       setForecasts(forecastsResult);
@@ -97,7 +103,12 @@ const Home = () => {
   };
 
   useEffect(() => {
-    loadInitialData();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        loadInitialData();
+      }
+    });
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
