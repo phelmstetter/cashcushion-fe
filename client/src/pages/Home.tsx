@@ -248,6 +248,36 @@ const Home = () => {
             <p><strong>{selectedTransaction.merchant_name || selectedTransaction.counterparty_name}</strong></p>
             <p style={{ color: '#666', fontSize: '14px' }}>Merchant ID: {selectedTransaction.merchant_entity_id || 'N/A'}</p>
             
+            <div style={{ marginTop: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Date</label>
+              <input 
+                type="date" 
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  borderRadius: '4px',
+                  border: '1px solid #ccc',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+            
+            <div style={{ marginTop: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Amount</label>
+              <input 
+                type="number" 
+                step="0.01"
+                placeholder="0.00"
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  borderRadius: '4px',
+                  border: '1px solid #ccc',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+            
             <div style={{ marginTop: '20px', textAlign: 'right' }}>
               <button
                 onClick={() => setSelectedTransaction(null)}
