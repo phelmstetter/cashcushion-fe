@@ -251,7 +251,8 @@ const Home = () => {
             <div style={{ marginTop: '16px' }}>
               <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Date</label>
               <input 
-                type="date" 
+                type="date"
+                min={new Date().toISOString().split('T')[0]}
                 style={{
                   width: '100%',
                   padding: '8px',
