@@ -129,13 +129,14 @@ const Home = () => {
   };
 
   const findDropTarget = (x: number, y: number): string | null => {
-    for (const [txId, el] of transactionRefs.current.entries()) {
+    let found: string | null = null;
+    transactionRefs.current.forEach((el, txId) => {
       const rect = el.getBoundingClientRect();
       if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-        return txId;
+        found = txId;
       }
-    }
-    return null;
+    });
+    return found;
   };
 
   const cancelLongPress = () => {
