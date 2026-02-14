@@ -105,7 +105,7 @@ const Home = () => {
         observerRef.current.disconnect();
       }
     };
-  }, [hasMore, transactions.length]);
+  }, [hasMore, transactions.length, forecasts.length]);
 
   const formatAmount = (amount: number) => {
     const flippedAmount = -amount;
