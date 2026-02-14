@@ -12,6 +12,7 @@ const Home = () => {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [modalView, setModalView] = useState<'details' | 'forecast'>('details');
   const [forecastDate, setForecastDate] = useState('');
   const [forecastAmount, setForecastAmount] = useState('');
   const [saving, setSaving] = useState(false);
@@ -385,20 +386,23 @@ const Home = () => {
                 
                 {!isForecast && transactionForModal && (
                   <button 
-                    data-testid={`button-add-forecast-${(item.data as Transaction).id}`}
+                    data-testid={`button-details-${(item.data as Transaction).id}`}
                     style={{
                       padding: '6px 10px',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      backgroundColor: '#4CAF50',
-                      color: 'white',
-                      border: 'none',
+                      fontSize: '18px',
+                      backgroundColor: 'transparent',
+                      color: '#666',
+                      border: '1px solid #ddd',
                       borderRadius: '4px',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      lineHeight: 1
                     }}
-                    onClick={() => setSelectedTransaction(transactionForModal)}
+                    onClick={() => {
+                      setSelectedTransaction(transactionForModal);
+                      setModalView('details');
+                    }}
                   >
-                    +F
+                    ...
                   </button>
                 )}
               </div>
@@ -449,6 +453,12 @@ const Home = () => {
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000
+        }}
+        onClick={() => {
+          setSelectedTransaction(null);
+          setModalView('details');
+          setForecastDate('');
+          setForecastAmount('');
         }}>
           <div style={{
             backgroundColor: 'white',
@@ -456,103 +466,251 @@ const Home = () => {
             borderRadius: '8px',
             maxWidth: '400px',
             width: '90%'
-          }}>
-            <h2 style={{ margin: '0 0 16px 0' }}>Add Forecast</h2>
-            <p><strong>{selectedTransaction.merchant_name || selectedTransaction.counterparty_name}</strong></p>
-            <p style={{ color: '#666', fontSize: '14px' }}>Merchant ID: {selectedTransaction.merchant_entity_id || 'N/A'}</p>
-            
-            <div style={{ marginTop: '16px' }}>
-              <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Date</label>
-              <input 
-                type="date"
-                value={forecastDate}
-                onChange={(e) => setForecastDate(e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  borderRadius: '4px',
-                  border: '1px solid #ccc',
-                  boxSizing: 'border-box'
-                }}
-              />
-            </div>
-            
-            <div style={{ marginTop: '16px' }}>
-              <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Amount</label>
-              <input 
-                type="number" 
-                step="0.01"
-                placeholder="0.00"
-                value={forecastAmount}
-                onChange={(e) => setForecastAmount(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  borderRadius: '4px',
-                  border: '1px solid #ccc',
-                  boxSizing: 'border-box'
-                }}
-              />
-            </div>
-            
-            <div style={{ marginTop: '20px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => {
-                  setSelectedTransaction(null);
-                  setForecastDate('');
-                  setForecastAmount('');
-                }}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: '#666',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                Close
-              </button>
-              <button
-                disabled={saving || !forecastDate || !forecastAmount}
-                onClick={async () => {
-                  if (!selectedTransaction || !auth.currentUser) return;
-                  setSaving(true);
-                  try {
-                    await saveForecast({
-                      user_id: auth.currentUser.uid,
-                      merchant_name: selectedTransaction.merchant_name || selectedTransaction.counterparty_name,
-                      merchant_entity_id: selectedTransaction.merchant_entity_id || null,
-                      date: forecastDate,
-                      amount: parseFloat(forecastAmount),
-                      created_at: new Date().toISOString()
-                    });
-                    const updatedForecasts = await getForecasts(auth.currentUser.uid);
-                    setForecasts(updatedForecasts);
-                    setSelectedTransaction(null);
-                    setForecastDate('');
-                    setForecastAmount('');
-                  } catch (error: any) {
-                    console.error('Error saving forecast:', error?.code, error?.message, error);
-                    alert('Error: ' + (error?.code || '') + ' ' + (error?.message || 'Unknown error'));
-                  } finally {
-                    setSaving(false);
-                  }
-                }}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: '#4CAF50',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: saving || !forecastDate || !forecastAmount ? 'not-allowed' : 'pointer',
-                  opacity: saving || !forecastDate || !forecastAmount ? 0.6 : 1
-                }}
-              >
-                {saving ? 'Saving...' : 'Save'}
-              </button>
-            </div>
+          }} onClick={(e) => e.stopPropagation()}>
+
+            {modalView === 'details' ? (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <h2 style={{ margin: 0 }}>Transaction Details</h2>
+                  <button
+                    data-testid="button-close-modal"
+                    onClick={() => {
+                      setSelectedTransaction(null);
+                      setModalView('details');
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '20px',
+                      cursor: 'pointer',
+                      color: '#666',
+                      padding: '4px 8px'
+                    }}
+                  >
+                    X
+                  </button>
+                </div>
+
+                <button
+                  data-testid="button-add-forecast"
+                  onClick={() => setModalView('forecast')}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    backgroundColor: '#4CAF50',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontSize: '14px',
+                    marginBottom: '20px'
+                  }}
+                >
+                  + Add Forecast
+                </button>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                  {selectedTransaction.logo_url ? (
+                    <img
+                      src={selectedTransaction.logo_url}
+                      alt={selectedTransaction.merchant_name || selectedTransaction.counterparty_name}
+                      style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <div style={{
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '50%',
+                      backgroundColor: '#e0e0e0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '16px',
+                      fontWeight: 'bold'
+                    }}>
+                      {getInitials(selectedTransaction.merchant_name || selectedTransaction.counterparty_name)}
+                    </div>
+                  )}
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '16px' }}>
+                      {selectedTransaction.merchant_name || selectedTransaction.counterparty_name}
+                    </div>
+                    {selectedTransaction.merchant_name && selectedTransaction.counterparty_name && selectedTransaction.merchant_name !== selectedTransaction.counterparty_name && (
+                      <div style={{ fontSize: '13px', color: '#666' }}>{selectedTransaction.counterparty_name}</div>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ borderTop: '1px solid #eee', paddingTop: '12px' }}>
+                  {(() => {
+                    const { display, isPositive } = formatAmount(selectedTransaction.amount);
+                    return (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
+                        <span style={{ color: '#666' }}>Amount</span>
+                        <span style={{ fontWeight: 600, color: isPositive ? 'green' : 'inherit' }}>{display}</span>
+                      </div>
+                    );
+                  })()}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
+                    <span style={{ color: '#666' }}>Date</span>
+                    <span style={{ fontWeight: 500 }}>{formatDate(selectedTransaction.date)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
+                    <span style={{ color: '#666' }}>Transaction ID</span>
+                    <span style={{ fontWeight: 500, fontSize: '12px', fontFamily: 'monospace' }}>{selectedTransaction.id}</span>
+                  </div>
+                  {selectedTransaction.merchant_entity_id && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
+                      <span style={{ color: '#666' }}>Merchant ID</span>
+                      <span style={{ fontWeight: 500, fontSize: '12px', fontFamily: 'monospace' }}>{selectedTransaction.merchant_entity_id}</span>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button
+                      data-testid="button-back-to-details"
+                      onClick={() => {
+                        setModalView('details');
+                        setForecastDate('');
+                        setForecastAmount('');
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        fontSize: '18px',
+                        cursor: 'pointer',
+                        color: '#666',
+                        padding: '4px'
+                      }}
+                    >
+                      &larr;
+                    </button>
+                    <h2 style={{ margin: 0 }}>Add Forecast</h2>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setSelectedTransaction(null);
+                      setModalView('details');
+                      setForecastDate('');
+                      setForecastAmount('');
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '20px',
+                      cursor: 'pointer',
+                      color: '#666',
+                      padding: '4px 8px'
+                    }}
+                  >
+                    X
+                  </button>
+                </div>
+
+                <p style={{ margin: '0 0 16px 0' }}>
+                  <strong>{selectedTransaction.merchant_name || selectedTransaction.counterparty_name}</strong>
+                </p>
+
+                <div style={{ marginTop: '0' }}>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Date</label>
+                  <input 
+                    type="date"
+                    value={forecastDate}
+                    onChange={(e) => setForecastDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      borderRadius: '4px',
+                      border: '1px solid #ccc',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+                
+                <div style={{ marginTop: '16px' }}>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Amount</label>
+                  <input 
+                    type="number" 
+                    step="0.01"
+                    placeholder="0.00"
+                    value={forecastAmount}
+                    onChange={(e) => setForecastAmount(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      borderRadius: '4px',
+                      border: '1px solid #ccc',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+                
+                <div style={{ marginTop: '20px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={() => {
+                      setModalView('details');
+                      setForecastDate('');
+                      setForecastAmount('');
+                    }}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: '#666',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    disabled={saving || !forecastDate || !forecastAmount}
+                    onClick={async () => {
+                      if (!selectedTransaction || !auth.currentUser) return;
+                      setSaving(true);
+                      try {
+                        await saveForecast({
+                          user_id: auth.currentUser.uid,
+                          merchant_name: selectedTransaction.merchant_name || selectedTransaction.counterparty_name,
+                          merchant_entity_id: selectedTransaction.merchant_entity_id || null,
+                          date: forecastDate,
+                          amount: parseFloat(forecastAmount),
+                          created_at: new Date().toISOString()
+                        });
+                        const updatedForecasts = await getForecasts(auth.currentUser.uid);
+                        setForecasts(updatedForecasts);
+                        setSelectedTransaction(null);
+                        setModalView('details');
+                        setForecastDate('');
+                        setForecastAmount('');
+                      } catch (error: any) {
+                        console.error('Error saving forecast:', error?.code, error?.message, error);
+                        alert('Error: ' + (error?.code || '') + ' ' + (error?.message || 'Unknown error'));
+                      } finally {
+                        setSaving(false);
+                      }
+                    }}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: '#4CAF50',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: saving || !forecastDate || !forecastAmount ? 'not-allowed' : 'pointer',
+                      opacity: saving || !forecastDate || !forecastAmount ? 0.6 : 1
+                    }}
+                  >
+                    {saving ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
