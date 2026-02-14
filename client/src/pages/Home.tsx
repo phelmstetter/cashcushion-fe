@@ -322,9 +322,9 @@ const Home = () => {
                     setForecastDate('');
                     setForecastAmount('');
                     alert('Forecast saved!');
-                  } catch (error) {
-                    console.error('Error saving forecast:', error);
-                    alert('Error saving forecast');
+                  } catch (error: any) {
+                    console.error('Error saving forecast:', error?.code, error?.message, error);
+                    alert('Error: ' + (error?.code || '') + ' ' + (error?.message || 'Unknown error'));
                   } finally {
                     setSaving(false);
                   }
