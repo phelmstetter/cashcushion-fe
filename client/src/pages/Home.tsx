@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { signOut } from "firebase/auth";
-import { auth, getTransactions, Transaction, saveForecast } from "@/lib/firebase";
+import { auth, getTransactions, Transaction, saveForecast, getForecasts, Forecast } from "@/lib/firebase";
 import { useLocation } from "wouter";
 
 const Home = () => {
@@ -13,6 +13,7 @@ const Home = () => {
   const [forecastDate, setForecastDate] = useState('');
   const [forecastAmount, setForecastAmount] = useState('');
   const [saving, setSaving] = useState(false);
+  const [forecasts, setForecasts] = useState<Forecast[]>([]);
   const cursorRef = useRef<{ date: string; id: string } | null>(null);
   const loadingRef = useRef(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -31,8 +32,12 @@ const Home = () => {
     }
     
     try {
-      const result = await getTransactions(userId, null);
+      const [result, userForecasts] = await Promise.all([
+        getTransactions(userId, null),
+        getForecasts(userId)
+      ]);
       setTransactions(result.transactions);
+      setForecasts(userForecasts);
       if (result.lastDate && result.lastId) {
         cursorRef.current = { date: result.lastDate, id: result.lastId };
       }
@@ -132,37 +137,73 @@ const Home = () => {
       .slice(0, 2);
   };
 
+  type MergedItem = 
+    | { type: 'transaction'; data: Transaction }
+    | { type: 'forecast'; data: Forecast };
+
+  const mergedItems: MergedItem[] = [
+    ...forecasts.map(f => ({ type: 'forecast' as const, data: f })),
+    ...transactions.map(t => ({ type: 'transaction' as const, data: t })),
+  ].sort((a, b) => b.data.date.localeCompare(a.data.date));
+
   return (
     <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h1 style={{ margin: 0 }}>CashCushion ({transactions.length})</h1>
+        <h1 style={{ margin: 0 }}>CashCushion ({transactions.length + forecasts.length})</h1>
         <button onClick={handleSignOut}>Sign Out</button>
       </div>
 
       {initialLoading ? (
         <p>Loading...</p>
-      ) : transactions.length === 0 ? (
+      ) : mergedItems.length === 0 ? (
         <p>No transactions found</p>
       ) : (
         <>
-          {transactions.map((transaction) => {
-            const { display: amountDisplay, isPositive } = formatAmount(transaction.amount);
-            const displayName = transaction.merchant_name || transaction.counterparty_name;
+          {mergedItems.map((item) => {
+            const isForecast = item.type === 'forecast';
+            const date = item.data.date;
+            const amount = item.data.amount;
             
+            let displayName: string;
+            let logoUrl: string | undefined;
+            let transactionForModal: Transaction | null = null;
+
+            if (isForecast) {
+              const forecast = item.data as Forecast;
+              displayName = forecast.merchant_name;
+              logoUrl = undefined;
+            } else {
+              const transaction = item.data as Transaction;
+              displayName = transaction.merchant_name || transaction.counterparty_name;
+              logoUrl = transaction.logo_url;
+              transactionForModal = transaction;
+            }
+
+            const forecastAmount = isForecast ? amount : undefined;
+            const { display: amountDisplay, isPositive } = isForecast 
+              ? { 
+                  display: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Math.abs(amount)),
+                  isPositive: false
+                }
+              : formatAmount(amount);
+            
+            const itemKey = isForecast ? `forecast-${(item.data as Forecast).id}` : `tx-${(item.data as Transaction).id}`;
+
             return (
-              <div key={transaction.id} style={{
+              <div key={itemKey} style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
                 padding: '12px',
                 marginBottom: '8px',
-                backgroundColor: '#fff',
+                backgroundColor: isForecast ? '#e8f5e9' : '#fff',
                 borderRadius: '8px',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                borderLeft: isForecast ? '4px solid #4CAF50' : 'none'
               }}>
-                {transaction.logo_url ? (
+                {logoUrl ? (
                   <img 
-                    src={transaction.logo_url} 
+                    src={logoUrl} 
                     alt={displayName}
                     style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }}
                   />
@@ -171,14 +212,15 @@ const Home = () => {
                     width: '40px',
                     height: '40px',
                     borderRadius: '50%',
-                    backgroundColor: '#e0e0e0',
+                    backgroundColor: isForecast ? '#4CAF50' : '#e0e0e0',
+                    color: isForecast ? 'white' : 'inherit',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontSize: '14px',
                     fontWeight: 'bold'
                   }}>
-                    {getInitials(displayName)}
+                    {isForecast ? 'F' : getInitials(displayName)}
                   </div>
                 )}
                 
@@ -189,33 +231,40 @@ const Home = () => {
                     WebkitLineClamp: 2,
                     WebkitBoxOrient: 'vertical',
                     overflow: 'hidden'
-                  }}>{displayName}</div>
+                  }}>
+                    {displayName}
+                  </div>
+                  {isForecast && (
+                    <div style={{ fontSize: '11px', color: '#4CAF50', fontWeight: 600 }}>FORECAST</div>
+                  )}
                 </div>
                 
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 600, color: isPositive ? 'green' : 'inherit' }}>
+                  <div style={{ fontWeight: 600, color: isForecast ? '#4CAF50' : (isPositive ? 'green' : 'inherit') }}>
                     {amountDisplay}
                   </div>
                   <div style={{ fontSize: '12px', color: '#666' }}>
-                    {formatDate(transaction.date)}
+                    {formatDate(date)}
                   </div>
                 </div>
                 
-                <button 
-                  style={{
-                    padding: '6px 10px',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    backgroundColor: '#4CAF50',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}
-                  onClick={() => setSelectedTransaction(transaction)}
-                >
-                  +F
-                </button>
+                {!isForecast && transactionForModal && (
+                  <button 
+                    style={{
+                      padding: '6px 10px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      backgroundColor: '#4CAF50',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => setSelectedTransaction(transactionForModal)}
+                  >
+                    +F
+                  </button>
+                )}
               </div>
             );
           })}
@@ -318,10 +367,11 @@ const Home = () => {
                       amount: parseFloat(forecastAmount),
                       created_at: new Date().toISOString()
                     });
+                    const updatedForecasts = await getForecasts(auth.currentUser.uid);
+                    setForecasts(updatedForecasts);
                     setSelectedTransaction(null);
                     setForecastDate('');
                     setForecastAmount('');
-                    alert('Forecast saved!');
                   } catch (error: any) {
                     console.error('Error saving forecast:', error?.code, error?.message, error);
                     alert('Error: ' + (error?.code || '') + ' ' + (error?.message || 'Unknown error'));
