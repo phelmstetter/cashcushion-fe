@@ -32,21 +32,22 @@ const Home = () => {
     }
     
     try {
-      const [result, userForecasts] = await Promise.all([
-        getTransactions(userId, null),
-        getForecasts(userId)
-      ]);
+      const result = await getTransactions(userId, null);
       setTransactions(result.transactions);
-      setForecasts(userForecasts);
       if (result.lastDate && result.lastId) {
         cursorRef.current = { date: result.lastDate, id: result.lastId };
       }
       setHasMore(result.hasMore);
     } catch (error) {
-      console.error("Error loading initial transactions:", error);
-    } finally {
-      setInitialLoading(false);
+      console.error("Error loading transactions:", error);
     }
+    try {
+      const userForecasts = await getForecasts(userId);
+      setForecasts(userForecasts);
+    } catch (error) {
+      console.error("Error loading forecasts:", error);
+    }
+    setInitialLoading(false);
   };
 
   const loadMoreTransactions = async () => {
