@@ -313,7 +313,7 @@ const Home = () => {
                     await saveForecast({
                       user_id: auth.currentUser.uid,
                       merchant_name: selectedTransaction.merchant_name || selectedTransaction.counterparty_name,
-                      merchant_entity_id: selectedTransaction.merchant_entity_id,
+                      merchant_entity_id: selectedTransaction.merchant_entity_id || null,
                       date: forecastDate,
                       amount: parseFloat(forecastAmount),
                       created_at: new Date().toISOString()
