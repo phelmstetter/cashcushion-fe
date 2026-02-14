@@ -1,7 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { signOut } from "firebase/auth";
-import { auth, getTransactions, Transaction, saveForecast, getForecasts, Forecast } from "@/lib/firebase";
+import { auth, getTransactions, Transaction, saveForecast, getForecasts, Forecast, reconcileForecast } from "@/lib/firebase";
 import { useLocation } from "wouter";
+
+const LONG_PRESS_MS = 500;
 
 const Home = () => {
   const [, setLocation] = useLocation();
@@ -14,10 +16,16 @@ const Home = () => {
   const [forecastAmount, setForecastAmount] = useState('');
   const [saving, setSaving] = useState(false);
   const [forecasts, setForecasts] = useState<Forecast[]>([]);
+  const [draggingForecast, setDraggingForecast] = useState<Forecast | null>(null);
+  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const cursorRef = useRef<{ date: string; id: string } | null>(null);
   const loadingRef = useRef(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const transactionRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const dragStartPosRef = useRef<{ x: number; y: number } | null>(null);
 
   const handleSignOut = async () => {
     await signOut(auth);
@@ -107,6 +115,110 @@ const Home = () => {
     };
   }, [hasMore, transactions.length, forecasts.length]);
 
+  const getClientPos = (e: React.TouchEvent | React.MouseEvent | TouchEvent | MouseEvent) => {
+    if ('touches' in e && e.touches.length > 0) {
+      return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+    if ('changedTouches' in e && e.changedTouches.length > 0) {
+      return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+    }
+    if ('clientX' in e) {
+      return { x: e.clientX, y: e.clientY };
+    }
+    return { x: 0, y: 0 };
+  };
+
+  const findDropTarget = (x: number, y: number): string | null => {
+    for (const [txId, el] of transactionRefs.current.entries()) {
+      const rect = el.getBoundingClientRect();
+      if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+        return txId;
+      }
+    }
+    return null;
+  };
+
+  const cancelLongPress = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const handleLongPressStart = (forecast: Forecast, e: React.TouchEvent | React.MouseEvent) => {
+    if (!forecast.id) return;
+    const pos = getClientPos(e);
+    dragStartPosRef.current = pos;
+
+    longPressTimerRef.current = setTimeout(() => {
+      setDraggingForecast(forecast);
+      setDragPos(pos);
+    }, LONG_PRESS_MS);
+  };
+
+  useEffect(() => {
+    const onMove = (e: TouchEvent | MouseEvent) => {
+      const pos = getClientPos(e);
+
+      if (longPressTimerRef.current && dragStartPosRef.current) {
+        const dx = pos.x - dragStartPosRef.current.x;
+        const dy = pos.y - dragStartPosRef.current.y;
+        if (Math.sqrt(dx * dx + dy * dy) > 10) {
+          cancelLongPress();
+        }
+      }
+
+      if (draggingForecast) {
+        e.preventDefault();
+        setDragPos(pos);
+        setDropTargetId(findDropTarget(pos.x, pos.y));
+      }
+    };
+
+    const onEnd = async (e: TouchEvent | MouseEvent) => {
+      cancelLongPress();
+
+      if (!draggingForecast) {
+        dragStartPosRef.current = null;
+        return;
+      }
+
+      const pos = getClientPos(e);
+      const target = findDropTarget(pos.x, pos.y);
+
+      if (draggingForecast.id && target) {
+        try {
+          await reconcileForecast(draggingForecast.id, target);
+          setForecasts(prev =>
+            prev.map(f =>
+              f.id === draggingForecast.id ? { ...f, matched_transaction_id: target } : f
+            )
+          );
+        } catch (error: any) {
+          console.error('Error reconciling forecast:', error);
+          alert('Error reconciling: ' + (error?.message || 'Unknown error'));
+        }
+      }
+
+      setDraggingForecast(null);
+      setDragPos(null);
+      setDropTargetId(null);
+      dragStartPosRef.current = null;
+    };
+
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('touchend', onEnd);
+    window.addEventListener('mouseup', onEnd);
+
+    return () => {
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('touchend', onEnd);
+      window.removeEventListener('mouseup', onEnd);
+    };
+  }, [draggingForecast]);
+
   const formatAmount = (amount: number) => {
     const flippedAmount = -amount;
     const formatted = new Intl.NumberFormat('en-US', {
@@ -138,19 +250,21 @@ const Home = () => {
       .slice(0, 2);
   };
 
+  const visibleForecasts = forecasts.filter(f => !f.matched_transaction_id);
+
   type MergedItem = 
     | { type: 'transaction'; data: Transaction }
     | { type: 'forecast'; data: Forecast };
 
   const mergedItems: MergedItem[] = [
-    ...forecasts.map(f => ({ type: 'forecast' as const, data: f })),
+    ...visibleForecasts.map(f => ({ type: 'forecast' as const, data: f })),
     ...transactions.map(t => ({ type: 'transaction' as const, data: t })),
   ].sort((a, b) => b.data.date.localeCompare(a.data.date));
 
   return (
     <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h1 style={{ margin: 0 }}>CashCushion ({transactions.length + forecasts.length})</h1>
+        <h1 style={{ margin: 0 }}>CashCushion ({transactions.length + visibleForecasts.length})</h1>
         <button onClick={handleSignOut}>Sign Out</button>
       </div>
 
@@ -180,7 +294,6 @@ const Home = () => {
               transactionForModal = transaction;
             }
 
-            const forecastAmount = isForecast ? amount : undefined;
             const { display: amountDisplay, isPositive } = isForecast 
               ? { 
                   display: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Math.abs(amount)),
@@ -189,19 +302,39 @@ const Home = () => {
               : formatAmount(amount);
             
             const itemKey = isForecast ? `forecast-${(item.data as Forecast).id}` : `tx-${(item.data as Transaction).id}`;
+            const isDropTarget = !isForecast && dropTargetId === (item.data as Transaction).id;
+            const isDragging = isForecast && draggingForecast?.id === (item.data as Forecast).id;
 
             return (
-              <div key={itemKey} style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '12px',
-                marginBottom: '8px',
-                backgroundColor: isForecast ? '#e8f5e9' : '#fff',
-                borderRadius: '8px',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                borderLeft: isForecast ? '4px solid #4CAF50' : 'none'
-              }}>
+              <div
+                key={itemKey}
+                ref={(el) => {
+                  if (!isForecast && el) {
+                    transactionRefs.current.set((item.data as Transaction).id, el);
+                  }
+                }}
+                onTouchStart={isForecast ? (e) => handleLongPressStart(item.data as Forecast, e) : undefined}
+                onMouseDown={isForecast ? (e) => handleLongPressStart(item.data as Forecast, e) : undefined}
+                onTouchEnd={isForecast && !draggingForecast ? () => cancelLongPress() : undefined}
+                onMouseUp={isForecast && !draggingForecast ? () => cancelLongPress() : undefined}
+                onMouseLeave={isForecast && !draggingForecast ? () => cancelLongPress() : undefined}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px',
+                  marginBottom: '8px',
+                  backgroundColor: isDropTarget ? '#bbdefb' : isForecast ? '#e8f5e9' : '#fff',
+                  borderRadius: '8px',
+                  boxShadow: isDropTarget ? '0 0 0 3px #1976d2' : '0 1px 3px rgba(0,0,0,0.1)',
+                  borderLeft: isForecast ? '4px solid #4CAF50' : 'none',
+                  opacity: isDragging ? 0.4 : 1,
+                  cursor: isForecast ? 'grab' : 'default',
+                  userSelect: 'none',
+                  transition: 'background-color 0.15s, box-shadow 0.15s',
+                  touchAction: draggingForecast ? 'none' : 'auto'
+                }}
+              >
                 {logoUrl ? (
                   <img 
                     src={logoUrl} 
@@ -251,6 +384,7 @@ const Home = () => {
                 
                 {!isForecast && transactionForModal && (
                   <button 
+                    data-testid={`button-add-forecast-${(item.data as Transaction).id}`}
                     style={{
                       padding: '6px 10px',
                       fontSize: '12px',
@@ -275,6 +409,31 @@ const Home = () => {
             {!hasMore && <p style={{ color: '#666' }}>No more transactions</p>}
           </div>
         </>
+      )}
+
+      {draggingForecast && dragPos && (
+        <div style={{
+          position: 'fixed',
+          left: dragPos.x - 100,
+          top: dragPos.y - 25,
+          width: '200px',
+          padding: '8px 12px',
+          backgroundColor: '#4CAF50',
+          color: 'white',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+          pointerEvents: 'none',
+          zIndex: 2000,
+          fontSize: '13px',
+          fontWeight: 600,
+          textAlign: 'center',
+          opacity: 0.9
+        }}>
+          {draggingForecast.merchant_name}
+          <div style={{ fontSize: '11px', fontWeight: 400, marginTop: '2px' }}>
+            Drop on a transaction to match
+          </div>
+        </div>
       )}
 
       {selectedTransaction && (

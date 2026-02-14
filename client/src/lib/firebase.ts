@@ -12,7 +12,8 @@ import {
   startAfter,
   getDocs,
   where,
-  addDoc
+  addDoc,
+  updateDoc
 } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -148,6 +149,7 @@ export interface Forecast {
   date: string;
   amount: number;
   created_at: string;
+  matched_transaction_id?: string | null;
 }
 
 export async function saveForecast(forecast: Forecast): Promise<string> {
@@ -174,8 +176,16 @@ export async function getForecasts(userId: string): Promise<Forecast[]> {
       merchant_entity_id: data.merchant_entity_id,
       date: data.date,
       amount: data.amount,
-      created_at: data.created_at
+      created_at: data.created_at,
+      matched_transaction_id: data.matched_transaction_id || null
     });
   });
   return forecasts;
+}
+
+export async function reconcileForecast(forecastId: string, transactionId: string): Promise<void> {
+  const forecastRef = doc(db, 'forecasts', forecastId);
+  await updateDoc(forecastRef, {
+    matched_transaction_id: transactionId
+  });
 }
