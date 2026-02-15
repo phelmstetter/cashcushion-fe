@@ -266,11 +266,49 @@ const Home = () => {
     ...transactions.map(t => ({ type: 'transaction' as const, data: t })),
   ].sort((a, b) => b.data.date.localeCompare(a.data.date));
 
+  const currentUser = auth.currentUser;
+
   return (
-    <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h1 style={{ margin: 0 }}>CashCushion ({transactions.length + visibleForecasts.length})</h1>
-        <button onClick={handleSignOut}>Sign Out</button>
+    <div style={{ maxWidth: '600px', margin: '0 auto', paddingTop: '72px', paddingLeft: '20px', paddingRight: '20px', paddingBottom: '20px' }}>
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: 'white',
+        zIndex: 999,
+        borderBottom: '1px solid #eee',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.08)'
+      }}>
+        <div style={{
+          maxWidth: '600px',
+          margin: '0 auto',
+          padding: '12px 20px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
+          <h1 style={{ margin: 0, fontSize: '20px' }}>CashCushion ({transactions.length + visibleForecasts.length})</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {currentUser?.photoURL && (
+              <img
+                src={currentUser.photoURL}
+                alt="Profile"
+                data-testid="img-profile"
+                style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
+              />
+            )}
+            <button onClick={handleSignOut} data-testid="button-sign-out" style={{
+              padding: '6px 12px',
+              fontSize: '13px',
+              borderRadius: '4px',
+              border: '1px solid #ccc',
+              backgroundColor: 'white',
+              cursor: 'pointer'
+            }}>Sign Out</button>
+          </div>
+        </div>
       </div>
 
       {initialLoading ? (
