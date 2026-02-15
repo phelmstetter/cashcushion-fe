@@ -1,26 +1,48 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from "firebase/auth";
 import { auth, saveUserToFirestore } from "@/lib/firebase";
+
+const isSafari = () => {
+  const ua = navigator.userAgent;
+  return ua.includes('Safari') && !ua.includes('Chrome') && !ua.includes('CriOS');
+};
 
 const Login = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [, setLocation] = useLocation();
 
+  useEffect(() => {
+    getRedirectResult(auth).then(async (result) => {
+      if (result) {
+        await saveUserToFirestore({
+          uid: result.user.uid,
+          email: result.user.email,
+          photoURL: result.user.photoURL
+        });
+        setLocation("/home");
+      }
+    }).catch((error: any) => {
+      setError(error.message);
+    });
+  }, []);
+
   const handleGoogleSignIn = async () => {
     const provider = new GoogleAuthProvider();
     setLoading(true);
     try {
-      const result = await signInWithPopup(auth, provider);
-      
-      await saveUserToFirestore({
-        uid: result.user.uid,
-        email: result.user.email,
-        photoURL: result.user.photoURL
-      });
-      
-      setLocation("/home");
+      if (isSafari()) {
+        await signInWithRedirect(auth, provider);
+      } else {
+        const result = await signInWithPopup(auth, provider);
+        await saveUserToFirestore({
+          uid: result.user.uid,
+          email: result.user.email,
+          photoURL: result.user.photoURL
+        });
+        setLocation("/home");
+      }
     } catch (error: any) {
       setError(error.message);
     } finally {
