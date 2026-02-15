@@ -20,6 +20,7 @@ const Home = () => {
   const [saving, setSaving] = useState(false);
   const [editingForecast, setEditingForecast] = useState<Forecast | null>(null);
   const [companyFilter, setCompanyFilter] = useState('');
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [forecasts, setForecasts] = useState<Forecast[]>([]);
   const [draggingForecast, setDraggingForecast] = useState<Forecast | null>(null);
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
@@ -325,23 +326,81 @@ const Home = () => {
               <option key={name} value={name}>{name}</option>
             ))}
           </select>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-            {currentUser?.photoURL && (
-              <img
-                src={currentUser.photoURL}
-                alt="Profile"
-                data-testid="img-profile"
-                style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
-              />
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <div
+              data-testid="button-profile-menu"
+              onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+              style={{ cursor: 'pointer' }}
+            >
+              {currentUser?.photoURL ? (
+                <img
+                  src={currentUser.photoURL}
+                  alt="Profile"
+                  data-testid="img-profile"
+                  style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', display: 'block' }}
+                />
+              ) : (
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  backgroundColor: '#e0e0e0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '14px',
+                  fontWeight: 'bold'
+                }}>
+                  {currentUser?.email?.[0]?.toUpperCase() || '?'}
+                </div>
+              )}
+            </div>
+            {profileMenuOpen && (
+              <>
+                <div
+                  style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000 }}
+                  onClick={() => setProfileMenuOpen(false)}
+                />
+                <div style={{
+                  position: 'absolute',
+                  top: '40px',
+                  right: 0,
+                  backgroundColor: 'white',
+                  border: '1px solid #ddd',
+                  borderRadius: '6px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  zIndex: 1001,
+                  minWidth: '140px',
+                  overflow: 'hidden'
+                }}>
+                  {currentUser?.email && (
+                    <div style={{ padding: '10px 14px', fontSize: '12px', color: '#666', borderBottom: '1px solid #eee' }}>
+                      {currentUser.email}
+                    </div>
+                  )}
+                  <button
+                    data-testid="button-sign-out"
+                    onClick={() => {
+                      setProfileMenuOpen(false);
+                      handleSignOut();
+                    }}
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      padding: '10px 14px',
+                      fontSize: '14px',
+                      textAlign: 'left',
+                      backgroundColor: 'white',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: '#d32f2f'
+                    }}
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              </>
             )}
-            <button onClick={handleSignOut} data-testid="button-sign-out" style={{
-              padding: '6px 12px',
-              fontSize: '13px',
-              borderRadius: '4px',
-              border: '1px solid #ccc',
-              backgroundColor: 'white',
-              cursor: 'pointer'
-            }}>Sign Out</button>
           </div>
         </div>
       </div>
