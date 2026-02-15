@@ -19,6 +19,7 @@ const Home = () => {
   const [forecastMonths, setForecastMonths] = useState(12);
   const [saving, setSaving] = useState(false);
   const [editingForecast, setEditingForecast] = useState<Forecast | null>(null);
+  const [companyFilter, setCompanyFilter] = useState('');
   const [forecasts, setForecasts] = useState<Forecast[]>([]);
   const [draggingForecast, setDraggingForecast] = useState<Forecast | null>(null);
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
@@ -257,6 +258,11 @@ const Home = () => {
 
   const visibleForecasts = forecasts.filter(f => !f.matched_transaction_id);
 
+  const companyNames: string[] = Array.from(new Set([
+    ...transactions.map(t => t.merchant_name || t.counterparty_name),
+    ...visibleForecasts.map(f => f.merchant_name)
+  ])).filter(Boolean).sort((a, b) => a.localeCompare(b));
+
   type MergedItem = 
     | { type: 'transaction'; data: Transaction }
     | { type: 'forecast'; data: Forecast };
@@ -264,7 +270,15 @@ const Home = () => {
   const mergedItems: MergedItem[] = [
     ...visibleForecasts.map(f => ({ type: 'forecast' as const, data: f })),
     ...transactions.map(t => ({ type: 'transaction' as const, data: t })),
-  ].sort((a, b) => b.data.date.localeCompare(a.data.date));
+  ].sort((a, b) => b.data.date.localeCompare(a.data.date))
+  .filter(item => {
+    if (!companyFilter) return true;
+    if (item.type === 'forecast') {
+      return (item.data as Forecast).merchant_name === companyFilter;
+    }
+    const tx = item.data as Transaction;
+    return (tx.merchant_name || tx.counterparty_name) === companyFilter;
+  });
 
   const currentUser = auth.currentUser;
 
@@ -289,8 +303,29 @@ const Home = () => {
           alignItems: 'center',
           gap: '12px'
         }}>
-          <h1 style={{ margin: 0, fontSize: '20px' }}>CashCushion ({transactions.length + visibleForecasts.length})</h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <h1 style={{ margin: 0, fontSize: '20px', whiteSpace: 'nowrap' }}>CashCushion</h1>
+          <select
+            data-testid="select-company-filter"
+            value={companyFilter}
+            onChange={(e) => setCompanyFilter(e.target.value)}
+            style={{
+              flex: 1,
+              minWidth: '0',
+              padding: '6px 8px',
+              fontSize: '13px',
+              borderRadius: '4px',
+              border: '1px solid #ccc',
+              backgroundColor: 'white',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}
+          >
+            <option value="">All ({transactions.length + visibleForecasts.length})</option>
+            {companyNames.map(name => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
             {currentUser?.photoURL && (
               <img
                 src={currentUser.photoURL}
