@@ -150,12 +150,62 @@ export interface Forecast {
   amount: number;
   created_at: string;
   matched_transaction_id?: string | null;
+  series_id?: string | null;
 }
 
 export async function saveForecast(forecast: Forecast): Promise<string> {
   const forecastsRef = collection(db, 'forecasts');
   const docRef = await addDoc(forecastsRef, forecast);
   return docRef.id;
+}
+
+export async function saveSeriesForecasts(
+  baseForecast: Omit<Forecast, 'id' | 'date'>,
+  startDate: string,
+  monthCount: number
+): Promise<string> {
+  const seriesId = crypto.randomUUID ? crypto.randomUUID() : `series_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  const forecastsRef = collection(db, 'forecasts');
+
+  for (let i = 0; i < monthCount; i++) {
+    const d = new Date(startDate + 'T00:00:00');
+    d.setMonth(d.getMonth() + i);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+
+    await addDoc(forecastsRef, {
+      ...baseForecast,
+      date: `${yyyy}-${mm}-${dd}`,
+      series_id: seriesId
+    });
+  }
+
+  return seriesId;
+}
+
+export async function updateForecast(forecastId: string, updates: Partial<Pick<Forecast, 'date' | 'amount'>>): Promise<void> {
+  const forecastRef = doc(db, 'forecasts', forecastId);
+  await updateDoc(forecastRef, updates);
+}
+
+export async function updateSeriesForecasts(
+  seriesId: string,
+  userId: string,
+  updates: { amount?: number }
+): Promise<void> {
+  const forecastsRef = collection(db, 'forecasts');
+  const q = query(
+    forecastsRef,
+    where('user_id', '==', userId),
+    where('series_id', '==', seriesId)
+  );
+  const snapshot = await getDocs(q);
+  const promises: Promise<void>[] = [];
+  snapshot.forEach((d) => {
+    promises.push(updateDoc(doc(db, 'forecasts', d.id), updates));
+  });
+  await Promise.all(promises);
 }
 
 export async function getForecasts(userId: string): Promise<Forecast[]> {
@@ -177,7 +227,8 @@ export async function getForecasts(userId: string): Promise<Forecast[]> {
       date: data.date,
       amount: data.amount,
       created_at: data.created_at,
-      matched_transaction_id: data.matched_transaction_id || null
+      matched_transaction_id: data.matched_transaction_id || null,
+      series_id: data.series_id || null
     });
   });
   return forecasts;

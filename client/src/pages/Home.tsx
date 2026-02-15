@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { signOut } from "firebase/auth";
-import { auth, getTransactions, Transaction, saveForecast, getForecasts, Forecast, reconcileForecast } from "@/lib/firebase";
+import { auth, getTransactions, Transaction, saveForecast, saveSeriesForecasts, updateForecast, updateSeriesForecasts, getForecasts, Forecast, reconcileForecast } from "@/lib/firebase";
 import { useLocation } from "wouter";
 
 const LONG_PRESS_MS = 500;
@@ -12,10 +12,13 @@ const Home = () => {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [modalView, setModalView] = useState<'details' | 'forecast'>('details');
+  const [modalView, setModalView] = useState<'details' | 'forecast' | 'editForecast'>('details');
   const [forecastDate, setForecastDate] = useState('');
   const [forecastAmount, setForecastAmount] = useState('');
+  const [forecastType, setForecastType] = useState<'single' | 'monthly'>('single');
+  const [forecastMonths, setForecastMonths] = useState(12);
   const [saving, setSaving] = useState(false);
+  const [editingForecast, setEditingForecast] = useState<Forecast | null>(null);
   const [forecasts, setForecasts] = useState<Forecast[]>([]);
   const [draggingForecast, setDraggingForecast] = useState<Forecast | null>(null);
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
@@ -320,6 +323,13 @@ const Home = () => {
                 onTouchEnd={isForecast && !draggingForecast ? () => cancelLongPress() : undefined}
                 onMouseUp={isForecast && !draggingForecast ? () => cancelLongPress() : undefined}
                 onMouseLeave={isForecast && !draggingForecast ? () => cancelLongPress() : undefined}
+                onClick={isForecast && !draggingForecast ? () => {
+                  const fc = item.data as Forecast;
+                  setEditingForecast(fc);
+                  setForecastDate(fc.date);
+                  setForecastAmount(fc.amount.toString());
+                  setModalView('editForecast');
+                } : undefined}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -441,7 +451,7 @@ const Home = () => {
         </div>
       )}
 
-      {selectedTransaction && (
+      {(selectedTransaction || editingForecast) && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -456,9 +466,12 @@ const Home = () => {
         }}
         onClick={() => {
           setSelectedTransaction(null);
+          setEditingForecast(null);
           setModalView('details');
           setForecastDate('');
           setForecastAmount('');
+          setForecastType('single');
+          setForecastMonths(12);
         }}>
           <div style={{
             backgroundColor: 'white',
@@ -468,7 +481,7 @@ const Home = () => {
             width: '90%'
           }} onClick={(e) => e.stopPropagation()}>
 
-            {modalView === 'details' ? (
+            {modalView === 'details' && selectedTransaction && (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                   <h2 style={{ margin: 0 }}>Transaction Details</h2>
@@ -579,7 +592,9 @@ const Home = () => {
                   )}
                 </div>
               </>
-            ) : (
+            )}
+
+            {modalView === 'forecast' && selectedTransaction && (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -624,16 +639,59 @@ const Home = () => {
                 </div>
 
                 <p style={{ margin: '0 0 16px 0' }}>
-                  <strong>{selectedTransaction.merchant_name || selectedTransaction.counterparty_name}</strong>
+                  <strong>{selectedTransaction!.merchant_name || selectedTransaction!.counterparty_name}</strong>
                 </p>
 
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 500 }}>Type</label>
+                  <div style={{ display: 'flex', gap: '0' }}>
+                    <button
+                      data-testid="button-forecast-single"
+                      onClick={() => setForecastType('single')}
+                      style={{
+                        flex: 1,
+                        padding: '8px',
+                        backgroundColor: forecastType === 'single' ? '#4CAF50' : '#f5f5f5',
+                        color: forecastType === 'single' ? 'white' : '#333',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px 0 0 4px',
+                        cursor: 'pointer',
+                        fontWeight: forecastType === 'single' ? 600 : 400,
+                        fontSize: '14px'
+                      }}
+                    >
+                      Single Date
+                    </button>
+                    <button
+                      data-testid="button-forecast-monthly"
+                      onClick={() => setForecastType('monthly')}
+                      style={{
+                        flex: 1,
+                        padding: '8px',
+                        backgroundColor: forecastType === 'monthly' ? '#4CAF50' : '#f5f5f5',
+                        color: forecastType === 'monthly' ? 'white' : '#333',
+                        border: '1px solid #ccc',
+                        borderLeft: 'none',
+                        borderRadius: '0 4px 4px 0',
+                        cursor: 'pointer',
+                        fontWeight: forecastType === 'monthly' ? 600 : 400,
+                        fontSize: '14px'
+                      }}
+                    >
+                      Monthly
+                    </button>
+                  </div>
+                </div>
+
                 <div style={{ marginTop: '0' }}>
-                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Date</label>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>
+                    {forecastType === 'single' ? 'Date' : 'Starting Date'}
+                  </label>
                   <input 
                     type="date"
+                    data-testid="input-forecast-date"
                     value={forecastDate}
                     onChange={(e) => setForecastDate(e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
                     style={{
                       width: '100%',
                       padding: '8px',
@@ -650,6 +708,7 @@ const Home = () => {
                     type="number" 
                     step="0.01"
                     placeholder="0.00"
+                    data-testid="input-forecast-amount"
                     value={forecastAmount}
                     onChange={(e) => setForecastAmount(e.target.value)}
                     style={{
@@ -661,6 +720,31 @@ const Home = () => {
                     }}
                   />
                 </div>
+
+                {forecastType === 'monthly' && (
+                  <div style={{ marginTop: '16px' }}>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>
+                      Number of Months
+                    </label>
+                    <select
+                      data-testid="select-forecast-months"
+                      value={forecastMonths}
+                      onChange={(e) => setForecastMonths(parseInt(e.target.value))}
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        borderRadius: '4px',
+                        border: '1px solid #ccc',
+                        boxSizing: 'border-box',
+                        backgroundColor: 'white'
+                      }}
+                    >
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map(n => (
+                        <option key={n} value={n}>{n} month{n > 1 ? 's' : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 
                 <div style={{ marginTop: '20px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                   <button
@@ -668,6 +752,8 @@ const Home = () => {
                       setModalView('details');
                       setForecastDate('');
                       setForecastAmount('');
+                      setForecastType('single');
+                      setForecastMonths(12);
                     }}
                     style={{
                       padding: '8px 16px',
@@ -681,25 +767,39 @@ const Home = () => {
                     Cancel
                   </button>
                   <button
+                    data-testid="button-save-forecast"
                     disabled={saving || !forecastDate || !forecastAmount}
                     onClick={async () => {
                       if (!selectedTransaction || !auth.currentUser) return;
                       setSaving(true);
                       try {
-                        await saveForecast({
+                        const merchantName = selectedTransaction.merchant_name || selectedTransaction.counterparty_name;
+                        const baseForecast = {
                           user_id: auth.currentUser.uid,
-                          merchant_name: selectedTransaction.merchant_name || selectedTransaction.counterparty_name,
+                          merchant_name: merchantName,
                           merchant_entity_id: selectedTransaction.merchant_entity_id || null,
-                          date: forecastDate,
                           amount: parseFloat(forecastAmount),
                           created_at: new Date().toISOString()
-                        });
+                        };
+
+                        if (forecastType === 'monthly') {
+                          await saveSeriesForecasts(baseForecast, forecastDate, forecastMonths);
+                        } else {
+                          await saveForecast({
+                            ...baseForecast,
+                            date: forecastDate,
+                            series_id: null
+                          });
+                        }
+
                         const updatedForecasts = await getForecasts(auth.currentUser.uid);
                         setForecasts(updatedForecasts);
                         setSelectedTransaction(null);
                         setModalView('details');
                         setForecastDate('');
                         setForecastAmount('');
+                        setForecastType('single');
+                        setForecastMonths(12);
                       } catch (error: any) {
                         console.error('Error saving forecast:', error?.code, error?.message, error);
                         alert('Error: ' + (error?.code || '') + ' ' + (error?.message || 'Unknown error'));
@@ -717,7 +817,181 @@ const Home = () => {
                       opacity: saving || !forecastDate || !forecastAmount ? 0.6 : 1
                     }}
                   >
-                    {saving ? 'Saving...' : 'Save'}
+                    {saving ? 'Saving...' : forecastType === 'monthly' ? `Save ${forecastMonths} Forecasts` : 'Save'}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {modalView === 'editForecast' && editingForecast && (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <h2 style={{ margin: 0 }}>Edit Forecast</h2>
+                  <button
+                    data-testid="button-close-edit-forecast"
+                    onClick={() => {
+                      setEditingForecast(null);
+                      setModalView('details');
+                      setForecastDate('');
+                      setForecastAmount('');
+                      setForecastType('single');
+                      setForecastMonths(12);
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '20px',
+                      cursor: 'pointer',
+                      color: '#666',
+                      padding: '4px 8px'
+                    }}
+                  >
+                    X
+                  </button>
+                </div>
+
+                <p style={{ margin: '0 0 16px 0' }}>
+                  <strong>{editingForecast.merchant_name}</strong>
+                  {editingForecast.series_id && (
+                    <span style={{ fontSize: '12px', color: '#4CAF50', marginLeft: '8px', fontWeight: 600 }}>SERIES</span>
+                  )}
+                </p>
+
+                <div style={{ marginTop: '0' }}>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Date</label>
+                  <input 
+                    type="date"
+                    data-testid="input-edit-forecast-date"
+                    value={forecastDate}
+                    onChange={(e) => setForecastDate(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      borderRadius: '4px',
+                      border: '1px solid #ccc',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+                
+                <div style={{ marginTop: '16px' }}>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Amount</label>
+                  <input 
+                    type="number" 
+                    step="0.01"
+                    placeholder="0.00"
+                    data-testid="input-edit-forecast-amount"
+                    value={forecastAmount}
+                    onChange={(e) => setForecastAmount(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      borderRadius: '4px',
+                      border: '1px solid #ccc',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <button
+                    data-testid="button-save-this-forecast"
+                    disabled={saving || !forecastDate || !forecastAmount}
+                    onClick={async () => {
+                      if (!editingForecast?.id || !auth.currentUser) return;
+                      setSaving(true);
+                      try {
+                        await updateForecast(editingForecast.id, {
+                          date: forecastDate,
+                          amount: parseFloat(forecastAmount)
+                        });
+                        const updatedForecasts = await getForecasts(auth.currentUser.uid);
+                        setForecasts(updatedForecasts);
+                        setEditingForecast(null);
+                        setModalView('details');
+                        setForecastDate('');
+                        setForecastAmount('');
+                      } catch (error: any) {
+                        console.error('Error updating forecast:', error);
+                        alert('Error: ' + (error?.message || 'Unknown error'));
+                      } finally {
+                        setSaving(false);
+                      }
+                    }}
+                    style={{
+                      padding: '10px 16px',
+                      backgroundColor: '#4CAF50',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: saving ? 'not-allowed' : 'pointer',
+                      opacity: saving ? 0.6 : 1,
+                      fontWeight: 600
+                    }}
+                  >
+                    {saving ? 'Saving...' : 'Save This Forecast'}
+                  </button>
+
+                  {editingForecast.series_id && (
+                    <button
+                      data-testid="button-save-series-forecast"
+                      disabled={saving || !forecastAmount}
+                      onClick={async () => {
+                        if (!editingForecast?.series_id || !auth.currentUser) return;
+                        setSaving(true);
+                        try {
+                          await updateSeriesForecasts(
+                            editingForecast.series_id,
+                            auth.currentUser.uid,
+                            { amount: parseFloat(forecastAmount) }
+                          );
+                          const updatedForecasts = await getForecasts(auth.currentUser.uid);
+                          setForecasts(updatedForecasts);
+                          setEditingForecast(null);
+                          setModalView('details');
+                          setForecastDate('');
+                          setForecastAmount('');
+                        } catch (error: any) {
+                          console.error('Error updating series:', error);
+                          alert('Error: ' + (error?.message || 'Unknown error'));
+                        } finally {
+                          setSaving(false);
+                        }
+                      }}
+                      style={{
+                        padding: '10px 16px',
+                        backgroundColor: '#1976d2',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: saving ? 'not-allowed' : 'pointer',
+                        opacity: saving ? 0.6 : 1,
+                        fontWeight: 600
+                      }}
+                    >
+                      {saving ? 'Saving...' : 'Update Entire Series (Amount)'}
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      setEditingForecast(null);
+                      setModalView('details');
+                      setForecastDate('');
+                      setForecastAmount('');
+                      setForecastType('single');
+                      setForecastMonths(12);
+                    }}
+                    style={{
+                      padding: '10px 16px',
+                      backgroundColor: '#666',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
                   </button>
                 </div>
               </>
