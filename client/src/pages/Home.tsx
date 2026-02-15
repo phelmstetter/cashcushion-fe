@@ -284,7 +284,7 @@ const Home = () => {
   const currentUser = auth.currentUser;
 
   return (
-    <div style={{ maxWidth: '600px', margin: '0 auto', paddingTop: '72px', paddingLeft: '20px', paddingRight: '20px', paddingBottom: '20px' }}>
+    <div style={{ maxWidth: '600px', margin: '0 auto', paddingTop: '56px', paddingLeft: '2px', paddingRight: '2px', paddingBottom: '2px' }}>
       <div
         data-testid="chart-container"
         style={{
@@ -292,7 +292,7 @@ const Home = () => {
           backgroundColor: 'white',
           borderRadius: '8px',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-          marginBottom: '16px',
+          marginBottom: '2px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -316,7 +316,7 @@ const Home = () => {
         <div style={{
           maxWidth: '600px',
           margin: '0 auto',
-          padding: '12px 20px',
+          padding: '8px 10px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -484,8 +484,8 @@ const Home = () => {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '12px',
-                  padding: '12px',
-                  marginBottom: '8px',
+                  padding: '8px',
+                  marginBottom: '2px',
                   backgroundColor: isDropTarget ? '#bbdefb' : isForecast ? '#e8f5e9' : '#fff',
                   borderRadius: '8px',
                   boxShadow: isDropTarget ? '0 0 0 3px #1976d2' : '0 1px 3px rgba(0,0,0,0.1)',
