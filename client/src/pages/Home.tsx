@@ -493,7 +493,18 @@ const Home = () => {
 
                 <button
                   data-testid="button-add-forecast"
-                  onClick={() => setModalView('forecast')}
+                  onClick={() => {
+                    if (selectedTransaction) {
+                      const txDate = new Date(selectedTransaction.date + 'T00:00:00');
+                      txDate.setMonth(txDate.getMonth() + 1);
+                      const yyyy = txDate.getFullYear();
+                      const mm = String(txDate.getMonth() + 1).padStart(2, '0');
+                      const dd = String(txDate.getDate()).padStart(2, '0');
+                      setForecastDate(`${yyyy}-${mm}-${dd}`);
+                      setForecastAmount(Math.abs(selectedTransaction.amount).toString());
+                    }
+                    setModalView('forecast');
+                  }}
                   style={{
                     width: '100%',
                     padding: '10px',
