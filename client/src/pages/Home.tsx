@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { signOut } from "firebase/auth";
-import { auth, getTransactions, Transaction, saveForecast, saveSeriesForecasts, updateForecast, updateSeriesForecasts, getForecasts, Forecast, reconcileForecast } from "@/lib/firebase";
+import { auth, getTransactions, Transaction, saveForecast, saveSeriesForecasts, updateForecast, updateSeriesForecasts, deleteForecast, deleteSeriesForecasts, getForecasts, Forecast, reconcileForecast } from "@/lib/firebase";
 import { useLocation } from "wouter";
 
 const LONG_PRESS_MS = 500;
@@ -972,6 +972,86 @@ const Home = () => {
                       {saving ? 'Saving...' : 'Update Entire Series (Amount)'}
                     </button>
                   )}
+
+                  <div style={{ borderTop: '1px solid #eee', paddingTop: '8px', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <button
+                      data-testid="button-delete-this-forecast"
+                      disabled={saving}
+                      onClick={async () => {
+                        if (!editingForecast?.id || !auth.currentUser) return;
+                        if (!confirm('Delete this forecast?')) return;
+                        setSaving(true);
+                        try {
+                          await deleteForecast(editingForecast.id);
+                          const updatedForecasts = await getForecasts(auth.currentUser.uid);
+                          setForecasts(updatedForecasts);
+                          setEditingForecast(null);
+                          setModalView('details');
+                          setForecastDate('');
+                          setForecastAmount('');
+                          setForecastType('single');
+                          setForecastMonths(12);
+                        } catch (error: any) {
+                          console.error('Error deleting forecast:', error);
+                          alert('Error: ' + (error?.message || 'Unknown error'));
+                        } finally {
+                          setSaving(false);
+                        }
+                      }}
+                      style={{
+                        padding: '10px 16px',
+                        backgroundColor: '#d32f2f',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: saving ? 'not-allowed' : 'pointer',
+                        opacity: saving ? 0.6 : 1,
+                        fontWeight: 600
+                      }}
+                    >
+                      {saving ? 'Deleting...' : 'Delete This Forecast'}
+                    </button>
+
+                    {editingForecast.series_id && (
+                      <button
+                        data-testid="button-delete-series-forecast"
+                        disabled={saving}
+                        onClick={async () => {
+                          if (!editingForecast?.series_id || !auth.currentUser) return;
+                          if (!confirm('Delete all forecasts in this series?')) return;
+                          setSaving(true);
+                          try {
+                            await deleteSeriesForecasts(editingForecast.series_id, auth.currentUser.uid);
+                            const updatedForecasts = await getForecasts(auth.currentUser.uid);
+                            setForecasts(updatedForecasts);
+                            setEditingForecast(null);
+                            setModalView('details');
+                            setForecastDate('');
+                            setForecastAmount('');
+                            setForecastType('single');
+                            setForecastMonths(12);
+                          } catch (error: any) {
+                            console.error('Error deleting series:', error);
+                            alert('Error: ' + (error?.message || 'Unknown error'));
+                          } finally {
+                            setSaving(false);
+                          }
+                        }}
+                        style={{
+                          padding: '10px 16px',
+                          backgroundColor: '#b71c1c',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: saving ? 'not-allowed' : 'pointer',
+                          opacity: saving ? 0.6 : 1,
+                          fontWeight: 600
+                        }}
+                      >
+                        {saving ? 'Deleting...' : 'Delete Entire Series'}
+                      </button>
+                    )}
+                  </div>
 
                   <button
                     onClick={() => {

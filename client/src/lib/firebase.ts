@@ -13,7 +13,8 @@ import {
   getDocs,
   where,
   addDoc,
-  updateDoc
+  updateDoc,
+  deleteDoc
 } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -232,6 +233,26 @@ export async function getForecasts(userId: string): Promise<Forecast[]> {
     });
   });
   return forecasts;
+}
+
+export async function deleteForecast(forecastId: string): Promise<void> {
+  const forecastRef = doc(db, 'forecasts', forecastId);
+  await deleteDoc(forecastRef);
+}
+
+export async function deleteSeriesForecasts(seriesId: string, userId: string): Promise<void> {
+  const forecastsRef = collection(db, 'forecasts');
+  const q = query(
+    forecastsRef,
+    where('user_id', '==', userId),
+    where('series_id', '==', seriesId)
+  );
+  const snapshot = await getDocs(q);
+  const promises: Promise<void>[] = [];
+  snapshot.forEach((d) => {
+    promises.push(deleteDoc(doc(db, 'forecasts', d.id)));
+  });
+  await Promise.all(promises);
 }
 
 export async function reconcileForecast(forecastId: string, transactionId: string): Promise<void> {
