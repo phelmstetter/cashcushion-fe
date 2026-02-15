@@ -285,6 +285,24 @@ const Home = () => {
 
   return (
     <div style={{ maxWidth: '600px', margin: '0 auto', paddingTop: '72px', paddingLeft: '20px', paddingRight: '20px', paddingBottom: '20px' }}>
+      <div
+        data-testid="chart-container"
+        style={{
+          height: '25vh',
+          backgroundColor: 'white',
+          borderRadius: '8px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#999',
+          fontSize: '14px',
+          border: '1px solid #eee'
+        }}
+      >
+        Chart coming soon
+      </div>
       <div style={{
         position: 'fixed',
         top: 0,
