@@ -21,6 +21,7 @@ const Home = () => {
   const [editingForecast, setEditingForecast] = useState<Forecast | null>(null);
   const [companyFilter, setCompanyFilter] = useState('');
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [chartOpen, setChartOpen] = useState(true);
   const [forecasts, setForecasts] = useState<Forecast[]>([]);
   const [draggingForecast, setDraggingForecast] = useState<Forecast | null>(null);
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
@@ -284,25 +285,7 @@ const Home = () => {
   const currentUser = auth.currentUser;
 
   return (
-    <div style={{ maxWidth: '600px', margin: '0 auto', paddingTop: '56px', paddingLeft: '2px', paddingRight: '2px', paddingBottom: '2px' }}>
-      <div
-        data-testid="chart-container"
-        style={{
-          height: '25vh',
-          backgroundColor: 'white',
-          borderRadius: '8px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-          marginBottom: '2px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#999',
-          fontSize: '14px',
-          border: '1px solid #eee'
-        }}
-      >
-        Chart coming soon
-      </div>
+    <div style={{ maxWidth: '600px', margin: '0 auto', paddingTop: chartOpen ? 'calc(56px + 25vh + 6px)' : 'calc(56px + 30px)', paddingLeft: '2px', paddingRight: '2px', paddingBottom: '2px' }}>
       <div style={{
         position: 'fixed',
         top: 0,
@@ -420,6 +403,54 @@ const Home = () => {
               </>
             )}
           </div>
+        </div>
+      </div>
+
+      <div style={{
+        position: 'fixed',
+        top: '44px',
+        left: 0,
+        right: 0,
+        zIndex: 998,
+        backgroundColor: '#f5f5f5'
+      }}>
+        <div style={{ maxWidth: '600px', margin: '0 auto', padding: '2px 2px 0 2px' }}>
+          {chartOpen && (
+            <div
+              data-testid="chart-container"
+              style={{
+                height: '25vh',
+                backgroundColor: 'white',
+                borderRadius: '8px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#999',
+                fontSize: '14px',
+                border: '1px solid #eee'
+              }}
+            >
+              Chart coming soon
+            </div>
+          )}
+          <button
+            data-testid="button-toggle-chart"
+            onClick={() => setChartOpen(!chartOpen)}
+            style={{
+              display: 'block',
+              width: '100%',
+              padding: '4px',
+              fontSize: '12px',
+              color: '#666',
+              backgroundColor: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              textAlign: 'center'
+            }}
+          >
+            {chartOpen ? 'Hide Chart' : 'Show Chart'}
+          </button>
         </div>
       </div>
 
