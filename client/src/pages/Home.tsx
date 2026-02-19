@@ -368,7 +368,7 @@ const Home = () => {
               textOverflow: 'ellipsis'
             }}
           >
-            <option value="">All ({transactions.length + visibleForecasts.length})</option>
+            <option value="">All Merchants ({transactions.length + visibleForecasts.length})</option>
             {companyNames.map(name => (
               <option key={name} value={name}>{name}</option>
             ))}
