@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { signOut } from "firebase/auth";
 import { auth, getTransactions, Transaction, saveForecast, saveSeriesForecasts, updateForecast, updateSeriesForecasts, deleteForecast, deleteSeriesForecasts, getForecasts, Forecast, reconcileForecast, getAccounts, Account } from "@/lib/firebase";
 import { useLocation } from "wouter";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const LONG_PRESS_MS = 500;
 
@@ -280,6 +281,55 @@ const Home = () => {
       value: a.account_id
     }));
 
+  const CHART_COLORS = ['#1976d2', '#e53935', '#43a047', '#fb8c00', '#8e24aa', '#00acc1', '#d81b60', '#6d4c41'];
+
+  const chartData = useMemo(() => {
+    if (accounts.length === 0) return [];
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endDate = new Date(today);
+    endDate.setMonth(endDate.getMonth() + 12);
+
+    const forecastsByAccount: Record<string, Record<string, number>> = {};
+    for (const f of visibleForecasts) {
+      if (!f.account_id) continue;
+      if (!forecastsByAccount[f.account_id]) forecastsByAccount[f.account_id] = {};
+      const dateStr = f.date;
+      if (!forecastsByAccount[f.account_id][dateStr]) forecastsByAccount[f.account_id][dateStr] = 0;
+      forecastsByAccount[f.account_id][dateStr] += f.amount;
+    }
+
+    const data: Record<string, any>[] = [];
+    const currentBalances: Record<string, number> = {};
+    for (const acct of accounts) {
+      currentBalances[acct.account_id] = acct.available_balance ?? 0;
+    }
+
+    const d = new Date(today);
+    while (d <= endDate) {
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const displayDate = `${d.getMonth() + 1}/${d.getDate()}`;
+
+      for (const acct of accounts) {
+        const dayForecast = forecastsByAccount[acct.account_id]?.[dateStr] || 0;
+        if (dayForecast !== 0) {
+          currentBalances[acct.account_id] += dayForecast;
+        }
+      }
+
+      const point: Record<string, any> = { date: displayDate, fullDate: dateStr };
+      for (const acct of accounts) {
+        point[acct.account_id] = Math.round(currentBalances[acct.account_id] * 100) / 100;
+      }
+      data.push(point);
+
+      d.setDate(d.getDate() + 1);
+    }
+
+    return data;
+  }, [accounts, visibleForecasts]);
+
   type MergedItem = 
     | { type: 'transaction'; data: Transaction }
     | { type: 'forecast'; data: Forecast };
@@ -309,7 +359,7 @@ const Home = () => {
   const currentUser = auth.currentUser;
 
   return (
-    <div style={{ maxWidth: '600px', margin: '0 auto', paddingTop: chartOpen ? 'calc(56px + 25vh + 6px)' : 'calc(56px + 30px)', paddingLeft: '2px', paddingRight: '2px', paddingBottom: '2px' }}>
+    <div style={{ maxWidth: '600px', margin: '0 auto', paddingTop: chartOpen ? 'calc(56px + 30vh + 6px)' : 'calc(56px + 30px)', paddingLeft: '2px', paddingRight: '2px', paddingBottom: '2px' }}>
       <div style={{
         position: 'fixed',
         top: 0,
@@ -465,7 +515,7 @@ const Home = () => {
             <div
               data-testid="chart-container"
               style={{
-                height: '25vh',
+                height: '30vh',
                 backgroundColor: 'white',
                 borderRadius: '8px',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
@@ -475,8 +525,56 @@ const Home = () => {
                 overflow: 'hidden'
               }}
             >
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999', fontSize: '14px' }}>
-                Chart coming soon
+              <div style={{ flex: 1, minHeight: 0, width: '100%' }}>
+                {chartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fontSize: 10 }}
+                        interval={Math.floor(chartData.length / 6)}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 10 }}
+                        tickFormatter={(v: number) => `$${(v / 1000).toFixed(1)}k`}
+                        width={48}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <Tooltip
+                        formatter={(value: number, name: string) => {
+                          const acct = accounts.find(a => a.account_id === name);
+                          const label = acct ? `${acct.name} ${acct.mask}` : name;
+                          return [new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value), label];
+                        }}
+                        labelFormatter={(label: string) => label}
+                        contentStyle={{ fontSize: '12px', borderRadius: '6px' }}
+                      />
+                      <Legend
+                        formatter={(value: string) => {
+                          const acct = accounts.find(a => a.account_id === value);
+                          return acct ? `${acct.name} ${acct.mask}` : value;
+                        }}
+                        wrapperStyle={{ fontSize: '11px', paddingTop: '0px' }}
+                      />
+                      {accounts.map((acct, i) => (
+                        <Line
+                          key={acct.account_id}
+                          type="stepAfter"
+                          dataKey={acct.account_id}
+                          stroke={CHART_COLORS[i % CHART_COLORS.length]}
+                          strokeWidth={2}
+                          dot={false}
+                        />
+                      ))}
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#999', fontSize: '14px' }}>
+                    No account data
+                  </div>
+                )}
               </div>
               {accounts.length > 0 && (
                 <div
