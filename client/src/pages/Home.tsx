@@ -20,6 +20,7 @@ const Home = () => {
   const [saving, setSaving] = useState(false);
   const [editingForecast, setEditingForecast] = useState<Forecast | null>(null);
   const [companyFilter, setCompanyFilter] = useState('');
+  const [accountFilter, setAccountFilter] = useState('');
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [chartOpen, setChartOpen] = useState(true);
   const [forecasts, setForecasts] = useState<Forecast[]>([]);
@@ -265,6 +266,17 @@ const Home = () => {
     ...visibleForecasts.map(f => f.merchant_name)
   ])).filter(Boolean).sort((a, b) => a.localeCompare(b));
 
+  const accountOptions: { label: string; value: string }[] = Array.from(
+    new Map(
+      transactions
+        .filter(t => t.account_mask)
+        .map(t => {
+          const label = t.account_name ? `${t.account_name} ••••${t.account_mask}` : `••••${t.account_mask}`;
+          return [t.account_mask!, { label, value: t.account_mask! }];
+        })
+    ).values()
+  ).sort((a, b) => a.label.localeCompare(b.label));
+
   type MergedItem = 
     | { type: 'transaction'; data: Transaction }
     | { type: 'forecast'; data: Forecast };
@@ -274,6 +286,11 @@ const Home = () => {
     ...transactions.map(t => ({ type: 'transaction' as const, data: t })),
   ].sort((a, b) => b.data.date.localeCompare(a.data.date))
   .filter(item => {
+    if (accountFilter && item.type === 'transaction') {
+      const tx = item.data as Transaction;
+      if (tx.account_mask !== accountFilter) return false;
+    }
+    if (accountFilter && item.type === 'forecast') return false;
     if (!companyFilter) return true;
     if (item.type === 'forecast') {
       return (item.data as Forecast).merchant_name === companyFilter;
@@ -306,6 +323,28 @@ const Home = () => {
           gap: '12px'
         }}>
           <h1 style={{ margin: 0, fontSize: '20px', whiteSpace: 'nowrap' }}>CashCushion</h1>
+          <select
+            data-testid="select-account-filter"
+            value={accountFilter}
+            onChange={(e) => setAccountFilter(e.target.value)}
+            style={{
+              flex: '0 1 auto',
+              minWidth: '0',
+              maxWidth: '140px',
+              padding: '6px 8px',
+              fontSize: '13px',
+              borderRadius: '4px',
+              border: '1px solid #ccc',
+              backgroundColor: 'white',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}
+          >
+            <option value="">All Accts</option>
+            {accountOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
           <select
             data-testid="select-company-filter"
             value={companyFilter}

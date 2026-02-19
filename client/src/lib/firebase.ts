@@ -81,6 +81,8 @@ export interface Transaction {
   merchant_name?: string;
   merchant_entity_id?: string;
   logo_url?: string;
+  account_mask?: string;
+  account_name?: string;
 }
 
 export interface TransactionsResult {
@@ -127,7 +129,9 @@ export async function getTransactions(
       date: data.date,
       counterparty_name: data.counterparty_name || data.name || 'Unknown',
       merchant_name: data.merchant_name,
-      logo_url: data.logo_url
+      logo_url: data.logo_url,
+      account_mask: data.account_mask,
+      account_name: data.account_name
     });
   });
   
