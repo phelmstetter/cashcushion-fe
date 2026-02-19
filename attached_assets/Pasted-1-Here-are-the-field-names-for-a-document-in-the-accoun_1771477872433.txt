@@ -1,0 +1,82 @@
+1. Here are the field names for a document in the accounts collection:
+account_id: "EV3497QVjRtv5v9v7VwgcjKM8LMa60Fq9jLMQ1" (string)
+available_balance: 3429.07 (number)
+current_balance: 3429.07 (number)
+iso_currency_code: "USD" (string)
+item_id: "VBdxj3PBg8CB4BRBZep1FZjynL3ke8IrnxOmA" (string)
+mask: "5454" (string)
+name: "Bills" (string)
+official_name: "Bills" (string)
+subtype: "checking" (string)
+type: "depository" (string)
+user_id: "hmXQNq3GQYfppZqW7MT2E8hnWPH2"
+
+2. Here are the field names for a document in the transactions collection: 
+account_id: RDQKk13DgRFDEDODXdvbHg4ZkvZx6wIrLJB0ev (string)
+account_owner: null (null)
+amount: -0.2 (number)
+authorized_date: 2025-09-15 (string)
+authorized_datetime: 2025-09-15T06:03:24Z (string)
+
+category: [Interest, Interest Earned] (array)
+category_id: 15001000 (string)
+check_number: null (null)
+
+counterparties: [] (array)
+
+date: 2025-09-15 (string)
+datetime: 2025-09-15T06:03:24Z (string)
+iso_currency_code: USD (string)
+item_id: VBdxj3PBg8CB4BRBZep1FZjynL3ke8IrnxOmA (string)
+
+location.address: null (null)
+location.city: null (null)
+location.country: null (null)
+location.lat: null (null)
+location.lon: null (null)
+location.postal_code: null (null)
+location.region: null (null)
+location.store_number: null (null)
+
+logo_url: null (null)
+merchant_entity_id: null (null)
+merchant_name: null (null)
+
+name: Dividend (GT20)DIVIDEND (string)
+payment_channel: other (string)
+
+payment_meta.by_order_of: null (null)
+payment_meta.payee: null (null)
+payment_meta.payer: null (null)
+payment_meta.payment_method: null (null)
+payment_meta.payment_processor: null (null)
+payment_meta.ppd_id: null (null)
+payment_meta.reason: null (null)
+payment_meta.reference_number: null (null)
+
+pending: false (boolean)
+pending_transaction_id: null (null)
+
+personal_finance_category.confidence_level: VERY_HIGH (string)
+personal_finance_category.detailed: INCOME_DIVIDENDS (string)
+personal_finance_category.primary: INCOME (string)
+personal_finance_category.version: v1 (string)
+
+personal_finance_category_icon_url: https://plaid-category-icons.plaid.com/PFC_INCOME.png (string)
+
+transaction_code: null (null)
+transaction_id: 03ykBqN3jOiPEPKPN1J5TJk0R9gzj6UvNLO0E (string)
+transaction_type: special (string)
+unofficial_currency_code: null (null)
+user_id: hmXQNq3GQYfppZqW7MT2E8hnWPH2 (string)
+
+
+3. Here are the field names for a document in the forecast collection:
+amount: 9.99 (number)
+created_at: 2026-02-15T04:22:23.433Z (string)
+date: 2026-07-13 (string)
+merchant_entity_id: null (null)
+merchant_name: Apple (string)
+series_id: 257b8b66-ce09-46e7-9496-26b6eb444e6a (string)
+user_id: hmXQNq3GQYfppZqW7MT2E8hnWPH2 (string)
+ 

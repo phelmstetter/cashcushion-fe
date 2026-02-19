@@ -75,6 +75,7 @@ export async function getUserFromFirestore(userId: string): Promise<UserData | n
 
 export interface Account {
   id: string;
+  account_id: string;
   mask: string;
   name: string;
   official_name?: string;
@@ -86,13 +87,12 @@ export async function getAccounts(userId: string): Promise<Account[]> {
   const accountsRef = collection(db, 'accounts');
   const q = query(accountsRef, where('user_id', '==', userId));
   const querySnapshot = await getDocs(q);
-  console.log('Accounts query returned', querySnapshot.size, 'documents for user', userId);
   const accounts: Account[] = [];
   querySnapshot.forEach((d) => {
     const data = d.data();
-    console.log('Account doc:', d.id, JSON.stringify(data));
     accounts.push({
       id: d.id,
+      account_id: data.account_id || '',
       mask: data.mask || '',
       name: data.name || data.official_name || '',
       official_name: data.official_name,
@@ -111,8 +111,7 @@ export interface Transaction {
   merchant_name?: string;
   merchant_entity_id?: string;
   logo_url?: string;
-  account_mask?: string;
-  account_name?: string;
+  account_id?: string;
 }
 
 export interface TransactionsResult {
@@ -160,8 +159,7 @@ export async function getTransactions(
       counterparty_name: data.counterparty_name || data.name || 'Unknown',
       merchant_name: data.merchant_name,
       logo_url: data.logo_url,
-      account_mask: data.account_mask,
-      account_name: data.account_name
+      account_id: data.account_id
     });
   });
   
@@ -186,8 +184,7 @@ export interface Forecast {
   created_at: string;
   matched_transaction_id?: string | null;
   series_id?: string | null;
-  account_mask?: string | null;
-  account_name?: string | null;
+  account_id?: string | null;
 }
 
 export async function saveForecast(forecast: Forecast): Promise<string> {
@@ -266,8 +263,7 @@ export async function getForecasts(userId: string): Promise<Forecast[]> {
       created_at: data.created_at,
       matched_transaction_id: data.matched_transaction_id || null,
       series_id: data.series_id || null,
-      account_mask: data.account_mask || null,
-      account_name: data.account_name || null
+      account_id: data.account_id || null
     });
   });
   return forecasts;

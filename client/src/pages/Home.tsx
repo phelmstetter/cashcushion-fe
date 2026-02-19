@@ -274,10 +274,10 @@ const Home = () => {
   ])).filter(Boolean).sort((a, b) => a.localeCompare(b));
 
   const accountOptions = accounts
-    .filter(a => a.mask)
+    .filter(a => a.account_id)
     .map(a => ({
       label: a.name ? `${a.name} ••••${a.mask}` : `••••${a.mask}`,
-      value: a.mask
+      value: a.account_id
     }));
 
   type MergedItem = 
@@ -292,10 +292,10 @@ const Home = () => {
     if (accountFilter) {
       if (item.type === 'transaction') {
         const tx = item.data as Transaction;
-        if (tx.account_mask !== accountFilter) return false;
+        if (tx.account_id !== accountFilter) return false;
       } else {
         const fc = item.data as Forecast;
-        if (fc.account_mask !== accountFilter) return false;
+        if (fc.account_id !== accountFilter) return false;
       }
     }
     if (!companyFilter) return true;
@@ -1007,8 +1007,7 @@ const Home = () => {
                           merchant_entity_id: selectedTransaction.merchant_entity_id || null,
                           amount: parseFloat(forecastAmount),
                           created_at: new Date().toISOString(),
-                          account_mask: selectedTransaction.account_mask || null,
-                          account_name: selectedTransaction.account_name || null
+                          account_id: selectedTransaction.account_id || null
                         };
 
                         if (forecastType === 'monthly') {
