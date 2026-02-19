@@ -86,11 +86,13 @@ export async function getAccounts(userId: string): Promise<Account[]> {
   const accountsRef = collection(db, 'accounts');
   const q = query(accountsRef, where('user_id', '==', userId));
   const querySnapshot = await getDocs(q);
+  console.log('Accounts query returned', querySnapshot.size, 'documents for user', userId);
   const accounts: Account[] = [];
-  querySnapshot.forEach((doc) => {
-    const data = doc.data();
+  querySnapshot.forEach((d) => {
+    const data = d.data();
+    console.log('Account doc:', d.id, JSON.stringify(data));
     accounts.push({
-      id: doc.id,
+      id: d.id,
       mask: data.mask || '',
       name: data.name || data.official_name || '',
       official_name: data.official_name,
