@@ -156,6 +156,8 @@ export interface Forecast {
   created_at: string;
   matched_transaction_id?: string | null;
   series_id?: string | null;
+  account_mask?: string | null;
+  account_name?: string | null;
 }
 
 export async function saveForecast(forecast: Forecast): Promise<string> {
@@ -233,7 +235,9 @@ export async function getForecasts(userId: string): Promise<Forecast[]> {
       amount: data.amount,
       created_at: data.created_at,
       matched_transaction_id: data.matched_transaction_id || null,
-      series_id: data.series_id || null
+      series_id: data.series_id || null,
+      account_mask: data.account_mask || null,
+      account_name: data.account_name || null
     });
   });
   return forecasts;
