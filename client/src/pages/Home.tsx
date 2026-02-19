@@ -297,7 +297,7 @@ const Home = () => {
       if (!forecastsByAccount[f.account_id]) forecastsByAccount[f.account_id] = {};
       const dateStr = f.date;
       if (!forecastsByAccount[f.account_id][dateStr]) forecastsByAccount[f.account_id][dateStr] = 0;
-      forecastsByAccount[f.account_id][dateStr] += f.amount;
+      forecastsByAccount[f.account_id][dateStr] -= f.amount;
     }
 
     const data: Record<string, any>[] = [];
