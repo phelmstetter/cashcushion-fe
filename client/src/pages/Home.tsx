@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { signOut } from "firebase/auth";
-import { auth, getTransactions, Transaction, saveForecast, saveSeriesForecasts, updateForecast, updateSeriesForecasts, deleteForecast, deleteSeriesForecasts, getForecasts, Forecast, reconcileForecast, getAccounts, Account } from "@/lib/firebase";
+import { auth, getTransactions, Transaction, saveForecast, saveSeriesForecasts, saveDayIntervalForecasts, updateForecast, updateSeriesForecasts, deleteForecast, deleteSeriesForecasts, getForecasts, Forecast, reconcileForecast, getAccounts, Account } from "@/lib/firebase";
 import { useLocation } from "wouter";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
@@ -16,8 +16,10 @@ const Home = () => {
   const [modalView, setModalView] = useState<'details' | 'forecast' | 'editForecast'>('details');
   const [forecastDate, setForecastDate] = useState('');
   const [forecastAmount, setForecastAmount] = useState('');
-  const [forecastType, setForecastType] = useState<'single' | 'monthly'>('single');
+  const [forecastType, setForecastType] = useState<'single' | 'monthly' | 'every_x_days'>('single');
   const [forecastMonths, setForecastMonths] = useState(12);
+  const [forecastDayInterval, setForecastDayInterval] = useState(14);
+  const [forecastDayCount, setForecastDayCount] = useState(12);
   const [saving, setSaving] = useState(false);
   const [editingForecast, setEditingForecast] = useState<Forecast | null>(null);
   const [companyFilter, setCompanyFilter] = useState('');
@@ -1018,7 +1020,7 @@ const Home = () => {
                         fontSize: '14px'
                       }}
                     >
-                      Single Date
+                      Single
                     </button>
                     <button
                       data-testid="button-forecast-monthly"
@@ -1030,13 +1032,31 @@ const Home = () => {
                         color: forecastType === 'monthly' ? 'white' : '#333',
                         border: '1px solid #ccc',
                         borderLeft: 'none',
-                        borderRadius: '0 4px 4px 0',
+                        borderRadius: '0',
                         cursor: 'pointer',
                         fontWeight: forecastType === 'monthly' ? 600 : 400,
                         fontSize: '14px'
                       }}
                     >
                       Monthly
+                    </button>
+                    <button
+                      data-testid="button-forecast-every-x-days"
+                      onClick={() => setForecastType('every_x_days')}
+                      style={{
+                        flex: 1,
+                        padding: '8px',
+                        backgroundColor: forecastType === 'every_x_days' ? '#4CAF50' : '#f5f5f5',
+                        color: forecastType === 'every_x_days' ? 'white' : '#333',
+                        border: '1px solid #ccc',
+                        borderLeft: 'none',
+                        borderRadius: '0 4px 4px 0',
+                        cursor: 'pointer',
+                        fontWeight: forecastType === 'every_x_days' ? 600 : 400,
+                        fontSize: '14px'
+                      }}
+                    >
+                      Every X Days
                     </button>
                   </div>
                 </div>
@@ -1078,6 +1098,51 @@ const Home = () => {
                     }}
                   />
                 </div>
+
+                {forecastType === 'every_x_days' && (
+                  <div style={{ marginTop: '16px', display: 'flex', gap: '8px' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>
+                        Every
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        data-testid="input-forecast-day-interval"
+                        value={forecastDayInterval}
+                        onChange={(e) => setForecastDayInterval(Math.max(1, parseInt(e.target.value) || 1))}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          borderRadius: '4px',
+                          border: '1px solid #ccc',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                      <span style={{ fontSize: '12px', color: '#888', marginTop: '2px', display: 'block' }}>days</span>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>
+                        Occurrences
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="52"
+                        data-testid="input-forecast-day-count"
+                        value={forecastDayCount}
+                        onChange={(e) => setForecastDayCount(Math.max(1, Math.min(52, parseInt(e.target.value) || 1)))}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          borderRadius: '4px',
+                          border: '1px solid #ccc',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {forecastType === 'monthly' && (
                   <div style={{ marginTop: '16px' }}>
@@ -1143,6 +1208,8 @@ const Home = () => {
 
                         if (forecastType === 'monthly') {
                           await saveSeriesForecasts(baseForecast, forecastDate, forecastMonths);
+                        } else if (forecastType === 'every_x_days') {
+                          await saveDayIntervalForecasts(baseForecast, forecastDate, forecastDayInterval, forecastDayCount);
                         } else {
                           await saveForecast({
                             ...baseForecast,
@@ -1176,7 +1243,7 @@ const Home = () => {
                       opacity: saving || !forecastDate || !forecastAmount ? 0.6 : 1
                     }}
                   >
-                    {saving ? 'Saving...' : forecastType === 'monthly' ? `Save ${forecastMonths} Forecasts` : 'Save'}
+                    {saving ? 'Saving...' : forecastType === 'monthly' ? `Save ${forecastMonths} Forecasts` : forecastType === 'every_x_days' ? `Save ${forecastDayCount} Forecasts` : 'Save'}
                   </button>
                 </div>
               </>

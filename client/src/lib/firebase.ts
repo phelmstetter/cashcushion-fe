@@ -222,6 +222,32 @@ export async function saveSeriesForecasts(
   return seriesId;
 }
 
+export async function saveDayIntervalForecasts(
+  baseForecast: Omit<Forecast, 'id' | 'date'>,
+  startDate: string,
+  dayInterval: number,
+  count: number
+): Promise<string> {
+  const seriesId = crypto.randomUUID ? crypto.randomUUID() : `series_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  const forecastsRef = collection(db, 'forecasts');
+
+  for (let i = 0; i < count; i++) {
+    const d = new Date(startDate + 'T00:00:00');
+    d.setDate(d.getDate() + (dayInterval * i));
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+
+    await addDoc(forecastsRef, {
+      ...baseForecast,
+      date: `${yyyy}-${mm}-${dd}`,
+      series_id: seriesId
+    });
+  }
+
+  return seriesId;
+}
+
 export async function updateForecast(forecastId: string, updates: Partial<Pick<Forecast, 'date' | 'amount'>>): Promise<void> {
   const forecastRef = doc(db, 'forecasts', forecastId);
   await updateDoc(forecastRef, updates);
