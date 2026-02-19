@@ -276,7 +276,7 @@ const Home = () => {
   const accountOptions = accounts
     .filter(a => a.account_id)
     .map(a => ({
-      label: a.name ? `${a.name} •${a.mask}` : `•${a.mask}`,
+      label: a.name ? `${a.name} ${a.mask}` : a.mask,
       value: a.account_id
     }));
 
@@ -501,7 +501,7 @@ const Home = () => {
                         whiteSpace: 'nowrap'
                       }}
                     >
-                      <span style={{ color: '#888' }}>{acct.name} •{acct.mask}</span>{' '}
+                      <span style={{ color: '#888' }}>{acct.name} {acct.mask}</span>{' '}
                       <span style={{ fontWeight: 600 }}>
                         {acct.available_balance != null
                           ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(acct.available_balance)
