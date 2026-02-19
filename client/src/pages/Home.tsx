@@ -10,6 +10,7 @@ const Home = () => {
   const [, setLocation] = useLocation();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [hasMore, setHasMore] = useState(true);
+  const hasMoreRef = useRef(true);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
@@ -77,7 +78,7 @@ const Home = () => {
   };
 
   const loadMoreTransactions = async () => {
-    if (loadingRef.current || !hasMore) return;
+    if (loadingRef.current || !hasMoreRef.current) return;
     
     const userId = auth.currentUser?.uid;
     if (!userId) return;
@@ -92,8 +93,10 @@ const Home = () => {
         if (result.lastDate && result.lastId) {
           cursorRef.current = { date: result.lastDate, id: result.lastId };
         }
+        hasMoreRef.current = result.hasMore;
         setHasMore(result.hasMore);
       } else {
+        hasMoreRef.current = false;
         setHasMore(false);
       }
     } catch (error) {
@@ -115,7 +118,7 @@ const Home = () => {
 
     observerRef.current = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loadingRef.current) {
+        if (entries[0].isIntersecting && hasMoreRef.current && !loadingRef.current) {
           loadMoreTransactions();
         }
       },
