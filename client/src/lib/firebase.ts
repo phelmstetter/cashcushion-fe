@@ -81,6 +81,8 @@ export interface Account {
   official_name?: string;
   subtype?: string;
   type?: string;
+  available_balance?: number | null;
+  current_balance?: number | null;
 }
 
 export async function getAccounts(userId: string): Promise<Account[]> {
@@ -97,7 +99,9 @@ export async function getAccounts(userId: string): Promise<Account[]> {
       name: data.name || data.official_name || '',
       official_name: data.official_name,
       subtype: data.subtype,
-      type: data.type
+      type: data.type,
+      available_balance: data.available_balance ?? null,
+      current_balance: data.current_balance ?? null
     });
   });
   return accounts.sort((a, b) => a.name.localeCompare(b.name));

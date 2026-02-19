@@ -470,14 +470,47 @@ const Home = () => {
                 borderRadius: '8px',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#999',
-                fontSize: '14px',
-                border: '1px solid #eee'
+                flexDirection: 'column',
+                border: '1px solid #eee',
+                overflow: 'hidden'
               }}
             >
-              Chart coming soon
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999', fontSize: '14px' }}>
+                Chart coming soon
+              </div>
+              {accounts.length > 0 && (
+                <div
+                  data-testid="account-balances"
+                  style={{
+                    borderTop: '1px solid #eee',
+                    padding: '6px 10px',
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '8px',
+                    justifyContent: 'center',
+                    backgroundColor: '#fafafa'
+                  }}
+                >
+                  {accounts.map(acct => (
+                    <div
+                      key={acct.account_id}
+                      data-testid={`balance-${acct.mask}`}
+                      style={{
+                        fontSize: '12px',
+                        color: '#333',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      <span style={{ color: '#888' }}>{acct.name} ••••{acct.mask}</span>{' '}
+                      <span style={{ fontWeight: 600 }}>
+                        {acct.available_balance != null
+                          ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(acct.available_balance)
+                          : '—'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
           <button
