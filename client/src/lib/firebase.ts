@@ -73,6 +73,34 @@ export async function getUserFromFirestore(userId: string): Promise<UserData | n
   return null;
 }
 
+export interface Account {
+  id: string;
+  mask: string;
+  name: string;
+  official_name?: string;
+  subtype?: string;
+  type?: string;
+}
+
+export async function getAccounts(userId: string): Promise<Account[]> {
+  const accountsRef = collection(db, 'accounts');
+  const q = query(accountsRef, where('user_id', '==', userId));
+  const querySnapshot = await getDocs(q);
+  const accounts: Account[] = [];
+  querySnapshot.forEach((doc) => {
+    const data = doc.data();
+    accounts.push({
+      id: doc.id,
+      mask: data.mask || '',
+      name: data.name || data.official_name || '',
+      official_name: data.official_name,
+      subtype: data.subtype,
+      type: data.type
+    });
+  });
+  return accounts.sort((a, b) => a.name.localeCompare(b.name));
+}
+
 export interface Transaction {
   id: string;
   amount: number;

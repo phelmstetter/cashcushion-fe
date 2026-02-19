@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { signOut } from "firebase/auth";
-import { auth, getTransactions, Transaction, saveForecast, saveSeriesForecasts, updateForecast, updateSeriesForecasts, deleteForecast, deleteSeriesForecasts, getForecasts, Forecast, reconcileForecast } from "@/lib/firebase";
+import { auth, getTransactions, Transaction, saveForecast, saveSeriesForecasts, updateForecast, updateSeriesForecasts, deleteForecast, deleteSeriesForecasts, getForecasts, Forecast, reconcileForecast, getAccounts, Account } from "@/lib/firebase";
 import { useLocation } from "wouter";
 
 const LONG_PRESS_MS = 500;
@@ -23,6 +23,7 @@ const Home = () => {
   const [accountFilter, setAccountFilter] = useState('');
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [chartOpen, setChartOpen] = useState(true);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [forecasts, setForecasts] = useState<Forecast[]>([]);
   const [draggingForecast, setDraggingForecast] = useState<Forecast | null>(null);
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
@@ -62,6 +63,12 @@ const Home = () => {
       setForecasts(userForecasts);
     } catch (error) {
       console.error("Error loading forecasts:", error);
+    }
+    try {
+      const userAccounts = await getAccounts(userId);
+      setAccounts(userAccounts);
+    } catch (error) {
+      console.error("Error loading accounts:", error);
     }
     setInitialLoading(false);
   };
@@ -266,16 +273,12 @@ const Home = () => {
     ...visibleForecasts.map(f => f.merchant_name)
   ])).filter(Boolean).sort((a, b) => a.localeCompare(b));
 
-  const accountOptions: { label: string; value: string }[] = Array.from(
-    new Map(
-      transactions
-        .filter(t => t.account_mask)
-        .map(t => {
-          const label = t.account_name ? `${t.account_name} ••••${t.account_mask}` : `••••${t.account_mask}`;
-          return [t.account_mask!, { label, value: t.account_mask! }];
-        })
-    ).values()
-  ).sort((a, b) => a.label.localeCompare(b.label));
+  const accountOptions = accounts
+    .filter(a => a.mask)
+    .map(a => ({
+      label: a.name ? `${a.name} ••••${a.mask}` : `••••${a.mask}`,
+      value: a.mask
+    }));
 
   type MergedItem = 
     | { type: 'transaction'; data: Transaction }
