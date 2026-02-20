@@ -964,16 +964,31 @@ const Home = () => {
                     <span style={{ color: '#666' }}>Date</span>
                     <span style={{ fontWeight: 500 }}>{formatDate(selectedTransaction.date)}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
-                    <span style={{ color: '#666' }}>Transaction ID</span>
-                    <span style={{ fontWeight: 500, fontSize: '12px', fontFamily: 'monospace' }}>{selectedTransaction.id}</span>
-                  </div>
-                  {selectedTransaction.merchant_entity_id && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
-                      <span style={{ color: '#666' }}>Merchant ID</span>
-                      <span style={{ fontWeight: 500, fontSize: '12px', fontFamily: 'monospace' }}>{selectedTransaction.merchant_entity_id}</span>
-                    </div>
-                  )}
+                  {(() => {
+                    const acct = accounts.find(a => a.account_id === selectedTransaction.account_id);
+                    if (acct) {
+                      return (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
+                          <span style={{ color: '#666' }}>Account</span>
+                          <span style={{ fontWeight: 500 }}>****{acct.mask}</span>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+                  {(() => {
+                    const merchantId = selectedTransaction.merchant_entity_id;
+                    if (!merchantId) return null;
+                    const hasForecast = forecasts.some(f => f.merchant_entity_id === merchantId);
+                    return (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
+                        <span style={{ color: '#666' }}>Forecast</span>
+                        <span style={{ fontWeight: 500, color: hasForecast ? 'green' : '#999' }}>
+                          {hasForecast ? 'Yes' : 'No'}
+                        </span>
+                      </div>
+                    );
+                  })()}
                 </div>
               </>
             )}
