@@ -384,6 +384,14 @@ const Home = () => {
     return (tx.merchant_name || tx.counterparty_name) === companyFilter;
   });
 
+  const matchedTransactionIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const f of forecasts) {
+      if (f.matched_transaction_id) ids.add(f.matched_transaction_id);
+    }
+    return ids;
+  }, [forecasts]);
+
   const scrollAnchorIndex = useMemo(() => {
     const firstTxIndex = mergedItems.findIndex(item => item.type === 'transaction');
     if (firstTxIndex <= 0) return 0;
@@ -704,7 +712,8 @@ const Home = () => {
               transactionForModal = transaction;
             }
 
-            const isForecasted = !isForecast && (() => {
+            const isMatched = !isForecast && matchedTransactionIds.has((item.data as Transaction).id);
+            const isForecasted = !isForecast && !isMatched && (() => {
               const tx = item.data as Transaction;
               const merchantId = tx.merchant_entity_id;
               const txName = tx.merchant_name || tx.counterparty_name;
@@ -757,7 +766,7 @@ const Home = () => {
                   backgroundColor: isDropTarget ? '#bbdefb' : isForecast ? '#E3F2FD' : '#fff',
                   borderRadius: '8px',
                   boxShadow: isDropTarget ? '0 0 0 3px #1976d2' : '0 1px 3px rgba(0,0,0,0.1)',
-                  borderLeft: isForecast ? 'none' : (isForecasted ? '4px solid #64B5F6' : '4px solid #F4A916'),
+                  borderLeft: isForecast ? 'none' : (isMatched ? '4px solid #4CAF50' : isForecasted ? '4px solid #64B5F6' : '4px solid #F4A916'),
                   opacity: isDragging ? 0.4 : 1,
                   cursor: isForecast ? 'grab' : 'default',
                   userSelect: 'none',
