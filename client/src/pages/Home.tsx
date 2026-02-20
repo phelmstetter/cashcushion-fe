@@ -675,7 +675,7 @@ const Home = () => {
             if (isForecast) {
               const forecast = item.data as Forecast;
               displayName = forecast.name;
-              logoUrl = undefined;
+              logoUrl = forecast.logo_url || undefined;
             } else {
               const transaction = item.data as Transaction;
               displayName = transaction.merchant_name || transaction.counterparty_name;
@@ -1254,7 +1254,8 @@ const Home = () => {
                           merchant_entity_id: selectedTransaction.merchant_entity_id || null,
                           amount: parseFloat(forecastAmount),
                           created_at: new Date().toISOString(),
-                          account_id: selectedTransaction.account_id || null
+                          account_id: selectedTransaction.account_id || null,
+                          logo_url: selectedTransaction.logo_url || null
                         };
 
                         if (forecastType === 'monthly') {
