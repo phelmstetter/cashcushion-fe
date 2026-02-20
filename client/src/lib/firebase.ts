@@ -327,3 +327,10 @@ export async function reconcileForecast(forecastId: string, transactionId: strin
     matched_transaction_id: transactionId
   });
 }
+
+export async function unreconcileForecast(forecastId: string): Promise<void> {
+  const forecastRef = doc(db, 'forecasts', forecastId);
+  await updateDoc(forecastRef, {
+    matched_transaction_id: null
+  });
+}

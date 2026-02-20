@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { signOut } from "firebase/auth";
-import { auth, getTransactions, Transaction, saveForecast, saveSeriesForecasts, saveDayIntervalForecasts, updateForecast, updateSeriesForecasts, deleteForecast, deleteSeriesForecasts, getForecasts, Forecast, reconcileForecast, getAccounts, Account } from "@/lib/firebase";
+import { auth, getTransactions, Transaction, saveForecast, saveSeriesForecasts, saveDayIntervalForecasts, updateForecast, updateSeriesForecasts, deleteForecast, deleteSeriesForecasts, getForecasts, Forecast, reconcileForecast, unreconcileForecast, getAccounts, Account } from "@/lib/firebase";
 import { useLocation } from "wouter";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
@@ -1031,6 +1031,39 @@ const Home = () => {
                         <span style={{ fontWeight: 500, color: hasForecast ? 'green' : '#999' }}>
                           {hasForecast ? 'True' : 'False'}
                         </span>
+                      </div>
+                    );
+                  })()}
+                  {(() => {
+                    const matchedForecast = forecasts.find(f => f.matched_transaction_id === selectedTransaction.id);
+                    if (!matchedForecast) return null;
+                    return (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' }}>
+                        <span style={{ color: '#4CAF50', fontWeight: 600 }}>Matched</span>
+                        <button
+                          data-testid="button-undo-match"
+                          onClick={async () => {
+                            try {
+                              await unreconcileForecast(matchedForecast.id!);
+                              const updatedForecasts = await getForecasts(auth.currentUser!.uid);
+                              setForecasts(updatedForecasts);
+                            } catch (error) {
+                              console.error('Error undoing match:', error);
+                            }
+                          }}
+                          style={{
+                            padding: '4px 12px',
+                            fontSize: '13px',
+                            backgroundColor: 'transparent',
+                            color: '#e53935',
+                            border: '1px solid #e53935',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontWeight: 500
+                          }}
+                        >
+                          Undo
+                        </button>
                       </div>
                     );
                   })()}
