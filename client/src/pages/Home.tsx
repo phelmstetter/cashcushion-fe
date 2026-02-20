@@ -85,18 +85,15 @@ const Home = () => {
   };
 
   const loadMoreTransactions = async () => {
-    console.log('[InfScroll] loadMore called, loading:', loadingRef.current, 'hasMore:', hasMoreRef.current, 'cursor:', cursorRef.current);
     if (loadingRef.current || !hasMoreRef.current) return;
     
     const userId = auth.currentUser?.uid;
-    if (!userId) { console.log('[InfScroll] no userId'); return; }
+    if (!userId) return;
     
     loadingRef.current = true;
     setLoading(true);
     try {
       const result = await getTransactions(userId, cursorRef.current);
-      console.log('[InfScroll] got', result.transactions.length, 'transactions, hasMore:', result.hasMore);
-      
       if (result.transactions.length > 0) {
         setTransactions(prev => [...prev, ...result.transactions]);
         if (result.lastDate && result.lastId) {
@@ -109,7 +106,7 @@ const Home = () => {
         setHasMore(false);
       }
     } catch (error) {
-      console.error("[InfScroll] Error loading more:", error);
+      console.error("Error loading more:", error);
     } finally {
       loadingRef.current = false;
       setLoading(false);
@@ -128,7 +125,6 @@ const Home = () => {
 
     observerRef.current = new IntersectionObserver(
       (entries) => {
-        console.log('[InfScroll] observer fired, isIntersecting:', entries[0].isIntersecting, 'hasMore:', hasMoreRef.current, 'loading:', loadingRef.current);
         if (entries[0].isIntersecting && hasMoreRef.current && !loadingRef.current) {
           loadMoreTransactions();
         }
@@ -154,7 +150,6 @@ const Home = () => {
       const windowHeight = window.innerHeight;
       const docHeight = document.documentElement.scrollHeight;
       if (scrollY + windowHeight >= docHeight - 300) {
-        console.log('[InfScroll] scroll fallback triggered');
         loadMoreTransactions();
       }
     };
