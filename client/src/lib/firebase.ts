@@ -181,7 +181,7 @@ export async function getTransactions(
 export interface Forecast {
   id?: string;
   user_id: string;
-  merchant_name: string;
+  name: string;
   merchant_entity_id?: string | null;
   date: string;
   amount: number;
@@ -286,7 +286,7 @@ export async function getForecasts(userId: string): Promise<Forecast[]> {
     forecasts.push({
       id: doc.id,
       user_id: data.user_id,
-      merchant_name: data.merchant_name,
+      name: data.name,
       merchant_entity_id: data.merchant_entity_id,
       date: data.date,
       amount: data.amount,

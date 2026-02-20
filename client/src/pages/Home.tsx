@@ -297,7 +297,7 @@ const Home = () => {
 
   const companyNames: string[] = Array.from(new Set([
     ...transactions.map(t => t.merchant_name || t.counterparty_name),
-    ...visibleForecasts.map(f => f.merchant_name)
+    ...visibleForecasts.map(f => f.name)
   ])).filter(Boolean).sort((a, b) => a.localeCompare(b));
 
   const accountOptions = accounts
@@ -376,7 +376,7 @@ const Home = () => {
     }
     if (!companyFilter) return true;
     if (item.type === 'forecast') {
-      return (item.data as Forecast).merchant_name === companyFilter;
+      return (item.data as Forecast).name === companyFilter;
     }
     const tx = item.data as Transaction;
     return (tx.merchant_name || tx.counterparty_name) === companyFilter;
@@ -674,7 +674,7 @@ const Home = () => {
 
             if (isForecast) {
               const forecast = item.data as Forecast;
-              displayName = forecast.merchant_name;
+              displayName = forecast.name;
               logoUrl = undefined;
             } else {
               const transaction = item.data as Transaction;
@@ -828,7 +828,7 @@ const Home = () => {
           textAlign: 'center',
           opacity: 0.9
         }}>
-          {draggingForecast.merchant_name}
+          {draggingForecast.name}
           <div style={{ fontSize: '11px', fontWeight: 400, marginTop: '2px' }}>
             Drop on a transaction to match
           </div>
@@ -981,7 +981,7 @@ const Home = () => {
                     const merchantName = selectedTransaction.merchant_name;
                     const hasForecast = forecasts.some(f =>
                       (merchantId && f.merchant_entity_id === merchantId) ||
-                      (merchantName && f.merchant_name === merchantName)
+                      (merchantName && f.name === merchantName)
                     );
                     return (
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
@@ -1241,7 +1241,7 @@ const Home = () => {
                         const merchantName = selectedTransaction.merchant_name || selectedTransaction.counterparty_name;
                         const baseForecast = {
                           user_id: auth.currentUser.uid,
-                          merchant_name: merchantName,
+                          name: merchantName,
                           merchant_entity_id: selectedTransaction.merchant_entity_id || null,
                           amount: parseFloat(forecastAmount),
                           created_at: new Date().toISOString(),
@@ -1319,7 +1319,7 @@ const Home = () => {
                 </div>
 
                 <p style={{ margin: '0 0 16px 0' }}>
-                  <strong>{editingForecast.merchant_name}</strong>
+                  <strong>{editingForecast.name}</strong>
                   {editingForecast.series_id && (
                     <span style={{ fontSize: '12px', color: '#4CAF50', marginLeft: '8px', fontWeight: 600 }}>SERIES</span>
                   )}
