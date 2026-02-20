@@ -683,6 +683,16 @@ const Home = () => {
               transactionForModal = transaction;
             }
 
+            const isForecasted = !isForecast && (() => {
+              const tx = item.data as Transaction;
+              const merchantId = tx.merchant_entity_id;
+              const txName = tx.merchant_name || tx.counterparty_name;
+              return forecasts.some(f =>
+                (merchantId && f.merchant_entity_id === merchantId) ||
+                (txName && f.name === txName)
+              );
+            })();
+
             const { display: amountDisplay, isPositive } = isForecast 
               ? { 
                   display: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Math.abs(amount)),
@@ -723,7 +733,7 @@ const Home = () => {
                   backgroundColor: isDropTarget ? '#bbdefb' : isForecast ? '#E3F2FD' : '#fff',
                   borderRadius: '8px',
                   boxShadow: isDropTarget ? '0 0 0 3px #1976d2' : '0 1px 3px rgba(0,0,0,0.1)',
-                  borderLeft: 'none',
+                  borderLeft: isForecasted ? '4px solid #64B5F6' : 'none',
                   opacity: isDragging ? 0.4 : 1,
                   cursor: isForecast ? 'grab' : 'default',
                   userSelect: 'none',
