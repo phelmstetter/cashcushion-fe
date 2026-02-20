@@ -725,8 +725,8 @@ const Home = () => {
 
             const { display: amountDisplay, isPositive } = isForecast 
               ? { 
-                  display: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount),
-                  isPositive: amount > 0
+                  display: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(-amount),
+                  isPositive: -amount > 0
                 }
               : formatAmount(amount);
             
