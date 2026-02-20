@@ -978,10 +978,10 @@ const Home = () => {
                   })()}
                   {(() => {
                     const merchantId = selectedTransaction.merchant_entity_id;
-                    const merchantName = selectedTransaction.merchant_name;
+                    const txName = selectedTransaction.merchant_name || selectedTransaction.counterparty_name;
                     const hasForecast = forecasts.some(f =>
                       (merchantId && f.merchant_entity_id === merchantId) ||
-                      (merchantName && f.name === merchantName)
+                      (txName && f.name === txName)
                     );
                     return (
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
