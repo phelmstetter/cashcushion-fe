@@ -970,7 +970,7 @@ const Home = () => {
                       return (
                         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
                           <span style={{ color: '#666' }}>Account</span>
-                          <span style={{ fontWeight: 500 }}>****{acct.mask}</span>
+                          <span style={{ fontWeight: 500 }}>{acct.name} {acct.mask}</span>
                         </div>
                       );
                     }
