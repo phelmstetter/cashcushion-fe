@@ -940,7 +940,7 @@ const Home = () => {
                       const mm = String(txDate.getMonth() + 1).padStart(2, '0');
                       const dd = String(txDate.getDate()).padStart(2, '0');
                       setForecastDate(`${yyyy}-${mm}-${dd}`);
-                      setForecastAmount(selectedTransaction.amount.toString());
+                      setForecastAmount((-selectedTransaction.amount).toString());
                     }
                     setModalView('forecast');
                   }}
