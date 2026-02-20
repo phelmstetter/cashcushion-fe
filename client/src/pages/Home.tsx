@@ -752,15 +752,14 @@ const Home = () => {
                     width: '40px',
                     height: '40px',
                     borderRadius: '50%',
-                    backgroundColor: isForecast ? '#90CAF9' : '#e0e0e0',
-                    color: isForecast ? 'white' : 'inherit',
+                    backgroundColor: '#e0e0e0',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontSize: '14px',
                     fontWeight: 'bold'
                   }}>
-                    {isForecast ? 'F' : getInitials(displayName)}
+                    {getInitials(displayName)}
                   </div>
                 )}
                 
