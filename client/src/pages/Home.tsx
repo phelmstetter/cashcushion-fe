@@ -978,13 +978,16 @@ const Home = () => {
                   })()}
                   {(() => {
                     const merchantId = selectedTransaction.merchant_entity_id;
-                    if (!merchantId) return null;
-                    const hasForecast = forecasts.some(f => f.merchant_entity_id === merchantId);
+                    const merchantName = selectedTransaction.merchant_name;
+                    const hasForecast = forecasts.some(f =>
+                      (merchantId && f.merchant_entity_id === merchantId) ||
+                      (merchantName && f.merchant_name === merchantName)
+                    );
                     return (
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
-                        <span style={{ color: '#666' }}>Forecast</span>
+                        <span style={{ color: '#666' }}>Forecasted</span>
                         <span style={{ fontWeight: 500, color: hasForecast ? 'green' : '#999' }}>
-                          {hasForecast ? 'Yes' : 'No'}
+                          {hasForecast ? 'True' : 'False'}
                         </span>
                       </div>
                     );
