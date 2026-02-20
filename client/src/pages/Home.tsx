@@ -77,6 +77,13 @@ const Home = () => {
     setInitialLoading(false);
   };
 
+  const reobserveSentinel = () => {
+    if (observerRef.current && sentinelRef.current) {
+      observerRef.current.unobserve(sentinelRef.current);
+      observerRef.current.observe(sentinelRef.current);
+    }
+  };
+
   const loadMoreTransactions = async () => {
     if (loadingRef.current || !hasMoreRef.current) return;
     
@@ -104,6 +111,7 @@ const Home = () => {
     } finally {
       loadingRef.current = false;
       setLoading(false);
+      setTimeout(() => reobserveSentinel(), 100);
     }
   };
 
@@ -122,7 +130,7 @@ const Home = () => {
           loadMoreTransactions();
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.1, rootMargin: '200px' }
     );
 
     if (sentinelRef.current) {
