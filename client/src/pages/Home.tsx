@@ -269,10 +269,10 @@ const Home = () => {
     const formatted = new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
-    }).format(Math.abs(flippedAmount));
+    }).format(flippedAmount);
     
     return {
-      display: flippedAmount >= 0 ? `+${formatted}` : formatted,
+      display: formatted,
       isPositive: flippedAmount >= 0
     };
   };
@@ -725,7 +725,7 @@ const Home = () => {
 
             const { display: amountDisplay, isPositive } = isForecast 
               ? { 
-                  display: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Math.abs(amount)),
+                  display: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(-amount),
                   isPositive: false
                 }
               : formatAmount(amount);
