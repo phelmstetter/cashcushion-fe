@@ -720,10 +720,10 @@ const Home = () => {
                   gap: '12px',
                   padding: '8px',
                   marginBottom: '2px',
-                  backgroundColor: isDropTarget ? '#bbdefb' : isForecast ? '#e8f5e9' : '#fff',
+                  backgroundColor: isDropTarget ? '#bbdefb' : isForecast ? '#E3F2FD' : '#fff',
                   borderRadius: '8px',
                   boxShadow: isDropTarget ? '0 0 0 3px #1976d2' : '0 1px 3px rgba(0,0,0,0.1)',
-                  borderLeft: isForecast ? '4px solid #4CAF50' : 'none',
+                  borderLeft: isForecast ? '4px solid #64B5F6' : 'none',
                   opacity: isDragging ? 0.4 : 1,
                   cursor: isForecast ? 'grab' : 'default',
                   userSelect: 'none',
@@ -742,7 +742,7 @@ const Home = () => {
                     width: '40px',
                     height: '40px',
                     borderRadius: '50%',
-                    backgroundColor: isForecast ? '#4CAF50' : '#e0e0e0',
+                    backgroundColor: isForecast ? '#90CAF9' : '#e0e0e0',
                     color: isForecast ? 'white' : 'inherit',
                     display: 'flex',
                     alignItems: 'center',
@@ -765,12 +765,12 @@ const Home = () => {
                     {displayName}
                   </div>
                   {isForecast && (
-                    <div style={{ fontSize: '11px', color: '#4CAF50', fontWeight: 600 }}>FORECAST</div>
+                    <div style={{ fontSize: '11px', color: '#42A5F5', fontWeight: 600 }}>FORECAST</div>
                   )}
                 </div>
                 
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 600, color: isForecast ? '#4CAF50' : (isPositive ? 'green' : 'inherit') }}>
+                  <div style={{ fontWeight: 600, color: isForecast ? '#42A5F5' : (isPositive ? 'green' : 'inherit') }}>
                     {amountDisplay}
                   </div>
                   <div style={{ fontSize: '12px', color: '#666' }}>
@@ -817,7 +817,7 @@ const Home = () => {
           top: dragPos.y - 25,
           width: '200px',
           padding: '8px 12px',
-          backgroundColor: '#4CAF50',
+          backgroundColor: '#42A5F5',
           color: 'white',
           borderRadius: '8px',
           boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
@@ -905,7 +905,7 @@ const Home = () => {
                   style={{
                     width: '100%',
                     padding: '10px',
-                    backgroundColor: '#4CAF50',
+                    backgroundColor: '#42A5F5',
                     color: 'white',
                     border: 'none',
                     borderRadius: '4px',
@@ -1053,7 +1053,7 @@ const Home = () => {
                       style={{
                         flex: 1,
                         padding: '8px',
-                        backgroundColor: forecastType === 'single' ? '#4CAF50' : '#f5f5f5',
+                        backgroundColor: forecastType === 'single' ? '#42A5F5' : '#f5f5f5',
                         color: forecastType === 'single' ? 'white' : '#333',
                         border: '1px solid #ccc',
                         borderRadius: '4px 0 0 4px',
@@ -1070,7 +1070,7 @@ const Home = () => {
                       style={{
                         flex: 1,
                         padding: '8px',
-                        backgroundColor: forecastType === 'monthly' ? '#4CAF50' : '#f5f5f5',
+                        backgroundColor: forecastType === 'monthly' ? '#42A5F5' : '#f5f5f5',
                         color: forecastType === 'monthly' ? 'white' : '#333',
                         border: '1px solid #ccc',
                         borderLeft: 'none',
@@ -1088,7 +1088,7 @@ const Home = () => {
                       style={{
                         flex: 1,
                         padding: '8px',
-                        backgroundColor: forecastType === 'every_x_days' ? '#4CAF50' : '#f5f5f5',
+                        backgroundColor: forecastType === 'every_x_days' ? '#42A5F5' : '#f5f5f5',
                         color: forecastType === 'every_x_days' ? 'white' : '#333',
                         border: '1px solid #ccc',
                         borderLeft: 'none',
@@ -1277,7 +1277,7 @@ const Home = () => {
                     }}
                     style={{
                       padding: '8px 16px',
-                      backgroundColor: '#4CAF50',
+                      backgroundColor: '#42A5F5',
                       color: 'white',
                       border: 'none',
                       borderRadius: '4px',
@@ -1321,7 +1321,7 @@ const Home = () => {
                 <p style={{ margin: '0 0 16px 0' }}>
                   <strong>{editingForecast.name}</strong>
                   {editingForecast.series_id && (
-                    <span style={{ fontSize: '12px', color: '#4CAF50', marginLeft: '8px', fontWeight: 600 }}>SERIES</span>
+                    <span style={{ fontSize: '12px', color: '#42A5F5', marginLeft: '8px', fontWeight: 600 }}>SERIES</span>
                   )}
                 </p>
 
@@ -1388,7 +1388,7 @@ const Home = () => {
                     }}
                     style={{
                       padding: '10px 16px',
-                      backgroundColor: '#4CAF50',
+                      backgroundColor: '#42A5F5',
                       color: 'white',
                       border: 'none',
                       borderRadius: '4px',
