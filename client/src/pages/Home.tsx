@@ -754,7 +754,7 @@ const Home = () => {
                   const fc = item.data as Forecast;
                   setEditingForecast(fc);
                   setForecastDate(fc.date);
-                  setForecastAmount(fc.amount.toString());
+                  setForecastAmount((-fc.amount).toString());
                   setModalView('editForecast');
                 } : undefined}
                 style={{
@@ -1318,7 +1318,7 @@ const Home = () => {
                           user_id: auth.currentUser.uid,
                           name: merchantName,
                           merchant_entity_id: selectedTransaction.merchant_entity_id || null,
-                          amount: parseFloat(forecastAmount),
+                          amount: -parseFloat(forecastAmount),
                           created_at: new Date().toISOString(),
                           account_id: selectedTransaction.account_id || null,
                           logo_url: selectedTransaction.logo_url || null
@@ -1447,7 +1447,7 @@ const Home = () => {
                       try {
                         await updateForecast(editingForecast.id, {
                           date: forecastDate,
-                          amount: parseFloat(forecastAmount)
+                          amount: -parseFloat(forecastAmount)
                         });
                         const updatedForecasts = await getForecasts(auth.currentUser.uid);
                         setForecasts(updatedForecasts);
@@ -1487,7 +1487,7 @@ const Home = () => {
                           await updateSeriesForecasts(
                             editingForecast.series_id,
                             auth.currentUser.uid,
-                            { amount: parseFloat(forecastAmount) }
+                            { amount: -parseFloat(forecastAmount) }
                           );
                           const updatedForecasts = await getForecasts(auth.currentUser.uid);
                           setForecasts(updatedForecasts);
