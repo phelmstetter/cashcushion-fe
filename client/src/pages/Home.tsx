@@ -723,7 +723,7 @@ const Home = () => {
                   backgroundColor: isDropTarget ? '#bbdefb' : isForecast ? '#E3F2FD' : '#fff',
                   borderRadius: '8px',
                   boxShadow: isDropTarget ? '0 0 0 3px #1976d2' : '0 1px 3px rgba(0,0,0,0.1)',
-                  borderLeft: isForecast ? '4px solid #64B5F6' : 'none',
+                  borderLeft: 'none',
                   opacity: isDragging ? 0.4 : 1,
                   cursor: isForecast ? 'grab' : 'default',
                   userSelect: 'none',
