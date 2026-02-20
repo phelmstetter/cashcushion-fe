@@ -394,7 +394,11 @@ const Home = () => {
     if (!initialLoading && !hasAutoScrolled.current && scrollAnchorRef.current) {
       hasAutoScrolled.current = true;
       requestAnimationFrame(() => {
-        scrollAnchorRef.current?.scrollIntoView({ behavior: 'auto', block: 'start' });
+        if (!scrollAnchorRef.current) return;
+        const rect = scrollAnchorRef.current.getBoundingClientRect();
+        const fixedHeaderHeight = chartOpen ? 56 + window.innerHeight * 0.3 + 6 : 56 + 30;
+        const scrollTarget = window.scrollY + rect.top - fixedHeaderHeight;
+        window.scrollTo({ top: Math.max(0, scrollTarget), behavior: 'auto' });
       });
     }
   }, [initialLoading, mergedItems.length]);
