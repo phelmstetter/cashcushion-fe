@@ -39,6 +39,8 @@ const Home = () => {
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transactionRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const dragStartPosRef = useRef<{ x: number; y: number } | null>(null);
+  const scrollAnchorRef = useRef<HTMLDivElement | null>(null);
+  const hasAutoScrolled = useRef(false);
 
   const handleSignOut = async () => {
     await signOut(auth);
@@ -382,6 +384,21 @@ const Home = () => {
     return (tx.merchant_name || tx.counterparty_name) === companyFilter;
   });
 
+  const scrollAnchorIndex = useMemo(() => {
+    const firstTxIndex = mergedItems.findIndex(item => item.type === 'transaction');
+    if (firstTxIndex <= 0) return 0;
+    return Math.max(0, firstTxIndex - 3);
+  }, [mergedItems]);
+
+  useEffect(() => {
+    if (!initialLoading && !hasAutoScrolled.current && scrollAnchorRef.current) {
+      hasAutoScrolled.current = true;
+      requestAnimationFrame(() => {
+        scrollAnchorRef.current?.scrollIntoView({ behavior: 'auto', block: 'start' });
+      });
+    }
+  }, [initialLoading, mergedItems.length]);
+
   const currentUser = auth.currentUser;
 
   return (
@@ -663,7 +680,7 @@ const Home = () => {
         <p>No transactions found</p>
       ) : (
         <>
-          {mergedItems.map((item) => {
+          {mergedItems.map((item, idx) => {
             const isForecast = item.type === 'forecast';
             const date = item.data.date;
             const amount = item.data.amount;
@@ -708,6 +725,9 @@ const Home = () => {
               <div
                 key={itemKey}
                 ref={(el) => {
+                  if (idx === scrollAnchorIndex && el) {
+                    scrollAnchorRef.current = el;
+                  }
                   if (!isForecast && el) {
                     transactionRefs.current.set((item.data as Transaction).id, el);
                   }
