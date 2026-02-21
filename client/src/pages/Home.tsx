@@ -483,30 +483,13 @@ const Home = () => {
             <div
               data-testid="button-profile-menu"
               onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-              style={{ cursor: 'pointer' }}
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px' }}
             >
-              {currentUser?.photoURL ? (
-                <img
-                  src={currentUser.photoURL}
-                  alt="Profile"
-                  data-testid="img-profile"
-                  style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', display: 'block' }}
-                />
-              ) : (
-                <div style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  backgroundColor: '#e0e0e0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '14px',
-                  fontWeight: 'bold'
-                }}>
-                  {currentUser?.email?.[0]?.toUpperCase() || '?'}
-                </div>
-              )}
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round">
+                <line x1="3" y1="5" x2="17" y2="5" />
+                <line x1="3" y1="10" x2="17" y2="10" />
+                <line x1="3" y1="15" x2="17" y2="15" />
+              </svg>
             </div>
             {profileMenuOpen && (
               <>
@@ -523,14 +506,39 @@ const Home = () => {
                   borderRadius: '6px',
                   boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                   zIndex: 1001,
-                  minWidth: '140px',
+                  minWidth: '200px',
                   overflow: 'hidden'
                 }}>
-                  {currentUser?.email && (
-                    <div style={{ padding: '10px 14px', fontSize: '12px', color: '#666', borderBottom: '1px solid #eee' }}>
-                      {currentUser.email}
-                    </div>
-                  )}
+                  <div style={{ padding: '12px 14px', borderBottom: '1px solid #eee', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    {currentUser?.photoURL ? (
+                      <img
+                        src={currentUser.photoURL}
+                        alt="Profile"
+                        data-testid="img-profile"
+                        style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                      />
+                    ) : (
+                      <div style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        backgroundColor: '#e0e0e0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        flexShrink: 0
+                      }}>
+                        {currentUser?.email?.[0]?.toUpperCase() || '?'}
+                      </div>
+                    )}
+                    {currentUser?.email && (
+                      <span style={{ fontSize: '12px', color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {currentUser.email}
+                      </span>
+                    )}
+                  </div>
                   {[
                     { label: 'Linked Accounts', testId: 'menu-linked-accounts' },
                     { label: 'Profile', testId: 'menu-profile' },
