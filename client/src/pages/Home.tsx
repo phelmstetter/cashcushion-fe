@@ -531,6 +531,36 @@ const Home = () => {
                       {currentUser.email}
                     </div>
                   )}
+                  {[
+                    { label: 'Linked Accounts', testId: 'menu-linked-accounts' },
+                    { label: 'Profile', testId: 'menu-profile' },
+                    { label: 'Billing', testId: 'menu-billing' },
+                    { label: 'Settings', testId: 'menu-settings' }
+                  ].map((item) => (
+                    <button
+                      key={item.testId}
+                      data-testid={item.testId}
+                      onClick={() => {
+                        setProfileMenuOpen(false);
+                      }}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        padding: '10px 14px',
+                        fontSize: '14px',
+                        textAlign: 'left',
+                        backgroundColor: 'white',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: '#333'
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f5f5f5')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                  <div style={{ borderTop: '1px solid #eee' }} />
                   <button
                     data-testid="button-sign-out"
                     onClick={() => {
@@ -548,6 +578,8 @@ const Home = () => {
                       cursor: 'pointer',
                       color: '#d32f2f'
                     }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f5f5f5')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
                   >
                     Sign Out
                   </button>
