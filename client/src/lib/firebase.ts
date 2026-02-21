@@ -190,6 +190,9 @@ export interface Forecast {
   series_id?: string | null;
   account_id?: string | null;
   logo_url?: string | null;
+  forecast_type?: 'single' | 'monthly' | 'every_x_days' | null;
+  forecast_interval?: number | null;
+  auto_extend?: boolean;
 }
 
 export async function saveForecast(forecast: Forecast): Promise<string> {

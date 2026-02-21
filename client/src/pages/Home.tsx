@@ -21,6 +21,7 @@ const Home = () => {
   const [forecastMonths, setForecastMonths] = useState(12);
   const [forecastDayInterval, setForecastDayInterval] = useState(14);
   const [forecastDayCount, setForecastDayCount] = useState(12);
+  const [autoExtend, setAutoExtend] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingForecast, setEditingForecast] = useState<Forecast | null>(null);
   const [companyFilter, setCompanyFilter] = useState('');
@@ -898,6 +899,7 @@ const Home = () => {
           setForecastAmount('');
           setForecastType('single');
           setForecastMonths(12);
+          setAutoExtend(false);
         }}>
           <div style={{
             backgroundColor: 'white',
@@ -1286,6 +1288,49 @@ const Home = () => {
                   </div>
                 )}
                 
+                {forecastType !== 'single' && (
+                  <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <label
+                      data-testid="toggle-auto-extend"
+                      style={{
+                        position: 'relative',
+                        display: 'inline-block',
+                        width: '44px',
+                        height: '24px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={autoExtend}
+                        onChange={(e) => setAutoExtend(e.target.checked)}
+                        style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
+                      />
+                      <span style={{
+                        position: 'absolute',
+                        top: 0, left: 0, right: 0, bottom: 0,
+                        backgroundColor: autoExtend ? '#42A5F5' : '#ccc',
+                        borderRadius: '12px',
+                        transition: 'background-color 0.2s'
+                      }} />
+                      <span style={{
+                        position: 'absolute',
+                        top: '2px',
+                        left: autoExtend ? '22px' : '2px',
+                        width: '20px',
+                        height: '20px',
+                        backgroundColor: 'white',
+                        borderRadius: '50%',
+                        transition: 'left 0.2s',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                      }} />
+                    </label>
+                    <span style={{ fontSize: '14px', color: '#333' }}>
+                      Auto-extend forecast 12 months
+                    </span>
+                  </div>
+                )}
+
                 <div style={{ marginTop: '20px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                   <button
                     onClick={() => {
@@ -1294,6 +1339,7 @@ const Home = () => {
                       setForecastAmount('');
                       setForecastType('single');
                       setForecastMonths(12);
+                      setAutoExtend(false);
                     }}
                     style={{
                       padding: '8px 16px',
@@ -1321,7 +1367,10 @@ const Home = () => {
                           amount: -parseFloat(forecastAmount),
                           created_at: new Date().toISOString(),
                           account_id: selectedTransaction.account_id || null,
-                          logo_url: selectedTransaction.logo_url || null
+                          logo_url: selectedTransaction.logo_url || null,
+                          forecast_type: forecastType,
+                          forecast_interval: forecastType === 'every_x_days' ? forecastDayInterval : forecastType === 'monthly' ? 1 : null,
+                          auto_extend: forecastType !== 'single' ? autoExtend : false
                         };
 
                         if (forecastType === 'monthly') {
@@ -1344,6 +1393,7 @@ const Home = () => {
                         setForecastAmount('');
                         setForecastType('single');
                         setForecastMonths(12);
+                        setAutoExtend(false);
                       } catch (error: any) {
                         console.error('Error saving forecast:', error?.code, error?.message, error);
                         alert('Error: ' + (error?.code || '') + ' ' + (error?.message || 'Unknown error'));
@@ -1380,6 +1430,7 @@ const Home = () => {
                       setForecastAmount('');
                       setForecastType('single');
                       setForecastMonths(12);
+                      setAutoExtend(false);
                     }}
                     style={{
                       background: 'none',
@@ -1535,6 +1586,7 @@ const Home = () => {
                           setForecastAmount('');
                           setForecastType('single');
                           setForecastMonths(12);
+                          setAutoExtend(false);
                         } catch (error: any) {
                           console.error('Error deleting forecast:', error);
                           alert('Error: ' + (error?.message || 'Unknown error'));
@@ -1574,6 +1626,7 @@ const Home = () => {
                             setForecastAmount('');
                             setForecastType('single');
                             setForecastMonths(12);
+                            setAutoExtend(false);
                           } catch (error: any) {
                             console.error('Error deleting series:', error);
                             alert('Error: ' + (error?.message || 'Unknown error'));
@@ -1605,6 +1658,7 @@ const Home = () => {
                       setForecastAmount('');
                       setForecastType('single');
                       setForecastMonths(12);
+                      setAutoExtend(false);
                     }}
                     style={{
                       padding: '10px 16px',
