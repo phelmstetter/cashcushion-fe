@@ -115,6 +115,47 @@ export default function LinkedAccounts() {
                   </div>
                 </div>
               ))}
+              <div style={{
+                padding: '10px 16px',
+                display: 'flex',
+                gap: '12px',
+                borderTop: '1px solid #eee'
+              }}>
+                <button
+                  data-testid={`button-add-remove-accounts-${instId}`}
+                  onClick={() => {}}
+                  style={{
+                    fontSize: '13px',
+                    color: '#555',
+                    background: 'none',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    padding: '6px 12px',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f5f5f5')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                >
+                  Add/Remove Accounts
+                </button>
+                <button
+                  data-testid={`button-remove-bank-${instId}`}
+                  onClick={() => {}}
+                  style={{
+                    fontSize: '13px',
+                    color: '#c44',
+                    background: 'none',
+                    border: '1px solid #e0c0c0',
+                    borderRadius: '6px',
+                    padding: '6px 12px',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fef5f5')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                >
+                  Remove Bank
+                </button>
+              </div>
             </div>
           ))
         )}
