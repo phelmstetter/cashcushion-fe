@@ -63,6 +63,27 @@ export default function LinkedAccounts() {
       </div>
 
       <div style={{ padding: '16px', maxWidth: '600px', margin: '0 auto' }}>
+        <button
+          data-testid="button-add-bank-account"
+          onClick={() => {}}
+          style={{
+            display: 'block',
+            width: '100%',
+            padding: '12px',
+            marginBottom: '16px',
+            fontSize: '15px',
+            fontWeight: 600,
+            color: 'white',
+            backgroundColor: '#333',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer'
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#444')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#333')}
+        >
+          + Add Bank Account
+        </button>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
             Loading accounts...
