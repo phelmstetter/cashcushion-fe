@@ -1,20 +1,95 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'wouter';
-import { auth, getAccounts, type Account } from '@/lib/firebase';
+import { usePlaidLink } from 'react-plaid-link';
+import { auth, getAccounts, saveLinkedAccounts, type Account } from '@/lib/firebase';
 
 export default function LinkedAccounts() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
+  const [linkToken, setLinkToken] = useState<string | null>(null);
+  const [linking, setLinking] = useState(false);
   const [, navigate] = useLocation();
 
-  useEffect(() => {
+  const loadAccounts = useCallback(async () => {
     const user = auth.currentUser;
     if (!user) return;
-    getAccounts(user.uid).then((accts) => {
+    try {
+      const accts = await getAccounts(user.uid);
       setAccounts(accts);
+    } catch {
+    } finally {
       setLoading(false);
-    }).catch(() => setLoading(false));
+    }
   }, []);
+
+  useEffect(() => {
+    loadAccounts();
+  }, [loadAccounts]);
+
+  const fetchLinkToken = useCallback(async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+    try {
+      const res = await fetch('/api/plaid/create-link-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.uid }),
+      });
+      const data = await res.json();
+      if (data.link_token) {
+        setLinkToken(data.link_token);
+      }
+    } catch (err) {
+      console.error('Failed to fetch link token:', err);
+    }
+  }, []);
+
+  const onPlaidSuccess = useCallback(async (publicToken: string) => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    setLinking(true);
+    try {
+      const res = await fetch('/api/plaid/exchange-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ publicToken }),
+      });
+      const data = await res.json();
+
+      if (data.accounts) {
+        await saveLinkedAccounts(
+          user.uid,
+          data.accounts,
+          data.item_id,
+          data.institution_id,
+          data.institution_name
+        );
+        await loadAccounts();
+      }
+    } catch (err) {
+      console.error('Failed to exchange token:', err);
+    } finally {
+      setLinking(false);
+      setLinkToken(null);
+    }
+  }, [loadAccounts]);
+
+  const { open, ready } = usePlaidLink({
+    token: linkToken,
+    onSuccess: (publicToken) => onPlaidSuccess(publicToken),
+    onExit: () => setLinkToken(null),
+  });
+
+  useEffect(() => {
+    if (linkToken && ready) {
+      open();
+    }
+  }, [linkToken, ready, open]);
+
+  const handleAddBank = () => {
+    fetchLinkToken();
+  };
 
   const grouped: Record<string, { name: string; accounts: Account[] }> = {};
   for (const acct of accounts) {
@@ -65,7 +140,8 @@ export default function LinkedAccounts() {
       <div style={{ padding: '16px', maxWidth: '600px', margin: '0 auto' }}>
         <button
           data-testid="button-add-bank-account"
-          onClick={() => {}}
+          onClick={handleAddBank}
+          disabled={linking}
           style={{
             display: 'block',
             width: '100%',
@@ -74,15 +150,15 @@ export default function LinkedAccounts() {
             fontSize: '15px',
             fontWeight: 600,
             color: 'white',
-            backgroundColor: '#333',
+            backgroundColor: linking ? '#888' : '#333',
             border: 'none',
             borderRadius: '8px',
-            cursor: 'pointer'
+            cursor: linking ? 'not-allowed' : 'pointer'
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#444')}
-          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#333')}
+          onMouseEnter={(e) => { if (!linking) e.currentTarget.style.backgroundColor = '#444'; }}
+          onMouseLeave={(e) => { if (!linking) e.currentTarget.style.backgroundColor = '#333'; }}
         >
-          + Add Bank Account
+          {linking ? 'Linking...' : '+ Add Bank Account'}
         </button>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>

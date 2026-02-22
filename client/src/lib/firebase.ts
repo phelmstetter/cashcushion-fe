@@ -111,6 +111,54 @@ export async function getAccounts(userId: string): Promise<Account[]> {
   return accounts.sort((a, b) => a.name.localeCompare(b.name));
 }
 
+export interface PlaidAccountData {
+  account_id: string;
+  name: string;
+  official_name: string | null;
+  mask: string;
+  type: string;
+  subtype: string | null;
+  available_balance: number | null;
+  current_balance: number | null;
+}
+
+export async function saveLinkedAccounts(
+  userId: string,
+  accounts: PlaidAccountData[],
+  itemId: string,
+  institutionId: string | null,
+  institutionName: string | null
+): Promise<void> {
+  const accountsRef = collection(db, 'accounts');
+
+  const existingQuery = query(accountsRef, where('user_id', '==', userId));
+  const existingSnapshot = await getDocs(existingQuery);
+  const existingAccountIds = new Set<string>();
+  existingSnapshot.forEach((d) => {
+    const data = d.data();
+    if (data.account_id) existingAccountIds.add(data.account_id);
+  });
+
+  for (const acct of accounts) {
+    if (existingAccountIds.has(acct.account_id)) continue;
+
+    await addDoc(accountsRef, {
+      user_id: userId,
+      account_id: acct.account_id,
+      name: acct.name,
+      official_name: acct.official_name,
+      mask: acct.mask,
+      type: acct.type,
+      subtype: acct.subtype,
+      available_balance: acct.available_balance,
+      current_balance: acct.current_balance,
+      plaid_item_id: itemId,
+      plaid_institution_id: institutionId,
+      plaid_institution_name: institutionName,
+    });
+  }
+}
+
 export interface Transaction {
   id: string;
   amount: number;
