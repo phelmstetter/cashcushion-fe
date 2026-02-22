@@ -10,6 +10,7 @@ import Home from "@/pages/Home";
 import Login from "@/pages/Login";
 import Landing from "@/pages/Landing";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import LinkedAccounts from "@/pages/LinkedAccounts";
 import NotFound from "@/pages/not-found";
 
 function Router({ user, loading }: { user: User | null; loading: boolean }) {
@@ -32,6 +33,11 @@ function Router({ user, loading }: { user: User | null; loading: boolean }) {
       <Route path="/home">
         <ProtectedRoute user={user}>
           <Home />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/linked-accounts">
+        <ProtectedRoute user={user}>
+          <LinkedAccounts />
         </ProtectedRoute>
       </Route>
       <Route component={NotFound} />

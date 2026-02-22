@@ -540,16 +540,17 @@ const Home = () => {
                     )}
                   </div>
                   {[
-                    { label: 'Linked Accounts', testId: 'menu-linked-accounts' },
-                    { label: 'Profile', testId: 'menu-profile' },
-                    { label: 'Billing', testId: 'menu-billing' },
-                    { label: 'Settings', testId: 'menu-settings' }
+                    { label: 'Linked Accounts', testId: 'menu-linked-accounts', path: '/linked-accounts' },
+                    { label: 'Profile', testId: 'menu-profile', path: '' },
+                    { label: 'Billing', testId: 'menu-billing', path: '' },
+                    { label: 'Settings', testId: 'menu-settings', path: '' }
                   ].map((item) => (
                     <button
                       key={item.testId}
                       data-testid={item.testId}
                       onClick={() => {
                         setProfileMenuOpen(false);
+                        if (item.path) setLocation(item.path);
                       }}
                       style={{
                         display: 'block',

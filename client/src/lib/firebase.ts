@@ -83,6 +83,8 @@ export interface Account {
   type?: string;
   available_balance?: number | null;
   current_balance?: number | null;
+  plaid_institution_id?: string | null;
+  plaid_institution_name?: string | null;
 }
 
 export async function getAccounts(userId: string): Promise<Account[]> {
@@ -101,7 +103,9 @@ export async function getAccounts(userId: string): Promise<Account[]> {
       subtype: data.subtype,
       type: data.type,
       available_balance: data.available_balance ?? null,
-      current_balance: data.current_balance ?? null
+      current_balance: data.current_balance ?? null,
+      plaid_institution_id: data.plaid_institution_id || null,
+      plaid_institution_name: data.plaid_institution_name || null
     });
   });
   return accounts.sort((a, b) => a.name.localeCompare(b.name));
