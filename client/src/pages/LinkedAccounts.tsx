@@ -105,13 +105,8 @@ export default function LinkedAccounts() {
                     borderBottom: '1px solid #f0f0f0'
                   }}
                 >
-                  <div>
-                    <div style={{ fontSize: '14px', color: '#333', fontWeight: 500 }}>
-                      {acct.name}
-                    </div>
-                    <div style={{ fontSize: '13px', color: '#888', marginTop: '2px' }}>
-                      ••••{acct.mask}
-                    </div>
+                  <div style={{ fontSize: '14px', color: '#333', fontWeight: 500 }}>
+                    {acct.name} Acct {acct.mask}
                   </div>
                   <div style={{ fontSize: '15px', fontWeight: 600, color: '#333' }}>
                     {acct.available_balance != null
