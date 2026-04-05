@@ -8,7 +8,7 @@
  * @param {import("firebase-functions/v2/https").Response} res
  */
 async function handler(uid, req, res) {
-  return res.status(200).json({ ok: true, handler: "exchangeToken", uid });
+  return res.status(200).json({ ok: true });
 }
 
 module.exports = { handler };
