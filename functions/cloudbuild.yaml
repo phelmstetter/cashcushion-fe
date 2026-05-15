@@ -28,6 +28,7 @@ steps:
       - '--entry-point=gateway'
       - '--trigger-http'
       - '--allow-unauthenticated'
+      - '--set-secrets=PLAID_CLIENT_ID=PLAID_CLIENT_ID:latest,PLAID_SECRET=PLAID_SECRET:latest,PLAID_ENV=PLAID_ENV:latest'
       - '--project=cashcushion'
     dir: 'functions'
     waitFor: ['Install']
