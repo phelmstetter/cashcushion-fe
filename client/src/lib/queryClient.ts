@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { auth, getAppCheckToken } from "./firebase";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -17,6 +18,39 @@ export async function apiRequest(
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
+  });
+
+  await throwIfResNotOk(res);
+  return res;
+}
+
+// apiFetch is used for calls to the Firebase Cloud Functions gateway.
+// It attaches the Firebase Auth ID token and App Check token as headers,
+// both of which the gateway requires.
+export async function apiFetch(
+  method: string,
+  url: string,
+  data?: unknown,
+): Promise<Response> {
+  const headers: Record<string, string> = {};
+
+  if (data) headers["Content-Type"] = "application/json";
+
+  const user = auth.currentUser;
+  if (user) {
+    const idToken = await user.getIdToken();
+    headers["Authorization"] = `Bearer ${idToken}`;
+  }
+
+  const appCheckToken = await getAppCheckToken();
+  if (appCheckToken) {
+    headers["X-Firebase-AppCheck"] = appCheckToken;
+  }
+
+  const res = await fetch(url, {
+    method,
+    headers,
+    body: data ? JSON.stringify(data) : undefined,
   });
 
   await throwIfResNotOk(res);

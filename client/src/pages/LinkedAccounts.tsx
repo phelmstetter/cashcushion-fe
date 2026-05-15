@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { usePlaidLink } from 'react-plaid-link';
 import { auth, getAccounts, saveLinkedAccounts, type Account } from '@/lib/firebase';
+import { apiFetch } from '@/lib/queryClient';
 
 export default function LinkedAccounts() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -30,11 +31,7 @@ export default function LinkedAccounts() {
     const user = auth.currentUser;
     if (!user) return;
     try {
-      const res = await fetch('/api/plaid/create-link-token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.uid }),
-      });
+      const res = await apiFetch('POST', '/api/plaid/create-link-token', { userId: user.uid });
       const data = await res.json();
       if (data.link_token) {
         setLinkToken(data.link_token);
@@ -50,11 +47,7 @@ export default function LinkedAccounts() {
 
     setLinking(true);
     try {
-      const res = await fetch('/api/plaid/exchange-token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ publicToken }),
-      });
+      const res = await apiFetch('POST', '/api/plaid/exchange-token', { publicToken });
       const data = await res.json();
 
       if (data.accounts) {

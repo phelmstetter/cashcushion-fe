@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
+import { initializeAppCheck, ReCaptchaV3Provider, getToken } from 'firebase/app-check';
 import { 
   getFirestore, 
   doc, 
@@ -26,10 +27,35 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_APP_ID
 };
 
+// In development, Firebase App Check prints a debug token to the browser console.
+// Copy that token and register it in the Firebase console under
+// App Check → Apps → your web app → Manage debug tokens.
+if (import.meta.env.DEV) {
+  (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+}
+
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+// App Check — reCAPTCHA v3 in production, debug token bypasses this in dev.
+// Set VITE_RECAPTCHA_SITE_KEY in your environment for production builds.
+export const appCheck = initializeAppCheck(app, {
+  provider: new ReCaptchaV3Provider(
+    import.meta.env.VITE_RECAPTCHA_SITE_KEY ?? 'debug-placeholder'
+  ),
+  isTokenAutoRefreshEnabled: true,
+});
+
+export async function getAppCheckToken(): Promise<string | null> {
+  try {
+    const result = await getToken(appCheck, false);
+    return result.token;
+  } catch {
+    return null;
+  }
+}
 
 export interface UserData {
   user_id: string;
