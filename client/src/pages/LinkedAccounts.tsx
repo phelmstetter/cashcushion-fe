@@ -9,6 +9,8 @@ export default function LinkedAccounts() {
   const [loading, setLoading] = useState(true);
   const [linkToken, setLinkToken] = useState<string | null>(null);
   const [linking, setLinking] = useState(false);
+  const [fetchingToken, setFetchingToken] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [, navigate] = useLocation();
 
   const loadAccounts = useCallback(async () => {
@@ -29,15 +31,25 @@ export default function LinkedAccounts() {
 
   const fetchLinkToken = useCallback(async () => {
     const user = auth.currentUser;
-    if (!user) return;
+    if (!user) {
+      setError('Not signed in. Please sign in and try again.');
+      return;
+    }
+    setFetchingToken(true);
+    setError(null);
     try {
       const res = await apiFetch('POST', '/api/plaid/create-link-token', { userId: user.uid });
       const data = await res.json();
       if (data.link_token) {
         setLinkToken(data.link_token);
+      } else {
+        setError(data.error || 'Failed to start bank connection. Please try again.');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to fetch link token:', err);
+      setError(err?.message || 'Failed to start bank connection. Please try again.');
+    } finally {
+      setFetchingToken(false);
     }
   }, []);
 
@@ -81,6 +93,7 @@ export default function LinkedAccounts() {
   }, [linkToken, ready, open]);
 
   const handleAddBank = () => {
+    setError(null);
     fetchLinkToken();
   };
 
@@ -134,25 +147,41 @@ export default function LinkedAccounts() {
         <button
           data-testid="button-add-bank-account"
           onClick={handleAddBank}
-          disabled={linking}
+          disabled={linking || fetchingToken}
           style={{
             display: 'block',
             width: '100%',
             padding: '12px',
-            marginBottom: '16px',
+            marginBottom: error ? '8px' : '16px',
             fontSize: '15px',
             fontWeight: 600,
             color: 'white',
-            backgroundColor: linking ? '#888' : '#333',
+            backgroundColor: (linking || fetchingToken) ? '#888' : '#333',
             border: 'none',
             borderRadius: '8px',
-            cursor: linking ? 'not-allowed' : 'pointer'
+            cursor: (linking || fetchingToken) ? 'not-allowed' : 'pointer'
           }}
-          onMouseEnter={(e) => { if (!linking) e.currentTarget.style.backgroundColor = '#444'; }}
-          onMouseLeave={(e) => { if (!linking) e.currentTarget.style.backgroundColor = '#333'; }}
+          onMouseEnter={(e) => { if (!linking && !fetchingToken) e.currentTarget.style.backgroundColor = '#444'; }}
+          onMouseLeave={(e) => { if (!linking && !fetchingToken) e.currentTarget.style.backgroundColor = '#333'; }}
         >
-          {linking ? 'Linking...' : '+ Add Bank Account'}
+          {linking ? 'Linking...' : fetchingToken ? 'Connecting...' : '+ Add Bank Account'}
         </button>
+        {error && (
+          <div
+            data-testid="text-link-error"
+            style={{
+              marginBottom: '16px',
+              padding: '10px 14px',
+              backgroundColor: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: '8px',
+              fontSize: '14px',
+              color: '#b91c1c'
+            }}
+          >
+            {error}
+          </div>
+        )}
         {loading ? (
           <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
             Loading accounts...
