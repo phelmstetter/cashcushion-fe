@@ -3,6 +3,7 @@ const { onRequest } = require("firebase-functions/v2/https");
 const { verifyAuth } = require("./middleware/auth");
 const createLinkToken = require("./plaid/createLinkToken");
 const exchangeToken = require("./plaid/exchangeToken");
+const removeItem = require("./plaid/removeItem");
 
 initializeApp();
 
@@ -13,6 +14,7 @@ initializeApp();
 const routes = {
   "POST /api/plaid/create-link-token": createLinkToken.handler,
   "POST /api/plaid/exchange-token": exchangeToken.handler,
+  "POST /api/plaid/remove-item": removeItem.handler,
 };
 
 /**

@@ -11,6 +11,7 @@ export default function LinkedAccounts() {
   const [linking, setLinking] = useState(false);
   const [fetchingToken, setFetchingToken] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [removingItemId, setRemovingItemId] = useState<string | null>(null);
   const [, navigate] = useLocation();
 
   const loadAccounts = useCallback(async () => {
@@ -97,12 +98,29 @@ export default function LinkedAccounts() {
     fetchLinkToken();
   };
 
-  const grouped: Record<string, { name: string; accounts: Account[] }> = {};
+  const handleRemoveBank = useCallback(async (itemId: string) => {
+    const user = auth.currentUser;
+    if (!user || !itemId) return;
+    setRemovingItemId(itemId);
+    setError(null);
+    try {
+      await apiFetch('POST', '/api/plaid/remove-item', { itemId, userId: user.uid });
+      await loadAccounts();
+    } catch (err: any) {
+      console.error('Failed to remove bank:', err);
+      setError(err?.message || 'Failed to remove bank account. Please try again.');
+    } finally {
+      setRemovingItemId(null);
+    }
+  }, [loadAccounts]);
+
+  const grouped: Record<string, { name: string; itemId: string | null; accounts: Account[] }> = {};
   for (const acct of accounts) {
     const instId = acct.plaid_institution_id || 'unknown';
     if (!grouped[instId]) {
       grouped[instId] = {
         name: acct.plaid_institution_name || acct.name || 'Unknown Institution',
+        itemId: acct.plaid_item_id || null,
         accounts: []
       };
     }
@@ -259,20 +277,21 @@ export default function LinkedAccounts() {
                 </button>
                 <button
                   data-testid={`button-remove-bank-${instId}`}
-                  onClick={() => {}}
+                  onClick={() => group.itemId && handleRemoveBank(group.itemId)}
+                  disabled={removingItemId === group.itemId}
                   style={{
                     fontSize: '13px',
-                    color: '#c44',
+                    color: removingItemId === group.itemId ? '#999' : '#c44',
                     background: 'none',
-                    border: '1px solid #e0c0c0',
+                    border: `1px solid ${removingItemId === group.itemId ? '#ddd' : '#e0c0c0'}`,
                     borderRadius: '6px',
                     padding: '6px 12px',
-                    cursor: 'pointer'
+                    cursor: removingItemId === group.itemId ? 'not-allowed' : 'pointer'
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fef5f5')}
+                  onMouseEnter={(e) => { if (removingItemId !== group.itemId) e.currentTarget.style.backgroundColor = '#fef5f5'; }}
                   onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                 >
-                  Remove Bank
+                  {removingItemId === group.itemId ? 'Removing...' : 'Remove Bank'}
                 </button>
               </div>
             </div>

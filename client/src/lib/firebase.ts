@@ -111,6 +111,7 @@ export interface Account {
   current_balance?: number | null;
   plaid_institution_id?: string | null;
   plaid_institution_name?: string | null;
+  plaid_item_id?: string | null;
 }
 
 export async function getAccounts(userId: string): Promise<Account[]> {
@@ -131,7 +132,8 @@ export async function getAccounts(userId: string): Promise<Account[]> {
       available_balance: data.available_balance ?? null,
       current_balance: data.current_balance ?? null,
       plaid_institution_id: data.plaid_institution_id || null,
-      plaid_institution_name: data.plaid_institution_name || null
+      plaid_institution_name: data.plaid_institution_name || null,
+      plaid_item_id: data.plaid_item_id || null,
     });
   });
   return accounts.sort((a, b) => a.name.localeCompare(b.name));
