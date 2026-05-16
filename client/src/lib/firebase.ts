@@ -139,6 +139,12 @@ export async function getAccounts(userId: string): Promise<Account[]> {
   return accounts.sort((a, b) => a.name.localeCompare(b.name));
 }
 
+export async function deleteAccountsByIds(docIds: string[]): Promise<void> {
+  await Promise.all(
+    docIds.map((id) => deleteDoc(doc(db, 'accounts', id)))
+  );
+}
+
 export interface PlaidAccountData {
   account_id: string;
   name: string;

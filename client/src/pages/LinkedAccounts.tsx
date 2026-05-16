@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { usePlaidLink } from 'react-plaid-link';
-import { auth, getAccounts, saveLinkedAccounts, type Account } from '@/lib/firebase';
+import { auth, getAccounts, saveLinkedAccounts, deleteAccountsByIds, type Account } from '@/lib/firebase';
 import { apiFetch } from '@/lib/queryClient';
 
 export default function LinkedAccounts() {
@@ -98,13 +98,16 @@ export default function LinkedAccounts() {
     fetchLinkToken();
   };
 
-  const handleRemoveBank = useCallback(async (itemId: string) => {
+  const handleRemoveBank = useCallback(async (itemId: string, accountDocIds: string[]) => {
     const user = auth.currentUser;
     if (!user || !itemId) return;
     setRemovingItemId(itemId);
     setError(null);
     try {
+      // Server revokes Plaid access token + cleans up plaid_items/transactions when admin SDK is available.
       await apiFetch('POST', '/api/plaid/remove-item', { itemId, userId: user.uid });
+      // Always delete account docs client-side (client SDK has permission).
+      await deleteAccountsByIds(accountDocIds);
       await loadAccounts();
     } catch (err: any) {
       console.error('Failed to remove bank:', err);
@@ -277,7 +280,7 @@ export default function LinkedAccounts() {
                 </button>
                 <button
                   data-testid={`button-remove-bank-${instId}`}
-                  onClick={() => group.itemId && handleRemoveBank(group.itemId)}
+                  onClick={() => group.itemId && handleRemoveBank(group.itemId, group.accounts.map((a) => a.id))}
                   disabled={removingItemId === group.itemId}
                   style={{
                     fontSize: '13px',
