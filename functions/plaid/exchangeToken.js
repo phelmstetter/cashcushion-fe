@@ -1,5 +1,6 @@
 const { getPlaidClient } = require('../lib/plaidClient');
 const { CountryCode } = require('plaid');
+const { getFirestore } = require('firebase-admin/firestore');
 
 /**
  * Handler for POST /api/plaid/exchange-token
@@ -25,6 +26,15 @@ async function handler(uid, req, res) {
 
     const accessToken = exchangeResponse.data.access_token;
     const itemId = exchangeResponse.data.item_id;
+
+    // Save to plaid_items so the transaction sync worker can find the access token.
+    const db = getFirestore();
+    await db.collection('plaid_items').doc(itemId).set({
+      access_token: accessToken,
+      item_id: itemId,
+      user_id: uid,
+      next_cursor: null,
+    }, { merge: true });
 
     const [accountsResponse, itemResponse] = await Promise.all([
       client.accountsGet({ access_token: accessToken }),

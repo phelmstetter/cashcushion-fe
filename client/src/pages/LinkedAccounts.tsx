@@ -59,7 +59,7 @@ export default function LinkedAccounts() {
 
     setLinking(true);
     try {
-      const res = await apiFetch('POST', '/api/plaid/exchange-token', { publicToken });
+      const res = await apiFetch('POST', '/api/plaid/exchange-token', { publicToken, userId: user.uid });
       const data = await res.json();
 
       if (data.accounts) {

@@ -1,0 +1,185 @@
+import base64
+import json
+import logging
+import traceback
+import functions_framework
+
+#trigger build
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Lazy initialization for Firebase/Firestore
+_firebase_initialized = False
+_db = None
+
+def get_db():
+    global _firebase_initialized, _db
+    if not _firebase_initialized:
+        import firebase_admin
+        from firebase_admin import firestore
+        try:
+            firebase_admin.initialize_app()
+            logger.info("Firebase app initialized successfully")
+        except Exception as e:
+            logger.warning(f"Firebase app already initialized or error: {e}")
+        _db = firestore.client()
+        _firebase_initialized = True
+        logger.info("Firestore client created")
+    return _db
+
+@functions_framework.cloud_event
+def sync_plaid_transactions_worker(cloud_event):
+    """Triggered from a message on a Cloud Pub/Sub topic (Gen2 format)."""
+    logger.info(f"Function triggered. CloudEvent type: {cloud_event['type']}")
+    logger.info(f"CloudEvent source: {cloud_event['source']}")
+
+    # 1. Decode the Pub/Sub message from CloudEvent data
+    try:
+        message_data = cloud_event.data.get("message", {}).get("data", "")
+        logger.info(f"Raw message data: {message_data}")
+        pubsub_message = base64.b64decode(message_data).decode('utf-8')
+        logger.info(f"Decoded Pub/Sub message: {pubsub_message}")
+        data = json.loads(pubsub_message)
+        item_id = data.get('item_id')
+        logger.info(f"Parsed item_id: {item_id}")
+    except Exception as e:
+        logger.error(f"Failed to decode Pub/Sub message: {e}")
+        logger.error(traceback.format_exc())
+        raise e
+
+    if not item_id:
+        logger.error("No item_id found in message")
+        return
+
+    # 2. Firestore/Plaid Logic
+    db = get_db()
+    try:
+        logger.info(f"Fetching Firestore document for item_id: {item_id}")
+        item_ref = db.collection('plaid_items').document(item_id)
+        item_doc = item_ref.get()
+        logger.info(f"Document exists: {item_doc.exists}")
+    except Exception as e:
+        logger.error(f"Failed to fetch Firestore document: {e}")
+        logger.error(traceback.format_exc())
+        raise e
+
+    if not item_doc.exists:
+        logger.warning(f"Item {item_id} not found in Firestore.")
+        return
+
+    item_data = item_doc.to_dict()
+    logger.info(f"Item data keys: {list(item_data.keys())}")
+    logger.info(f"Has access_token: {'access_token' in item_data}")
+    logger.info(f"Has next_cursor: {'next_cursor' in item_data}")
+    logger.info(f"Current cursor value: {item_data.get('next_cursor', 'None/Empty')}")
+
+    # 3. Perform the Sync
+    try:
+        access_token = item_data.get('access_token')
+        cursor = item_data.get('next_cursor')
+        user_id = item_data.get('user_id')
+        
+        if not access_token:
+            logger.error(f"No access_token found for item {item_id}")
+            return
+        
+        if not user_id:
+            logger.warning(f"No user_id found for item {item_id} - transactions won't be queryable by user")
+        
+        logger.info(f"Calling transactions_sync with cursor: {cursor}")
+        from module.plaid_light import transactions_sync
+        response = transactions_sync(
+            access_token=access_token,
+            cursor=cursor
+        )
+        
+        if response is None:
+            logger.error("Plaid transactions_sync returned None")
+            raise Exception("Plaid transactions_sync returned None")
+        
+        logger.info(f"Plaid response keys: {list(response.keys())}")
+        added_count = len(response.get('added', []))
+        modified_count = len(response.get('modified', []))
+        removed_count = len(response.get('removed', []))
+        logger.info(f"Transactions - Added: {added_count}, Modified: {modified_count}, Removed: {removed_count}")
+
+        batch = db.batch()
+        
+        # Update account balances
+        from module.plaid_light import accounts_get
+        accounts_response = accounts_get(access_token)
+        if accounts_response is None:
+            logger.error("Plaid accounts_get returned None")
+            accounts_list = []
+            institution_id = None
+            institution_name = None
+        else:
+            item_info = accounts_response.get('item', {})
+            logger.info(f"Item Info: {item_info}")
+            institution_id = item_info.get('institution_id')
+            institution_name = item_info.get('institution_name')
+            accounts_list = accounts_response.get('accounts', [])
+
+        for acct in accounts_list:
+            account_id = acct.get('account_id')
+            balances = acct.get('balances', {})
+            acct_data = {
+                'item_id': item_id,
+                'user_id': user_id,
+                'account_id': account_id,
+                'plaid_institution_id': institution_id,
+                'plaid_institution_name': institution_name,
+                'available_balance': balances.get('available'),
+                'current_balance': balances.get('current'),
+                'iso_currency_code': balances.get('iso_currency_code'),
+                'name': acct.get('name'),
+                'official_name': acct.get('official_name'),
+                'type': acct.get('type'),
+                'subtype': acct.get('subtype'),
+                'mask': acct.get('mask'),
+            }
+            logger.info(f"Updating account {account_id}: available={balances.get('available')}, current={balances.get('current')}")
+            acct_ref = db.collection('accounts').document(account_id)
+            batch.set(acct_ref, acct_data, merge=True)
+
+        # Add new transactions with user_id and item_id for querying
+        for txn in response.get('added', []):
+            txn_id = txn.get('transaction_id')
+            logger.debug(f"Adding transaction: {txn_id}")
+            txn['user_id'] = user_id
+            txn['item_id'] = item_id
+            txn_ref = db.collection('transactions').document(txn_id)
+            batch.set(txn_ref, txn)
+        
+        # Update modified transactions with user_id and item_id
+        for txn in response.get('modified', []):
+            txn_id = txn.get('transaction_id')
+            logger.debug(f"Modifying transaction: {txn_id}")
+            txn['user_id'] = user_id
+            txn['item_id'] = item_id
+            txn_ref = db.collection('transactions').document(txn_id)
+            batch.set(txn_ref, txn, merge=True)
+        
+        # Delete removed transactions
+        for txn in response.get('removed', []):
+            txn_id = txn.get('transaction_id')
+            logger.debug(f"Removing transaction: {txn_id}")
+            txn_ref = db.collection('transactions').document(txn_id)
+            batch.delete(txn_ref)
+
+        # Update cursor for next sync
+        new_cursor = response.get('next_cursor')
+        logger.info(f"Updating cursor to: {new_cursor}")
+        batch.update(item_ref, {'next_cursor': new_cursor})
+        
+        logger.info("Committing batch to Firestore...")
+        batch.commit()
+        logger.info(f"Successfully synced transactions for {item_id}: added={added_count}, modified={modified_count}, removed={removed_count}")
+
+    except Exception as e:
+        logger.error(f"Sync failed for {item_id}: {e}")
+        logger.error(traceback.format_exc())
+        # Raising an exception here will trigger a Pub/Sub retry
+        raise e
