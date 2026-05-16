@@ -1,33 +1,5 @@
-const { Configuration, PlaidApi, PlaidEnvironments, CountryCode } = require('plaid');
-
-let plaidClient = null;
-
-function getPlaidClient() {
-  if (plaidClient) return plaidClient;
-
-  const clientId = process.env.PLAID_CLIENT_ID;
-  const secret = process.env.PLAID_SECRET;
-  const env = (process.env.PLAID_ENV || 'sandbox').toLowerCase();
-
-  const envMap = {
-    sandbox: PlaidEnvironments.sandbox,
-    development: PlaidEnvironments.development,
-    production: PlaidEnvironments.production,
-  };
-
-  const configuration = new Configuration({
-    basePath: envMap[env] || PlaidEnvironments.sandbox,
-    baseOptions: {
-      headers: {
-        'PLAID-CLIENT-ID': clientId,
-        'PLAID-SECRET': secret,
-      },
-    },
-  });
-
-  plaidClient = new PlaidApi(configuration);
-  return plaidClient;
-}
+const { getPlaidClient } = require('../lib/plaidClient');
+const { CountryCode } = require('plaid');
 
 /**
  * Handler for POST /api/plaid/exchange-token
@@ -45,7 +17,7 @@ async function handler(uid, req, res) {
       return res.status(400).json({ error: 'publicToken is required' });
     }
 
-    const client = getPlaidClient();
+    const client = await getPlaidClient();
 
     const exchangeResponse = await client.itemPublicTokenExchange({
       public_token: publicToken,
