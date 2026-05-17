@@ -4,7 +4,7 @@
 .replit
 node_modules
 dist
-functions/node_modules
+functions
 attached_assets
 *.md
 *.log
