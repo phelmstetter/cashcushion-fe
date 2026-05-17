@@ -37,6 +37,7 @@ async function handler(uid, req, res) {
     const client = await getPlaidClient();
     const response = await client.linkTokenCreate({
       user: { client_user_id: uid },
+      update: { account_selection_enabled: true },
       client_name: 'Cash Cushion',
       access_token: accessToken,
       country_codes: [CountryCode.Us],
