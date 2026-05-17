@@ -23,7 +23,16 @@ async function handler(uid, req, res) {
     if (!itemDoc.exists) {
       return res.status(404).json({ error: 'Item not found' });
     }
-    const accessToken = itemDoc.data().access_token;
+
+    const itemData = itemDoc.data();
+    if (itemData.user_id !== uid) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (!itemData.access_token) {
+      return res.status(422).json({ error: 'Access token missing — try re-linking the bank' });
+    }
+
+    const accessToken = itemData.access_token;
 
     const client = await getPlaidClient();
     const response = await client.linkTokenCreate({
