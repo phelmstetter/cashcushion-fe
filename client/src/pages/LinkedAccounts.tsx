@@ -36,7 +36,6 @@ export default function LinkedAccounts() {
       setError('Not signed in. Please sign in and try again.');
       return;
     }
-    setFetchingToken(true);
     setError(null);
     try {
       const res = await apiFetch('POST', '/api/plaid/create-link-token', { userId: user.uid });
@@ -49,8 +48,6 @@ export default function LinkedAccounts() {
     } catch (err: any) {
       console.error('Failed to fetch link token:', err);
       setError(err?.message || 'Failed to start bank connection. Please try again.');
-    } finally {
-      setFetchingToken(false);
     }
   }, []);
 
