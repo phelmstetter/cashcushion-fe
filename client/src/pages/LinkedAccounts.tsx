@@ -212,7 +212,7 @@ export default function LinkedAccounts() {
         <button
           data-testid="button-add-bank-account"
           onClick={handleAddBank}
-          disabled={linking || fetchingToken}
+          disabled={linking}
           style={{
             display: 'block',
             width: '100%',
@@ -221,15 +221,15 @@ export default function LinkedAccounts() {
             fontSize: '15px',
             fontWeight: 600,
             color: 'white',
-            backgroundColor: (linking || fetchingToken) ? '#888' : '#333',
+            backgroundColor: linking ? '#888' : '#333',
             border: 'none',
             borderRadius: '8px',
-            cursor: (linking || fetchingToken) ? 'not-allowed' : 'pointer'
+            cursor: linking ? 'not-allowed' : 'pointer'
           }}
-          onMouseEnter={(e) => { if (!linking && !fetchingToken) e.currentTarget.style.backgroundColor = '#444'; }}
-          onMouseLeave={(e) => { if (!linking && !fetchingToken) e.currentTarget.style.backgroundColor = '#333'; }}
+          onMouseEnter={(e) => { if (!linking) e.currentTarget.style.backgroundColor = '#444'; }}
+          onMouseLeave={(e) => { if (!linking) e.currentTarget.style.backgroundColor = '#333'; }}
         >
-          {linking ? 'Linking...' : fetchingToken ? 'Connecting...' : '+ Add Bank Account'}
+          {linking ? 'Linking...' : '+ Add Bank Account'}
         </button>
         {error && (
           <div
