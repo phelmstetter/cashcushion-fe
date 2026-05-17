@@ -3,7 +3,6 @@
 .local
 .replit
 node_modules
-dist
 functions
 attached_assets
 *.md
