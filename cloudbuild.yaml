@@ -43,7 +43,8 @@ steps:
       - --image=us-central1-docker.pkg.dev/$PROJECT_ID/$_REPO/web:$COMMIT_SHA
       - --region=$_REGION
       - --platform=managed
-      - --allow-unauthenticated
+      - --no-allow-unauthenticated
+      - --ingress=internal-and-cloud-load-balancing
       - --port=8080
 
 images:
