@@ -182,6 +182,43 @@ export async function saveLinkedAccounts(
   }
 }
 
+export async function saveLinkedAccountsForItem(
+  userId: string,
+  accounts: PlaidAccountData[],
+  itemId: string,
+  institutionId: string | null,
+  institutionName: string | null
+): Promise<void> {
+  const freshAccountIds = new Set(accounts.map((a) => a.account_id));
+
+  const existingSnap = await getDocs(
+    query(collection(db, 'accounts'), where('user_id', '==', userId), where('plaid_item_id', '==', itemId))
+  );
+  const deleteOps = existingSnap.docs
+    .filter((d) => !freshAccountIds.has(d.data().account_id as string))
+    .map((d) => deleteDoc(d.ref));
+
+  const upsertOps = accounts.map((acct) => {
+    const docId = `${userId}_${itemId}_${acct.account_id}`;
+    return setDoc(doc(db, 'accounts', docId), {
+      user_id: userId,
+      account_id: acct.account_id,
+      name: acct.name,
+      official_name: acct.official_name,
+      mask: acct.mask,
+      type: acct.type,
+      subtype: acct.subtype,
+      available_balance: acct.available_balance,
+      current_balance: acct.current_balance,
+      plaid_item_id: itemId,
+      plaid_institution_id: institutionId,
+      plaid_institution_name: institutionName,
+    }, { merge: true });
+  });
+
+  await Promise.all([...deleteOps, ...upsertOps]);
+}
+
 export interface Transaction {
   id: string;
   amount: number;

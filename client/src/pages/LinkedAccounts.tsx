@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { usePlaidLink } from 'react-plaid-link';
-import { auth, getAccounts, saveLinkedAccounts, deleteAccountsByIds, type Account } from '@/lib/firebase';
+import { auth, getAccounts, saveLinkedAccounts, saveLinkedAccountsForItem, deleteAccountsByIds, type Account, type PlaidAccountData } from '@/lib/firebase';
 import { apiFetch } from '@/lib/queryClient';
 
 export default function LinkedAccounts() {
@@ -55,30 +55,46 @@ export default function LinkedAccounts() {
     }
   }, []);
 
+  interface PlaidFlowResponse {
+    accounts: PlaidAccountData[];
+    item_id: string;
+    institution_id: string | null;
+    institution_name: string | null;
+    error?: string;
+  }
+
   const onPlaidSuccess = useCallback(async (publicToken: string) => {
     const user = auth.currentUser;
     if (!user) return;
 
     setLinking(true);
     try {
-      let data: any;
       if (updatingItemId) {
         const res = await apiFetch('POST', '/api/plaid/refresh-accounts', { itemId: updatingItemId, userId: user.uid });
-        data = await res.json();
+        const data: PlaidFlowResponse = await res.json();
+        if (data.accounts) {
+          await saveLinkedAccountsForItem(
+            user.uid,
+            data.accounts,
+            data.item_id,
+            data.institution_id,
+            data.institution_name
+          );
+          await loadAccounts();
+        }
       } else {
         const res = await apiFetch('POST', '/api/plaid/exchange-token', { publicToken, userId: user.uid });
-        data = await res.json();
-      }
-
-      if (data.accounts) {
-        await saveLinkedAccounts(
-          user.uid,
-          data.accounts,
-          data.item_id,
-          data.institution_id,
-          data.institution_name
-        );
-        await loadAccounts();
+        const data: PlaidFlowResponse = await res.json();
+        if (data.accounts) {
+          await saveLinkedAccounts(
+            user.uid,
+            data.accounts,
+            data.item_id,
+            data.institution_id,
+            data.institution_name
+          );
+          await loadAccounts();
+        }
       }
     } catch (err) {
       console.error('Failed to complete Plaid flow:', err);
