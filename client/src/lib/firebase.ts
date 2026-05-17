@@ -163,20 +163,9 @@ export async function saveLinkedAccounts(
   institutionId: string | null,
   institutionName: string | null
 ): Promise<void> {
-  const accountsRef = collection(db, 'accounts');
-
-  const existingQuery = query(accountsRef, where('user_id', '==', userId));
-  const existingSnapshot = await getDocs(existingQuery);
-  const existingAccountIds = new Set<string>();
-  existingSnapshot.forEach((d) => {
-    const data = d.data();
-    if (data.account_id) existingAccountIds.add(data.account_id);
-  });
-
   for (const acct of accounts) {
-    if (existingAccountIds.has(acct.account_id)) continue;
-
-    await addDoc(accountsRef, {
+    const docId = `${userId}_${itemId}_${acct.account_id}`;
+    await setDoc(doc(db, 'accounts', docId), {
       user_id: userId,
       account_id: acct.account_id,
       name: acct.name,
@@ -189,7 +178,7 @@ export async function saveLinkedAccounts(
       plaid_item_id: itemId,
       plaid_institution_id: institutionId,
       plaid_institution_name: institutionName,
-    });
+    }, { merge: true });
   }
 }
 
