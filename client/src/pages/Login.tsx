@@ -1,29 +1,35 @@
-import { useState } from "react";
-import { useLocation } from "wouter";
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { useState, useEffect } from "react";
+import { GoogleAuthProvider, signInWithRedirect, getRedirectResult } from "firebase/auth";
 import { auth, saveUserToFirestore } from "@/lib/firebase";
 
 const Login = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [, setLocation] = useLocation();
 
-  const handleGoogleSignIn = async () => {
-    const provider = new GoogleAuthProvider();
+  useEffect(() => {
     setLoading(true);
-    try {
-      const result = await signInWithPopup(auth, provider);
-      await saveUserToFirestore({
-        uid: result.user.uid,
-        email: result.user.email,
-        photoURL: result.user.photoURL
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (result?.user) {
+          await saveUserToFirestore({
+            uid: result.user.uid,
+            email: result.user.email,
+            photoURL: result.user.photoURL,
+          });
+        }
+      })
+      .catch((err) => {
+        setError(err.message);
+      })
+      .finally(() => {
+        setLoading(false);
       });
-      setLocation("/home");
-    } catch (error: any) {
-      setError(error.message);
-    } finally {
-      setLoading(false);
-    }
+  }, []);
+
+  const handleGoogleSignIn = () => {
+    const provider = new GoogleAuthProvider();
+    setError("");
+    signInWithRedirect(auth, provider);
   };
 
   return (
@@ -33,8 +39,8 @@ const Login = () => {
           <h2>Welcome</h2>
           <p>Sign in to continue</p>
           <div className="button-group">
-            <button 
-              className="auth-button google" 
+            <button
+              className="auth-button google"
               onClick={handleGoogleSignIn}
               disabled={loading}
               data-testid="button-google-signin"
