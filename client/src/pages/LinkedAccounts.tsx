@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { usePlaidLink } from 'react-plaid-link';
-import { auth, getAccounts, saveLinkedAccounts, saveLinkedAccountsForItem, deleteAccountsByIds, type Account, type PlaidAccountData } from '@/lib/firebase';
+import { auth, getAccounts, saveLinkedAccounts, deleteAccountsByIds, type Account, type PlaidAccountData } from '@/lib/firebase';
 import { apiFetch } from '@/lib/queryClient';
 
 export default function LinkedAccounts() {
@@ -66,18 +66,10 @@ export default function LinkedAccounts() {
     setLinking(true);
     try {
       if (updatingItemId) {
-        const res = await apiFetch('POST', '/api/plaid/refresh-accounts', { itemId: updatingItemId });
-        const data: PlaidFlowResponse = await res.json();
-        if (data.accounts) {
-          await saveLinkedAccountsForItem(
-            user.uid,
-            data.accounts,
-            data.item_id,
-            data.institution_id,
-            data.institution_name
-          );
-          await loadAccounts();
-        }
+        // Server handles full reconciliation: deletes stale accounts/transactions/forecasts
+        // and upserts fresh accounts — just reload the local list.
+        await apiFetch('POST', '/api/plaid/refresh-accounts', { itemId: updatingItemId });
+        await loadAccounts();
       } else {
         const res = await apiFetch('POST', '/api/plaid/exchange-token', { publicToken, userId: user.uid });
         const data: PlaidFlowResponse = await res.json();
