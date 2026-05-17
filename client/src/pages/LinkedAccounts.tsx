@@ -144,27 +144,34 @@ export default function LinkedAccounts() {
     if (!user || !itemId) return;
     setRemovingItemId(itemId);
     setError(null);
+    let serverCleanedUp = false;
     try {
-      // Server revokes Plaid access token + cleans up plaid_items/transactions when admin SDK is available.
-      // A 404 means plaid_items was never written (e.g. linked before gateway routing was active) —
-      // treat it as a soft error and continue with local cleanup.
+      // Server revokes Plaid access token and deletes plaid_items + accounts via firebase-admin.
       await apiFetch('POST', '/api/plaid/remove-item', { itemId, userId: user.uid });
+      serverCleanedUp = true;
     } catch (err: any) {
       const is404 = err?.message?.startsWith('404');
       if (!is404) {
+        // Unknown server error — don't touch local data, state may be inconsistent.
         console.error('Failed to remove bank:', err);
         setError(err?.message || 'Failed to remove bank account. Please try again.');
         setRemovingItemId(null);
         return;
       }
+      // 404 means plaid_items was never written (linked before gateway was active).
+      // Server skipped cleanup — fall through to client-side delete below.
       console.warn('plaid_items not found for item — proceeding with local account cleanup only.');
     }
-    // Always delete account docs client-side regardless of server outcome.
+
     try {
-      await deleteAccountsByIds(accountDocIds);
+      if (!serverCleanedUp) {
+        // Server didn't clean up — delete account docs from the client.
+        await deleteAccountsByIds(accountDocIds);
+      }
+      // Server already deleted everything — just refresh the UI.
       await loadAccounts();
     } catch (err: any) {
-      console.error('Failed to delete local account docs:', err);
+      console.error('Failed to complete local account cleanup:', err);
       setError(err?.message || 'Failed to remove bank account. Please try again.');
     } finally {
       setRemovingItemId(null);
