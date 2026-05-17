@@ -27,6 +27,12 @@ export async function apiRequest(
 // apiFetch is used for calls to the Firebase Cloud Functions gateway.
 // It attaches the Firebase Auth ID token and App Check token as headers,
 // both of which the gateway requires.
+//
+// When VITE_FUNCTIONS_URL is set, requests go directly to the deployed
+// Cloud Functions gateway (useful for testing production functions from dev).
+// Otherwise, requests go to the local Express dev server via relative URL.
+const FUNCTIONS_BASE = import.meta.env.VITE_FUNCTIONS_URL ?? "";
+
 export async function apiFetch(
   method: string,
   url: string,
@@ -47,7 +53,7 @@ export async function apiFetch(
     headers["X-Firebase-AppCheck"] = appCheckToken;
   }
 
-  const res = await fetch(url, {
+  const res = await fetch(`${FUNCTIONS_BASE}${url}`, {
     method,
     headers,
     body: data ? JSON.stringify(data) : undefined,
