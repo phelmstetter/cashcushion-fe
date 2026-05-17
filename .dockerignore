@@ -1,0 +1,10 @@
+.git
+.gitignore
+.local
+.replit
+node_modules
+dist
+functions/node_modules
+attached_assets
+*.md
+*.log

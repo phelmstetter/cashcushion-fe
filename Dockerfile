@@ -1,0 +1,32 @@
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+
+ARG VITE_API_KEY
+ARG VITE_APP_ID
+ARG VITE_AUTH_DOMAIN
+ARG VITE_MESSAGING_SENDER_ID
+ARG VITE_PROJECT_ID
+ARG VITE_STORAGE_BUCKET
+ARG VITE_FUNCTIONS_URL
+
+ENV VITE_API_KEY=$VITE_API_KEY \
+    VITE_APP_ID=$VITE_APP_ID \
+    VITE_AUTH_DOMAIN=$VITE_AUTH_DOMAIN \
+    VITE_MESSAGING_SENDER_ID=$VITE_MESSAGING_SENDER_ID \
+    VITE_PROJECT_ID=$VITE_PROJECT_ID \
+    VITE_STORAGE_BUCKET=$VITE_STORAGE_BUCKET \
+    VITE_FUNCTIONS_URL=$VITE_FUNCTIONS_URL \
+    NODE_ENV=production
+
+RUN npx vite build
+
+FROM nginx:stable-alpine
+COPY --from=builder /app/dist/public /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 8080
+CMD ["nginx", "-g", "daemon off;"]
