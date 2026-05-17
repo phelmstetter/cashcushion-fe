@@ -9,7 +9,6 @@ export default function LinkedAccounts() {
   const [loading, setLoading] = useState(true);
   const [linkToken, setLinkToken] = useState<string | null>(null);
   const [linking, setLinking] = useState(false);
-  const [fetchingToken, setFetchingToken] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [removingItemId, setRemovingItemId] = useState<string | null>(null);
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
@@ -70,7 +69,7 @@ export default function LinkedAccounts() {
     setLinking(true);
     try {
       if (updatingItemId) {
-        const res = await apiFetch('POST', '/api/plaid/refresh-accounts', { itemId: updatingItemId, userId: user.uid });
+        const res = await apiFetch('POST', '/api/plaid/refresh-accounts', { itemId: updatingItemId });
         const data: PlaidFlowResponse = await res.json();
         if (data.accounts) {
           await saveLinkedAccountsForItem(
@@ -125,7 +124,6 @@ export default function LinkedAccounts() {
   const fetchUpdateLinkToken = useCallback(async (itemId: string) => {
     const user = auth.currentUser;
     if (!user) return;
-    setFetchingToken(true);
     setError(null);
     setUpdatingItemId(itemId);
     try {
@@ -141,8 +139,6 @@ export default function LinkedAccounts() {
       console.error('Failed to fetch update link token:', err);
       setError(err?.message || 'Failed to start account update. Please try again.');
       setUpdatingItemId(null);
-    } finally {
-      setFetchingToken(false);
     }
   }, []);
 
@@ -312,21 +308,21 @@ export default function LinkedAccounts() {
                 <button
                   data-testid={`button-add-remove-accounts-${instId}`}
                   onClick={() => group.itemId && fetchUpdateLinkToken(group.itemId)}
-                  disabled={!group.itemId || fetchingToken || linking}
+                  disabled={!group.itemId || updatingItemId === group.itemId || linking}
                   title={!group.itemId ? 'Re-link this bank to manage accounts' : undefined}
                   style={{
                     fontSize: '13px',
-                    color: (!group.itemId || fetchingToken || linking) ? '#999' : '#555',
+                    color: (!group.itemId || updatingItemId === group.itemId || linking) ? '#999' : '#555',
                     background: 'none',
-                    border: `1px solid ${(!group.itemId || fetchingToken || linking) ? '#e0e0e0' : '#ddd'}`,
+                    border: `1px solid ${(!group.itemId || updatingItemId === group.itemId || linking) ? '#e0e0e0' : '#ddd'}`,
                     borderRadius: '6px',
                     padding: '6px 12px',
-                    cursor: (!group.itemId || fetchingToken || linking) ? 'not-allowed' : 'pointer'
+                    cursor: (!group.itemId || updatingItemId === group.itemId || linking) ? 'not-allowed' : 'pointer'
                   }}
-                  onMouseEnter={(e) => { if (group.itemId && !fetchingToken && !linking) e.currentTarget.style.backgroundColor = '#f5f5f5'; }}
+                  onMouseEnter={(e) => { if (group.itemId && updatingItemId !== group.itemId && !linking) e.currentTarget.style.backgroundColor = '#f5f5f5'; }}
                   onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                 >
-                  {(fetchingToken && updatingItemId === group.itemId) ? 'Loading...' : 'Add/Remove Accounts'}
+                  {updatingItemId === group.itemId ? 'Loading...' : 'Add/Remove Accounts'}
                 </button>
                 <button
                   data-testid={`button-remove-bank-${instId}`}
