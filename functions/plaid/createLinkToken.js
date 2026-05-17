@@ -16,6 +16,7 @@ async function handler(uid, req, res) {
     const response = await client.linkTokenCreate({
       user: { client_user_id: uid },
       client_name: 'Cash Cushion',
+      webhook: 'https://plaid.webhook.cashcushion.net/',
       products: [Products.Transactions],
       transactions: { days_requested: 730 },
       country_codes: [CountryCode.Us],
