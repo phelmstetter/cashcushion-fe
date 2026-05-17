@@ -12,6 +12,7 @@ export default function LinkedAccounts() {
   const [fetchingToken, setFetchingToken] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [removingItemId, setRemovingItemId] = useState<string | null>(null);
+  const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
   const [, navigate] = useLocation();
 
   const loadAccounts = useCallback(async () => {
@@ -60,8 +61,14 @@ export default function LinkedAccounts() {
 
     setLinking(true);
     try {
-      const res = await apiFetch('POST', '/api/plaid/exchange-token', { publicToken, userId: user.uid });
-      const data = await res.json();
+      let data: any;
+      if (updatingItemId) {
+        const res = await apiFetch('POST', '/api/plaid/refresh-accounts', { itemId: updatingItemId, userId: user.uid });
+        data = await res.json();
+      } else {
+        const res = await apiFetch('POST', '/api/plaid/exchange-token', { publicToken, userId: user.uid });
+        data = await res.json();
+      }
 
       if (data.accounts) {
         await saveLinkedAccounts(
@@ -74,17 +81,18 @@ export default function LinkedAccounts() {
         await loadAccounts();
       }
     } catch (err) {
-      console.error('Failed to exchange token:', err);
+      console.error('Failed to complete Plaid flow:', err);
     } finally {
       setLinking(false);
       setLinkToken(null);
+      setUpdatingItemId(null);
     }
-  }, [loadAccounts]);
+  }, [loadAccounts, updatingItemId]);
 
   const { open, ready } = usePlaidLink({
     token: linkToken,
     onSuccess: (publicToken) => onPlaidSuccess(publicToken),
-    onExit: () => setLinkToken(null),
+    onExit: () => { setLinkToken(null); setUpdatingItemId(null); },
   });
 
   useEffect(() => {
@@ -97,6 +105,30 @@ export default function LinkedAccounts() {
     setError(null);
     fetchLinkToken();
   };
+
+  const fetchUpdateLinkToken = useCallback(async (itemId: string) => {
+    const user = auth.currentUser;
+    if (!user) return;
+    setFetchingToken(true);
+    setError(null);
+    setUpdatingItemId(itemId);
+    try {
+      const res = await apiFetch('POST', '/api/plaid/create-update-link-token', { itemId, userId: user.uid });
+      const data = await res.json();
+      if (data.link_token) {
+        setLinkToken(data.link_token);
+      } else {
+        setError(data.error || 'Failed to start account update. Please try again.');
+        setUpdatingItemId(null);
+      }
+    } catch (err: any) {
+      console.error('Failed to fetch update link token:', err);
+      setError(err?.message || 'Failed to start account update. Please try again.');
+      setUpdatingItemId(null);
+    } finally {
+      setFetchingToken(false);
+    }
+  }, []);
 
   const handleRemoveBank = useCallback(async (itemId: string, accountDocIds: string[]) => {
     const user = auth.currentUser;
@@ -263,20 +295,22 @@ export default function LinkedAccounts() {
               }}>
                 <button
                   data-testid={`button-add-remove-accounts-${instId}`}
-                  onClick={() => {}}
+                  onClick={() => group.itemId && fetchUpdateLinkToken(group.itemId)}
+                  disabled={!group.itemId || fetchingToken || linking}
+                  title={!group.itemId ? 'Re-link this bank to manage accounts' : undefined}
                   style={{
                     fontSize: '13px',
-                    color: '#555',
+                    color: (!group.itemId || fetchingToken || linking) ? '#999' : '#555',
                     background: 'none',
-                    border: '1px solid #ddd',
+                    border: `1px solid ${(!group.itemId || fetchingToken || linking) ? '#e0e0e0' : '#ddd'}`,
                     borderRadius: '6px',
                     padding: '6px 12px',
-                    cursor: 'pointer'
+                    cursor: (!group.itemId || fetchingToken || linking) ? 'not-allowed' : 'pointer'
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f5f5f5')}
+                  onMouseEnter={(e) => { if (group.itemId && !fetchingToken && !linking) e.currentTarget.style.backgroundColor = '#f5f5f5'; }}
                   onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                 >
-                  Add/Remove Accounts
+                  {(fetchingToken && updatingItemId === group.itemId) ? 'Loading...' : 'Add/Remove Accounts'}
                 </button>
                 <button
                   data-testid={`button-remove-bank-${instId}`}
