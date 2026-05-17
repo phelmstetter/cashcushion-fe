@@ -20,23 +20,24 @@ async function handler(uid, req, res) {
 
     // Look up the access token for this item.
     const itemDoc = await db.collection('plaid_items').doc(itemId).get();
-    if (!itemDoc.exists) {
-      return res.status(404).json({ error: 'Item not found' });
-    }
 
-    const itemData = itemDoc.data();
+    if (itemDoc.exists) {
+      const itemData = itemDoc.data();
 
-    // Verify the item belongs to the requesting user.
-    if (itemData.user_id !== uid) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
+      // Verify the item belongs to the requesting user.
+      if (itemData.user_id !== uid) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
 
-    // Tell Plaid to remove the item.
-    try {
-      const client = await getPlaidClient();
-      await client.itemRemove({ access_token: itemData.access_token });
-    } catch (err) {
-      console.warn('Plaid itemRemove failed (continuing with local cleanup):', err?.response?.data || err.message);
+      // Tell Plaid to remove the item.
+      try {
+        const client = await getPlaidClient();
+        await client.itemRemove({ access_token: itemData.access_token });
+      } catch (err) {
+        console.warn('Plaid itemRemove failed (continuing with local cleanup):', err?.response?.data || err.message);
+      }
+    } else {
+      console.warn(`plaid_items/${itemId} not found — skipping Plaid revocation and Firestore cleanup`);
     }
 
     // Delete all Firestore data associated with this item in parallel.

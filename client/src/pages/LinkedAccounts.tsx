@@ -146,12 +146,25 @@ export default function LinkedAccounts() {
     setError(null);
     try {
       // Server revokes Plaid access token + cleans up plaid_items/transactions when admin SDK is available.
+      // A 404 means plaid_items was never written (e.g. linked before gateway routing was active) —
+      // treat it as a soft error and continue with local cleanup.
       await apiFetch('POST', '/api/plaid/remove-item', { itemId, userId: user.uid });
-      // Always delete account docs client-side (client SDK has permission).
+    } catch (err: any) {
+      const is404 = err?.message?.startsWith('404');
+      if (!is404) {
+        console.error('Failed to remove bank:', err);
+        setError(err?.message || 'Failed to remove bank account. Please try again.');
+        setRemovingItemId(null);
+        return;
+      }
+      console.warn('plaid_items not found for item — proceeding with local account cleanup only.');
+    }
+    // Always delete account docs client-side regardless of server outcome.
+    try {
       await deleteAccountsByIds(accountDocIds);
       await loadAccounts();
     } catch (err: any) {
-      console.error('Failed to remove bank:', err);
+      console.error('Failed to delete local account docs:', err);
       setError(err?.message || 'Failed to remove bank account. Please try again.');
     } finally {
       setRemovingItemId(null);

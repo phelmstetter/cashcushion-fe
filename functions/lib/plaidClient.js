@@ -22,7 +22,9 @@ async function getPlaidClient() {
   const keyMap = {
     sandbox: 'sandbox_secret',
     development: 'dev_secret',
+    dev: 'dev_secret',
     production: 'prod_secret',
+    prod: 'prod_secret',
   };
   const secretKey = secrets[keyMap[env]];
   if (!secretKey) {
