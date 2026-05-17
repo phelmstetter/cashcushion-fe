@@ -46,17 +46,29 @@ async function handler(uid, req, res) {
     // Delete the plaid_items document.
     batch.delete(db.collection('plaid_items').doc(itemId));
 
-    // Delete accounts linked to this item.
+    // Delete accounts linked to this item and collect their account_ids.
     const accountsSnap = await db.collection('accounts')
       .where('plaid_item_id', '==', itemId)
       .get();
-    accountsSnap.forEach((doc) => batch.delete(doc.ref));
+    const accountIds = [];
+    accountsSnap.forEach((doc) => {
+      batch.delete(doc.ref);
+      const aid = doc.data().account_id;
+      if (aid) accountIds.push(aid);
+    });
 
-    // Delete transactions linked to this item.
-    const txSnap = await db.collection('transactions')
-      .where('item_id', '==', itemId)
-      .get();
-    txSnap.forEach((doc) => batch.delete(doc.ref));
+    // Delete transactions and forecasts in parallel (both keyed off item/account).
+    const cleanupQueries = [
+      db.collection('transactions').where('item_id', '==', itemId).get(),
+    ];
+    // Forecasts are keyed by account_id — only query if we have accounts to match.
+    if (accountIds.length > 0) {
+      cleanupQueries.push(
+        db.collection('forecasts').where('account_id', 'in', accountIds).get()
+      );
+    }
+    const snapshots = await Promise.all(cleanupQueries);
+    snapshots.forEach((snap) => snap.forEach((doc) => batch.delete(doc.ref)));
 
     await batch.commit();
 
