@@ -1,7 +1,7 @@
 steps:
   # 1. Install dependencies — versions are pinned exactly in package.json (no ^ ranges),
   #    so npm install is reproducible without needing a committed package-lock.json.
-  - name: 'node:20'
+  - name: 'node:22'
     id: 'Install'
     entrypoint: 'bash'
     args:
