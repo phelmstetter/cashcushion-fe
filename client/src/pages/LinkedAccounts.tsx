@@ -281,20 +281,21 @@ export default function LinkedAccounts() {
                 <button
                   data-testid={`button-remove-bank-${instId}`}
                   onClick={() => group.itemId && handleRemoveBank(group.itemId, group.accounts.map((a) => a.id))}
-                  disabled={removingItemId === group.itemId}
+                  disabled={!group.itemId || (removingItemId !== null && removingItemId === group.itemId)}
+                  title={!group.itemId ? 'Re-link this bank to enable removal' : undefined}
                   style={{
                     fontSize: '13px',
-                    color: removingItemId === group.itemId ? '#999' : '#c44',
+                    color: (!group.itemId || (removingItemId !== null && removingItemId === group.itemId)) ? '#999' : '#c44',
                     background: 'none',
-                    border: `1px solid ${removingItemId === group.itemId ? '#ddd' : '#e0c0c0'}`,
+                    border: `1px solid ${(!group.itemId || (removingItemId !== null && removingItemId === group.itemId)) ? '#ddd' : '#e0c0c0'}`,
                     borderRadius: '6px',
                     padding: '6px 12px',
-                    cursor: removingItemId === group.itemId ? 'not-allowed' : 'pointer'
+                    cursor: (!group.itemId || (removingItemId !== null && removingItemId === group.itemId)) ? 'not-allowed' : 'pointer'
                   }}
-                  onMouseEnter={(e) => { if (removingItemId !== group.itemId) e.currentTarget.style.backgroundColor = '#fef5f5'; }}
+                  onMouseEnter={(e) => { if (group.itemId && !(removingItemId !== null && removingItemId === group.itemId)) e.currentTarget.style.backgroundColor = '#fef5f5'; }}
                   onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                 >
-                  {removingItemId === group.itemId ? 'Removing...' : 'Remove Bank'}
+                  {(removingItemId !== null && removingItemId === group.itemId) ? 'Removing...' : 'Remove Bank'}
                 </button>
               </div>
             </div>
