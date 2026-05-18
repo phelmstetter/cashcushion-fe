@@ -50,10 +50,7 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Must call getRedirectResult to complete the signInWithRedirect flow.
-    // Without this, Firebase never processes the pending redirect and
-    // onAuthStateChanged fires with null, leaving the user on the login page.
-    getRedirectResult(auth).catch(console.error);
+    let settled = false;
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
@@ -65,7 +62,30 @@ function App() {
       }
       setUser(currentUser);
       setLoading(false);
+      settled = true;
     });
+
+    // Process any pending signInWithRedirect result. If onAuthStateChanged
+    // already settled (cached session), this is a no-op. If it hasn't settled
+    // yet (fresh session after redirect), the result resolves the pending auth
+    // and triggers onAuthStateChanged with the authenticated user.
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (result?.user && !settled) {
+          await saveUserToFirestore({
+            uid: result.user.uid,
+            email: result.user.email,
+            photoURL: result.user.photoURL,
+          });
+          setUser(result.user);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.error('Redirect result error:', err);
+        if (!settled) setLoading(false);
+      });
+
     return () => unsubscribe();
   }, []);
 
