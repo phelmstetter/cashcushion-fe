@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Switch, Route, Redirect } from "wouter";
-import { type User, onAuthStateChanged } from 'firebase/auth';
+import { type User, onAuthStateChanged, getRedirectResult } from 'firebase/auth';
 import { auth, saveUserToFirestore } from '@/lib/firebase';
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -50,6 +50,11 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Must call getRedirectResult to complete the signInWithRedirect flow.
+    // Without this, Firebase never processes the pending redirect and
+    // onAuthStateChanged fires with null, leaving the user on the login page.
+    getRedirectResult(auth).catch(console.error);
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         await saveUserToFirestore({
