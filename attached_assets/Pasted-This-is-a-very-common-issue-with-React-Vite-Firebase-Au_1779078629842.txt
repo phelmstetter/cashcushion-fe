@@ -1,0 +1,233 @@
+This is a very common issue with React + Vite + Firebase Auth redirect flows, especially when combined with client-side routers like Wouter.
+
+The problem is usually not Firebase Auth itself — it’s the interaction between:
+
+* Firebase redirect auth
+* SPA routing
+* Hosting rewrites
+* Vite dev/prod config
+* auth state restoration timing
+
+⸻
+
+🔍 What’s probably happening
+
+With signInWithRedirect():
+
+1. User clicks login
+2. Browser leaves your app
+3. Firebase auth page/provider opens
+4. User authenticates
+5. Firebase redirects BACK to your app
+6. App reloads
+7. Router initializes
+8. Firebase restores auth state asynchronously
+
+⚠️ During steps 6–8:
+
+* Wouter may render before auth state is restored
+* route guards may fire too early
+* app may redirect to login again
+* state may appear lost
+
+This creates:
+
+* redirect loops
+* blank screens
+* “not authenticated” flashes
+* broken navigation
+
+⸻
+
+✅ Most common fixes
+
+1️⃣ Wait for Firebase auth initialization before rendering app
+
+This is the #1 issue.
+
+Your app should NOT render protected routes until Firebase finishes restoring session state.
+
+⸻
+
+Correct pattern
+
+Create an auth loading state:
+
+const [user, setUser] = useState(null);
+const [loading, setLoading] = useState(true);
+useEffect(() => {
+  return onAuthStateChanged(auth, (user) => {
+    setUser(user);
+    setLoading(false);
+  });
+}, []);
+
+Then:
+
+if (loading) {
+  return <LoadingScreen />;
+}
+
+ONLY render router after loading completes.
+
+⸻
+
+2️⃣ Firebase Hosting rewrite must support SPA routes
+
+Your firebase.json should include:
+
+{
+  "hosting": {
+    "public": "dist",
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}
+
+Without this:
+
+* redirect callbacks break
+* refreshes fail
+* deep links 404
+
+⸻
+
+3️⃣ Use getRedirectResult() properly
+
+After redirect returns:
+
+useEffect(() => {
+  getRedirectResult(auth)
+    .then((result) => {
+      if (result?.user) {
+        console.log("Logged in");
+      }
+    })
+    .catch(console.error);
+}, []);
+
+⸻
+
+4️⃣ Wouter route guards can cause loops
+
+A common bug:
+
+if (!user) {
+  navigate("/login");
+}
+
+fires BEFORE Firebase finishes restoring auth state.
+
+You need:
+
+if (!loading && !user) {
+  navigate("/login");
+}
+
+⸻
+
+5️⃣ Vite dev server sometimes breaks redirects
+
+Locally:
+
+* Firebase redirect domains must match exactly
+
+Make sure authorized domains include:
+
+* localhost
+* your Firebase Hosting domain
+* custom domain
+
+In:
+Firebase Console Auth Settings￼
+
+⸻
+
+🧠 Why redirect auth feels flaky in SPAs
+
+Redirect auth:
+
+* fully reloads the app
+* loses transient client state
+* depends on async auth restoration
+
+Popup auth (signInWithPopup) avoids most of this.
+
+⸻
+
+🚨 My recommendation for MVP
+
+Unless you specifically need redirect auth for mobile Safari / OAuth edge cases:
+
+👉 Use:
+
+signInWithPopup()
+
+instead of:
+
+signInWithRedirect()
+
+For:
+
+* Google auth
+* desktop apps
+* MVPs
+
+…it’s dramatically simpler.
+
+⸻
+
+⚠️ BUT if you need redirect auth
+
+Then your app MUST have:
+
+✅ auth loading state
+✅ delayed route rendering
+✅ Firebase Hosting SPA rewrites
+✅ proper authorized domains
+✅ stable auth context/provider
+
+⸻
+
+🧭 Most likely root cause in your app
+
+Based on:
+
+* React
+* Vite
+* Wouter
+* redirect auth problems
+
+…I’d bet:
+
+Wouter is rendering routes before Firebase restores auth state.
+
+That’s the classic failure mode.
+
+⸻
+
+✅ Architecture that works well
+
+<App>
+  <AuthProvider>
+    {loading ? <Splash /> : <Router />}
+  </AuthProvider>
+</App>
+
+Protected routes only run AFTER auth initialization completes.
+
+⸻
+
+If you want, I can next help with:
+
+* proper React auth provider structure
+* Wouter-compatible protected route pattern
+* Vite + Firebase Hosting production config
+* why redirect auth may fail specifically on iOS
+* Cloud Run + Firebase Hosting auth cookie patterns
+
+Just paste the relevant auth/router code.

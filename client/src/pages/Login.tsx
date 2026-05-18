@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { GoogleAuthProvider, signInWithRedirect } from "firebase/auth";
+import { GoogleAuthProvider, signInWithPopup, signInWithRedirect } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
 const Login = () => {
@@ -12,11 +12,17 @@ const Login = () => {
     setLoading(true);
 
     try {
-      await signInWithRedirect(auth, provider);
+      // Popup is the fast path — no full-page redirect, no cross-origin issues.
+      await signInWithPopup(auth, provider);
     } catch (err: unknown) {
-      const e = err as { message?: string };
-      setError(e.message ?? "Sign-in failed. Please try again.");
-      setLoading(false);
+      const e = err as { code?: string; message?: string };
+      if (e.code === "auth/popup-blocked") {
+        // Browser blocked the popup (common on mobile) — fall back to redirect.
+        await signInWithRedirect(auth, provider);
+      } else {
+        setError(e.message ?? "Sign-in failed. Please try again.");
+        setLoading(false);
+      }
     }
   };
 
