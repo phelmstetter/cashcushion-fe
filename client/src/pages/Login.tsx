@@ -1,36 +1,53 @@
-import { useState, useEffect } from "react";
-import { GoogleAuthProvider, signInWithRedirect, getRedirectResult } from "firebase/auth";
-import { auth, saveUserToFirestore } from "@/lib/firebase";
+  import { useState, useEffect } from "react";
+  import { type User, GoogleAuthProvider, signInWithPopup, getRedirectResult } from "firebase/auth";
+  import { auth, saveUserToFirestore } from "@/lib/firebase";
 
-const Login = () => {
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const Login = () => {
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    setLoading(true);
-    getRedirectResult(auth)
-      .then(async (result) => {
-        if (result?.user) {
-          await saveUserToFirestore({
-            uid: result.user.uid,
-            email: result.user.email,
-            photoURL: result.user.photoURL,
-          });
+    // Helper to handle the user data saving logic to keep code DRY
+    const processUser = async (user: User) => {
+      if (user) {
+        await saveUserToFirestore({
+          uid: user.uid,
+          email: user.email,
+          photoURL: user.photoURL,
+        });
+      }
+    };
+
+    useEffect(() => {
+      // kept for browsers that successfully use redirect
+      setLoading(true);
+      getRedirectResult(auth)
+        .then(async (result) => {
+          if (result?.user) await processUser(result.user);
+        })
+        .catch((err) => setError(err.message))
+        .finally(() => setLoading(false));
+    }, []);
+
+    const handleGoogleSignIn = async () => {
+      const provider = new GoogleAuthProvider();
+      setError("");
+      setLoading(true);
+
+      try {
+        // Use Popup instead of Redirect for better iOS compatibility
+        const result = await signInWithPopup(auth, provider);
+        await processUser(result.user);
+      } catch (err: unknown) {
+        const e = err as { code?: string; message?: string };
+        if (e.code === "auth/popup-blocked") {
+          setError("Please enable pop-ups for this site to sign in.");
+        } else {
+          setError(e.message ?? "Sign-in failed. Please try again.");
         }
-      })
-      .catch((err) => {
-        setError(err.message);
-      })
-      .finally(() => {
+      } finally {
         setLoading(false);
-      });
-  }, []);
-
-  const handleGoogleSignIn = () => {
-    const provider = new GoogleAuthProvider();
-    setError("");
-    signInWithRedirect(auth, provider);
-  };
+      }
+    };
 
   return (
     <div className="container" data-testid="page-login">
