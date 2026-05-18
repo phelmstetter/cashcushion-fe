@@ -1,0 +1,94 @@
+You are getting kicked back to the login page because getRedirectResult does not persist state automatically across page refreshes unless your routing logic explicitly tells the application that a user is now logged in.When signInWithRedirect finishes, Google redirects the user back to your site. Your app reloads from scratch, checks the route, sees the user state is empty, and immediately drops them back onto the /login page before the asynchronous getRedirectResult ever finishes running.To fix this, you must listen to the authentic global auth state using onAuthStateChanged or use a Router redirect once processUser finishes.Here is the fully corrected implementation. It handles the redirect result, waits for the user object to fully hydrate, and then pushes them into your app dashboard (assuming a router like Next.js or React Router):tsximport { useState, useEffect } from "react";
+import { useRouter } from "next/router"; // OR "next/navigation" or "react-router-dom"
+import { type User, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged } from "firebase/auth";
+import { auth, saveUserToFirestore } from "@/lib/firebase";
+
+const Login = () => {
+  const router = useRouter();
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true); // Start as true to prevent flash of login page
+
+  // Helper to handle the user data saving logic
+  const processUser = async (user: User) => {
+    if (user) {
+      await saveUserToFirestore({
+        uid: user.uid,
+        email: user.email,
+        photoURL: user.photoURL,
+      });
+      // 1. FORWARD USER INTO THE APP ONCE PROCESSING IS COMPLETE
+      router.push("/dashboard"); 
+    }
+  };
+
+  // Listen to the reliable global auth state listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // User is already logged in, bypass login screen entirely
+        router.push("/dashboard");
+      } else {
+        // No active user session found, check if they just arrived from a redirect
+        try {
+          const result = await getRedirectResult(auth);
+          if (result?.user) {
+            await processUser(result.user);
+          }
+        } catch (err: any) {
+          setError(err.message);
+        } finally {
+          setLoading(false);
+        }
+      }
+    });
+
+    return () => unsubscribe(); // Clean up listener on unmount
+  }, []);
+
+  const handleGoogleSignIn = async () => {
+    const provider = new GoogleAuthProvider();
+    setError("");
+    setLoading(true);
+
+    try {
+      await signInWithRedirect(auth, provider);
+    } catch (err: unknown) {
+      const e = err as { code?: string; message?: string };
+      setError(e.message ?? "Sign-in failed. Please try again.");
+      setLoading(false);
+    }
+  };
+
+  // Prevent showing the login form while checking auth status
+  if (loading) {
+    return (
+      <div className="container">
+        <div className="loading-spinner">Loading session...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container" data-testid="page-login">
+      <div className="card">
+        <div className="auth-container">
+          <h2>Welcome</h2>
+          <p>Sign in to continue</p>
+          <div className="button-group">
+            <button
+              className="auth-button google"
+              onClick={handleGoogleSignIn}
+              data-testid="button-google-signin"
+            >
+              Sign in with Google
+            </button>
+          </div>
+          {error && <p className="error-message" data-testid="text-error">{error}</p>}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Login;
+Use code with caution.Why This Version WorksInitial Loading State: loading defaults to true. This stops the login UI from flashing or running any internal app route blocks while Firebase figures out who the incoming user is.onAuthStateChanged Integration: This handles both users coming back from the Google Redirect page and users who already have an active valid session cookie.Route Navigation: Adding your specific framework router hook inside processUser manually pushes the authenticated browser session forward past your login component.
