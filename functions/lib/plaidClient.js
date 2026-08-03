@@ -1,7 +1,11 @@
 const { getStorage } = require('firebase-admin/storage');
 const { Configuration, PlaidApi, PlaidEnvironments } = require('plaid');
 
-let plaidClient = null;
+// Cached per environment name, not globally — so switching the `plaid_env`
+// file (e.g. sandbox -> production) takes effect on the next call instead of
+// being stuck with whichever client a warm instance built first.
+let cachedEnv = null;
+let cachedClient = null;
 
 async function getPlaidEnv() {
   const bucket = getStorage().bucket('cashcushion.appspot.com');
@@ -11,12 +15,14 @@ async function getPlaidEnv() {
 }
 
 async function getPlaidClient() {
-  if (plaidClient) return plaidClient;
+  const env = await getPlaidEnv();
+
+  if (cachedClient && cachedEnv === env) {
+    return cachedClient;
+  }
 
   const secrets = JSON.parse(process.env.PLAID_SECRETS);
   const clientId = secrets.client_id;
-
-  const env = await getPlaidEnv();
 
   // Key names in the secret JSON: sandbox_secret, dev_secret, prod_secret
   const keyMap = {
@@ -47,8 +53,9 @@ async function getPlaidClient() {
     },
   });
 
-  plaidClient = new PlaidApi(configuration);
-  return plaidClient;
+  cachedClient = new PlaidApi(configuration);
+  cachedEnv = env;
+  return cachedClient;
 }
 
 module.exports = { getPlaidClient };
