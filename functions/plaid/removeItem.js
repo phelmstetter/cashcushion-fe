@@ -1,5 +1,5 @@
 const { getPlaidClient } = require('../lib/plaidClient');
-const { getFirestore } = require('firebase-admin/firestore');
+const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 
 /**
  * Handler for POST /api/plaid/remove-item
@@ -43,8 +43,14 @@ async function handler(uid, req, res) {
     // Delete all Firestore data associated with this item in parallel.
     const batch = db.batch();
 
-    // Delete the plaid_items document.
-    batch.delete(db.collection('plaid_items').doc(itemId));
+    // Soft-deactivate the plaid_items document instead of deleting it, so a
+    // record survives for troubleshooting (e.g. did Plaid's itemRemove call
+    // actually succeed, when was the item last used before it was removed).
+    if (itemDoc.exists) {
+      batch.set(db.collection('plaid_items').doc(itemId), {
+        deactivated_at: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
 
     // Delete accounts linked to this item and collect their account_ids.
     const accountsSnap = await db.collection('accounts')

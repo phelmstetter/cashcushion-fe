@@ -1,6 +1,6 @@
 const { getPlaidClient } = require('../lib/plaidClient');
 const { CountryCode } = require('plaid');
-const { getFirestore } = require('firebase-admin/firestore');
+const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 
 /**
  * Handler for POST /api/plaid/refresh-accounts
@@ -28,6 +28,9 @@ async function handler(uid, req, res) {
     const itemData = itemDoc.data();
     if (itemData.user_id !== uid) {
       return res.status(403).json({ error: 'Forbidden' });
+    }
+    if (itemData.deactivated_at) {
+      return res.status(404).json({ error: 'Item not found' });
     }
     if (!itemData.access_token) {
       return res.status(422).json({ error: 'Access token missing — try re-linking the bank' });
@@ -84,6 +87,11 @@ async function handler(uid, req, res) {
 
     // Build batch: delete stale data, upsert fresh accounts.
     const batch = db.batch();
+
+    // Record that this item was successfully used just now.
+    batch.set(db.collection('plaid_items').doc(itemId), {
+      last_used_at: FieldValue.serverTimestamp(),
+    }, { merge: true });
 
     // Delete stale account docs.
     existingSnap.forEach((d) => {

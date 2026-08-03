@@ -1,6 +1,6 @@
 const { getPlaidClient } = require('../lib/plaidClient');
 const { CountryCode } = require('plaid');
-const { getFirestore } = require('firebase-admin/firestore');
+const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 
 /**
  * Handler for POST /api/plaid/exchange-token
@@ -28,12 +28,16 @@ async function handler(uid, req, res) {
     const itemId = exchangeResponse.data.item_id;
 
     // Save to plaid_items so the transaction sync worker can find the access token.
+    // deactivated_at is explicitly cleared so re-linking a previously removed
+    // item (same item_id) reactivates it instead of leaving it marked inactive.
     const db = getFirestore();
     await db.collection('plaid_items').doc(itemId).set({
       access_token: accessToken,
       item_id: itemId,
       user_id: uid,
       next_cursor: null,
+      last_used_at: FieldValue.serverTimestamp(),
+      deactivated_at: null,
     }, { merge: true });
 
     const [accountsResponse, itemResponse] = await Promise.all([

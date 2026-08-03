@@ -28,6 +28,9 @@ async function handler(uid, req, res) {
     if (itemData.user_id !== uid) {
       return res.status(403).json({ error: 'Forbidden' });
     }
+    if (itemData.deactivated_at) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
     if (!itemData.access_token) {
       return res.status(422).json({ error: 'Access token missing — try re-linking the bank' });
     }
