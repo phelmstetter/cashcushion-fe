@@ -4,6 +4,23 @@ import { usePlaidLink } from 'react-plaid-link';
 import { auth, getAccounts, saveLinkedAccounts, deleteAccountsByIds, type Account, type PlaidAccountData } from '@/lib/firebase';
 import { apiFetch } from '@/lib/queryClient';
 
+// Many US banks require an OAuth login step in Plaid Link: the user gets
+// redirected to their bank's real login page and back via a full page
+// navigation, which wipes React state entirely. To resume the flow we persist
+// the in-flight link token (and which item, if any, is being updated) in
+// sessionStorage before handing off, and restore it on load if the URL comes
+// back with Plaid's `oauth_state_id` marker.
+const OAUTH_LINK_TOKEN_KEY = 'plaid_oauth_link_token';
+const OAUTH_UPDATING_ITEM_KEY = 'plaid_oauth_updating_item_id';
+
+function getRedirectUri() {
+  return `${window.location.origin}/linked-accounts`;
+}
+
+function isOAuthRedirect() {
+  return new URLSearchParams(window.location.search).has('oauth_state_id');
+}
+
 export default function LinkedAccounts() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
@@ -12,7 +29,22 @@ export default function LinkedAccounts() {
   const [error, setError] = useState<string | null>(null);
   const [removingItemId, setRemovingItemId] = useState<string | null>(null);
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
+  const [receivedRedirectUri, setReceivedRedirectUri] = useState<string | undefined>(undefined);
   const [, navigate] = useLocation();
+
+  // Resume an in-flight Link session after returning from a bank's OAuth
+  // login redirect. Runs once on mount, before the normal "fetch a fresh
+  // link token" flows would otherwise kick in.
+  useEffect(() => {
+    if (!isOAuthRedirect()) return;
+    const savedToken = sessionStorage.getItem(OAUTH_LINK_TOKEN_KEY);
+    if (!savedToken) return;
+    const savedUpdatingItemId = sessionStorage.getItem(OAUTH_UPDATING_ITEM_KEY);
+    setLinking(true);
+    setUpdatingItemId(savedUpdatingItemId || null);
+    setReceivedRedirectUri(window.location.href);
+    setLinkToken(savedToken);
+  }, []);
 
   const loadAccounts = useCallback(async () => {
     const user = auth.currentUser;
@@ -38,9 +70,11 @@ export default function LinkedAccounts() {
     }
     setError(null);
     try {
-      const res = await apiFetch('POST', '/api/plaid/create-link-token', { userId: user.uid });
+      const res = await apiFetch('POST', '/api/plaid/create-link-token', { userId: user.uid, redirectUri: getRedirectUri() });
       const data = await res.json();
       if (data.link_token) {
+        sessionStorage.setItem(OAUTH_LINK_TOKEN_KEY, data.link_token);
+        sessionStorage.removeItem(OAUTH_UPDATING_ITEM_KEY);
         setLinkToken(data.link_token);
       } else {
         setError(data.error || 'Failed to start bank connection. Please try again.');
@@ -58,6 +92,18 @@ export default function LinkedAccounts() {
     institution_name: string | null;
     error?: string;
   }
+
+  // Clears the persisted OAuth hand-off state and strips Plaid's
+  // `oauth_state_id` marker from the URL so refreshing the page doesn't try
+  // to resume a finished (or abandoned) Link session.
+  const clearOAuthState = () => {
+    sessionStorage.removeItem(OAUTH_LINK_TOKEN_KEY);
+    sessionStorage.removeItem(OAUTH_UPDATING_ITEM_KEY);
+    setReceivedRedirectUri(undefined);
+    if (isOAuthRedirect()) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  };
 
   const onPlaidSuccess = useCallback(async (publicToken: string) => {
     const user = auth.currentUser;
@@ -84,22 +130,36 @@ export default function LinkedAccounts() {
           await loadAccounts();
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to complete Plaid flow:', err);
+      setError(err?.message || 'Failed to save the account changes. Please try again.');
     } finally {
       setLinking(false);
       setLinkToken(null);
       setUpdatingItemId(null);
+      clearOAuthState();
     }
   }, [loadAccounts, updatingItemId]);
 
   const { open, ready } = usePlaidLink({
     token: linkToken,
+    receivedRedirectUri,
     onSuccess: (publicToken) => onPlaidSuccess(publicToken),
-    onExit: () => { setLinkToken(null); setUpdatingItemId(null); },
+    onExit: (err) => {
+      if (err) {
+        console.error('Plaid Link exited with error:', err);
+        setError('Bank connection was cancelled or failed. Please try again.');
+      }
+      setLinking(false);
+      setLinkToken(null);
+      setUpdatingItemId(null);
+      clearOAuthState();
+    },
   });
 
   useEffect(() => {
+    // In the OAuth-redirect-return case, Link must reopen as soon as it's
+    // ready — there's no user click to hang the `open()` call off of.
     if (linkToken && ready) {
       open();
     }
@@ -116,9 +176,11 @@ export default function LinkedAccounts() {
     setError(null);
     setUpdatingItemId(itemId);
     try {
-      const res = await apiFetch('POST', '/api/plaid/create-update-link-token', { itemId, userId: user.uid });
+      const res = await apiFetch('POST', '/api/plaid/create-update-link-token', { itemId, userId: user.uid, redirectUri: getRedirectUri() });
       const data = await res.json();
       if (data.link_token) {
+        sessionStorage.setItem(OAUTH_LINK_TOKEN_KEY, data.link_token);
+        sessionStorage.setItem(OAUTH_UPDATING_ITEM_KEY, itemId);
         setLinkToken(data.link_token);
       } else {
         setError(data.error || 'Failed to start account update. Please try again.');

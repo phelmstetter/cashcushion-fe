@@ -11,6 +11,7 @@ const { Products, CountryCode } = require('plaid');
  */
 async function handler(uid, req, res) {
   try {
+    const { redirectUri } = req.body;
     const client = await getPlaidClient();
 
     const response = await client.linkTokenCreate({
@@ -26,6 +27,11 @@ async function handler(uid, req, res) {
           account_subtypes: ['checking', 'savings'],
         },
       },
+      // Required for institutions that use an OAuth login step (most major US
+      // banks). Without it, Link redirects the user to the bank's OAuth page
+      // and has no way to hand control back to the app. Must exactly match a
+      // URI registered in the Plaid Dashboard's "Allowed redirect URIs".
+      ...(redirectUri ? { redirect_uri: redirectUri } : {}),
     });
 
     return res.status(200).json({ link_token: response.data.link_token });

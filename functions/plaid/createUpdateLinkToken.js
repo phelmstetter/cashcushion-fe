@@ -13,7 +13,7 @@ const { getFirestore } = require('firebase-admin/firestore');
  */
 async function handler(uid, req, res) {
   try {
-    const { itemId } = req.body;
+    const { itemId, redirectUri } = req.body;
     if (!itemId) {
       return res.status(400).json({ error: 'itemId is required' });
     }
@@ -45,6 +45,11 @@ async function handler(uid, req, res) {
       access_token: accessToken,
       country_codes: [CountryCode.Us],
       language: 'en',
+      // Required for institutions that use an OAuth login step (most major US
+      // banks). Without it, Link redirects the user to the bank's OAuth page
+      // and has no way to hand control back to the app. Must exactly match a
+      // URI registered in the Plaid Dashboard's "Allowed redirect URIs".
+      ...(redirectUri ? { redirect_uri: redirectUri } : {}),
     });
 
     return res.status(200).json({ link_token: response.data.link_token });
