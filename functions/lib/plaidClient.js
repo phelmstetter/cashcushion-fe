@@ -40,11 +40,18 @@ async function getPlaidClient() {
   const envMap = {
     sandbox: PlaidEnvironments.sandbox,
     development: PlaidEnvironments.development,
+    dev: PlaidEnvironments.development,
     production: PlaidEnvironments.production,
+    prod: PlaidEnvironments.production,
   };
 
+  const basePath = envMap[env];
+  if (!basePath) {
+    throw new Error(`No Plaid basePath found for environment: ${env}`);
+  }
+
   const configuration = new Configuration({
-    basePath: envMap[env] || PlaidEnvironments.sandbox,
+    basePath,
     baseOptions: {
       headers: {
         'PLAID-CLIENT-ID': clientId,
