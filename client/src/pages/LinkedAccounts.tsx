@@ -21,6 +21,16 @@ function isOAuthRedirect() {
   return new URLSearchParams(window.location.search).has('oauth_state_id');
 }
 
+// Surfaces Plaid's own error taxonomy (e.g. INVALID_FIELD for an
+// unregistered redirect_uri) instead of a generic message, so failures are
+// diagnosable from the UI alone.
+function formatPlaidError(data: any, fallback: string): string {
+  if (data?.plaid_error_code) {
+    return `${fallback} (${data.plaid_error_code}${data.plaid_error_message ? `: ${data.plaid_error_message}` : ''})`;
+  }
+  return data?.error || fallback;
+}
+
 export default function LinkedAccounts() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,7 +87,7 @@ export default function LinkedAccounts() {
         sessionStorage.removeItem(OAUTH_UPDATING_ITEM_KEY);
         setLinkToken(data.link_token);
       } else {
-        setError(data.error || 'Failed to start bank connection. Please try again.');
+        setError(formatPlaidError(data, 'Failed to start bank connection. Please try again.'));
       }
     } catch (err: any) {
       console.error('Failed to fetch link token:', err);
@@ -183,7 +193,7 @@ export default function LinkedAccounts() {
         sessionStorage.setItem(OAUTH_UPDATING_ITEM_KEY, itemId);
         setLinkToken(data.link_token);
       } else {
-        setError(data.error || 'Failed to start account update. Please try again.');
+        setError(formatPlaidError(data, 'Failed to start account update. Please try again.'));
         setUpdatingItemId(null);
       }
     } catch (err: any) {

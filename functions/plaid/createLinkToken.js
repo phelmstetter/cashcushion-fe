@@ -36,8 +36,15 @@ async function handler(uid, req, res) {
 
     return res.status(200).json({ link_token: response.data.link_token });
   } catch (error) {
-    console.error('Error creating link token:', error?.response?.data || error.message);
-    return res.status(500).json({ error: 'Failed to create link token' });
+    const plaidError = error?.response?.data;
+    console.error('Error creating link token:', plaidError || error.message);
+    return res.status(500).json({
+      error: 'Failed to create link token',
+      // Surfaced so the client-visible error is actionable instead of opaque —
+      // this is safe to expose: it's Plaid's own error taxonomy, not secrets.
+      plaid_error_code: plaidError?.error_code,
+      plaid_error_message: plaidError?.error_message,
+    });
   }
 }
 

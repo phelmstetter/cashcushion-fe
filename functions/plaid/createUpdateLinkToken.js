@@ -54,8 +54,13 @@ async function handler(uid, req, res) {
 
     return res.status(200).json({ link_token: response.data.link_token });
   } catch (error) {
-    console.error('Error creating update link token:', error?.response?.data || error.message);
-    return res.status(500).json({ error: 'Failed to create update link token' });
+    const plaidError = error?.response?.data;
+    console.error('Error creating update link token:', plaidError || error.message);
+    return res.status(500).json({
+      error: 'Failed to create update link token',
+      plaid_error_code: plaidError?.error_code,
+      plaid_error_message: plaidError?.error_message,
+    });
   }
 }
 
