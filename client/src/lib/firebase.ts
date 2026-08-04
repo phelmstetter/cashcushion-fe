@@ -117,7 +117,10 @@ export interface Account {
 export async function getAccounts(userId: string): Promise<Account[]> {
   const accountsRef = collection(db, 'accounts');
   const q = query(accountsRef, where('user_id', '==', userId));
-  const querySnapshot = await getDocs(q);
+  const [querySnapshot, removedIds] = await Promise.all([
+    getDocs(q),
+    getRemovedAccountIds(userId),
+  ]);
   const accountsById = new Map<string, Account>();
   querySnapshot.forEach((d) => {
     const data = d.data();
@@ -135,6 +138,8 @@ export async function getAccounts(userId: string): Promise<Account[]> {
       plaid_institution_name: data.plaid_institution_name || null,
       plaid_item_id: data.plaid_item_id || null,
     };
+    // Skip accounts the user has explicitly removed.
+    if (removedIds.has(acct.account_id)) return;
     const existing = accountsById.get(acct.account_id);
     if (!existing) {
       accountsById.set(acct.account_id, acct);
@@ -157,6 +162,33 @@ export async function deleteAccountsByIds(docIds: string[]): Promise<void> {
   );
 }
 
+/**
+ * Write tombstone records for the given Plaid account_ids so that sync and
+ * re-link flows never re-create accounts the user has intentionally removed.
+ * Doc ID: `{userId}_{account_id}` — one doc per (user, Plaid account).
+ */
+export async function markAccountsRemoved(userId: string, plaidAccountIds: string[]): Promise<void> {
+  const removedAt = new Date().toISOString();
+  await Promise.all(
+    plaidAccountIds.map((account_id) =>
+      setDoc(doc(db, 'removed_accounts', `${userId}_${account_id}`), {
+        user_id: userId,
+        account_id,
+        removed_at: removedAt,
+      })
+    )
+  );
+}
+
+async function getRemovedAccountIds(userId: string): Promise<Set<string>> {
+  const snap = await getDocs(
+    query(collection(db, 'removed_accounts'), where('user_id', '==', userId))
+  );
+  const ids = new Set<string>();
+  snap.forEach((d) => ids.add(d.data().account_id as string));
+  return ids;
+}
+
 export interface PlaidAccountData {
   account_id: string;
   name: string;
@@ -175,7 +207,10 @@ export async function saveLinkedAccounts(
   institutionId: string | null,
   institutionName: string | null
 ): Promise<void> {
+  const removedIds = await getRemovedAccountIds(userId);
   for (const acct of accounts) {
+    // Never re-create an account the user has explicitly removed.
+    if (removedIds.has(acct.account_id)) continue;
     const docId = `${userId}_${itemId}_${acct.account_id}`;
     await setDoc(doc(db, 'accounts', docId), {
       user_id: userId,
@@ -201,16 +236,21 @@ export async function saveLinkedAccountsForItem(
   institutionId: string | null,
   institutionName: string | null
 ): Promise<void> {
-  const freshAccountIds = new Set(accounts.map((a) => a.account_id));
+  const [existingSnap, removedIds] = await Promise.all([
+    getDocs(query(collection(db, 'accounts'), where('user_id', '==', userId), where('plaid_item_id', '==', itemId))),
+    getRemovedAccountIds(userId),
+  ]);
 
-  const existingSnap = await getDocs(
-    query(collection(db, 'accounts'), where('user_id', '==', userId), where('plaid_item_id', '==', itemId))
-  );
+  // Only upsert accounts the user hasn't removed; treat removed ones as absent
+  // from the fresh set so their stale docs get cleaned up below.
+  const activeAccounts = accounts.filter((a) => !removedIds.has(a.account_id));
+  const freshAccountIds = new Set(activeAccounts.map((a) => a.account_id));
+
   const deleteOps = existingSnap.docs
     .filter((d) => !freshAccountIds.has(d.data().account_id as string))
     .map((d) => deleteDoc(d.ref));
 
-  const upsertOps = accounts.map((acct) => {
+  const upsertOps = activeAccounts.map((acct) => {
     const docId = `${userId}_${itemId}_${acct.account_id}`;
     return setDoc(doc(db, 'accounts', docId), {
       user_id: userId,

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { usePlaidLink } from 'react-plaid-link';
-import { auth, getAccounts, saveLinkedAccounts, deleteAccountsByIds, type Account, type PlaidAccountData } from '@/lib/firebase';
+import { auth, getAccounts, saveLinkedAccounts, deleteAccountsByIds, markAccountsRemoved, type Account, type PlaidAccountData } from '@/lib/firebase';
 import { apiFetch } from '@/lib/queryClient';
 
 // Many US banks require an OAuth login step in Plaid Link: the user gets
@@ -203,14 +203,31 @@ export default function LinkedAccounts() {
     }
   }, []);
 
-  const handleRemoveBank = useCallback(async (itemId: string | null, accountDocIds: string[]) => {
+  const handleRemoveBank = useCallback(async (itemId: string | null, accountsToRemove: Account[]) => {
     const user = auth.currentUser;
     if (!user) return;
+    const accountDocIds = accountsToRemove.map((a) => a.id);
+    const plaidAccountIds = accountsToRemove.map((a) => a.account_id).filter(Boolean);
     // Use a stable key for tracking removal state: itemId if present, else a
     // sentinel derived from the first doc ID so multiple legacy groups don't collide.
     const removalKey = itemId ?? `legacy_${accountDocIds[0] ?? 'unknown'}`;
     setRemovingItemId(removalKey);
     setError(null);
+
+    // Write tombstones BEFORE any deletion so the account_ids are protected
+    // from the moment removal begins — a concurrent sync or re-link can never
+    // re-create them even if a later step partially fails.
+    try {
+      if (plaidAccountIds.length > 0) {
+        await markAccountsRemoved(user.uid, plaidAccountIds);
+      }
+    } catch (err: any) {
+      console.error('Failed to write removal tombstones:', err);
+      setError(err?.message || 'Failed to remove bank account. Please try again.');
+      setRemovingItemId(null);
+      return;
+    }
+
     let serverCleanedUp = false;
     if (itemId) {
       try {
@@ -420,7 +437,7 @@ export default function LinkedAccounts() {
                   onClick={() => {
                     const removalKey = group.itemId ?? `legacy_${group.accounts[0]?.id ?? 'unknown'}`;
                     if (removingItemId !== removalKey) {
-                      handleRemoveBank(group.itemId, group.accounts.map((a) => a.id));
+                      handleRemoveBank(group.itemId, group.accounts);
                     }
                   }}
                   disabled={removingItemId === (group.itemId ?? `legacy_${group.accounts[0]?.id ?? 'unknown'}`)}

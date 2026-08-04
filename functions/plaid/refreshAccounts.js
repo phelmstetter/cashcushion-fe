@@ -58,7 +58,7 @@ async function handler(uid, req, res) {
       }
     }
 
-    const freshAccounts = accountsResponse.data.accounts.map((acct) => ({
+    const allFreshAccounts = accountsResponse.data.accounts.map((acct) => ({
       account_id: acct.account_id,
       name: acct.name,
       official_name: acct.official_name || null,
@@ -69,6 +69,15 @@ async function handler(uid, req, res) {
       current_balance: acct.balances.current ?? null,
     }));
 
+    // Fetch tombstones so accounts the user explicitly removed are never re-created.
+    const tombstoneSnap = await db.collection('removed_accounts')
+      .where('user_id', '==', uid)
+      .get();
+    const removedAccountIds = new Set();
+    tombstoneSnap.forEach((d) => removedAccountIds.add(d.data().account_id));
+
+    // Only upsert accounts that have not been tombstoned.
+    const freshAccounts = allFreshAccounts.filter((a) => !removedAccountIds.has(a.account_id));
     const freshAccountIds = new Set(freshAccounts.map((a) => a.account_id));
 
     // Find existing accounts in Firestore for this item.
@@ -80,6 +89,8 @@ async function handler(uid, req, res) {
     const staleAccountIds = [];
     existingSnap.forEach((d) => {
       const aid = d.data().account_id;
+      // An account is stale if Plaid no longer returns it, OR if the user has
+      // tombstoned it — in either case its Firestore doc should be removed.
       if (aid && !freshAccountIds.has(aid)) {
         staleAccountIds.push(aid);
       }
@@ -110,7 +121,7 @@ async function handler(uid, req, res) {
       staleForecastSnap.forEach((d) => batch.delete(d.ref));
     }
 
-    // Upsert fresh accounts.
+    // Upsert fresh (non-tombstoned) accounts.
     for (const acct of freshAccounts) {
       const docId = `${uid}_${itemId}_${acct.account_id}`;
       batch.set(db.collection('accounts').doc(docId), {

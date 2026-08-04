@@ -27,6 +27,24 @@ service cloud.firestore {
                     && resource.data.user_id == request.auth.uid;
     }
 
+    match /removed_accounts/{tombstoneId} {
+      // Users can read (get + list) and create their own tombstones.
+      // Tombstones are immutable — no update or delete is permitted.
+      // The doc id must be {uid}_{account_id} so the rule can validate it on create.
+      allow get: if request.auth != null
+                 && resource.data.user_id == request.auth.uid;
+
+      // For list queries (e.g. where('user_id','==',uid)), Firestore evaluates
+      // this rule against each potential result document; the client must issue
+      // a query constrained to the authenticated user's own records.
+      allow list: if request.auth != null
+                  && resource.data.user_id == request.auth.uid;
+
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.user_id
+                    && tombstoneId == request.auth.uid + '_' + request.resource.data.account_id;
+    }
+
     match /accounts/{accountId} {
       allow read: if request.auth != null
                   && resource.data.user_id == request.auth.uid;
