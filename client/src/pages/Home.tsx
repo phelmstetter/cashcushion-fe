@@ -303,12 +303,16 @@ const Home = () => {
     ...visibleForecasts.map(f => f.name)
   ])).filter(Boolean).sort((a, b) => a.localeCompare(b));
 
-  const accountOptions = accounts
-    .filter(a => a.account_id)
-    .map(a => ({
-      label: a.name ? `${a.name} ${a.mask}` : a.mask,
-      value: a.account_id
-    }));
+  const accountOptions = Array.from(
+    new Map(
+      accounts
+        .filter(a => a.account_id)
+        .map(a => [
+          a.account_id,
+          { label: a.name ? `${a.name} ${a.mask}` : a.mask, value: a.account_id }
+        ])
+    ).values()
+  );
 
   const CHART_COLORS = ['#1976d2', '#e53935', '#43a047', '#fb8c00', '#8e24aa', '#00acc1', '#d81b60', '#6d4c41'];
 
