@@ -118,10 +118,10 @@ export async function getAccounts(userId: string): Promise<Account[]> {
   const accountsRef = collection(db, 'accounts');
   const q = query(accountsRef, where('user_id', '==', userId));
   const querySnapshot = await getDocs(q);
-  const accounts: Account[] = [];
+  const accountsById = new Map<string, Account>();
   querySnapshot.forEach((d) => {
     const data = d.data();
-    accounts.push({
+    const acct: Account = {
       id: d.id,
       account_id: data.account_id || '',
       mask: data.mask || '',
@@ -134,8 +134,20 @@ export async function getAccounts(userId: string): Promise<Account[]> {
       plaid_institution_id: data.plaid_institution_id || null,
       plaid_institution_name: data.plaid_institution_name || null,
       plaid_item_id: data.plaid_item_id || null,
-    });
+    };
+    const existing = accountsById.get(acct.account_id);
+    if (!existing) {
+      accountsById.set(acct.account_id, acct);
+    } else {
+      // Keep the doc with the higher current_balance (fall back to available_balance)
+      const existingScore = existing.current_balance ?? existing.available_balance ?? 0;
+      const newScore = acct.current_balance ?? acct.available_balance ?? 0;
+      if (newScore > existingScore) {
+        accountsById.set(acct.account_id, acct);
+      }
+    }
   });
+  const accounts = Array.from(accountsById.values());
   return accounts.sort((a, b) => a.name.localeCompare(b.name));
 }
 
