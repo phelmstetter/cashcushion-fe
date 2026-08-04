@@ -4,6 +4,12 @@ import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
 export default defineConfig({
+  define: {
+    // Build-time stamp so a deployed build's freshness can be confirmed
+    // visually (e.g. on the Linked Accounts page) instead of guessing
+    // whether a Cloud Build run actually picked up the latest code.
+    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+  },
   plugins: [
     react(),
     runtimeErrorOverlay(),
