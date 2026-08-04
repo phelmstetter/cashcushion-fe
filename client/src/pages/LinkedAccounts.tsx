@@ -38,6 +38,7 @@ export default function LinkedAccounts() {
   const [linking, setLinking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [removingItemId, setRemovingItemId] = useState<string | null>(null);
+  const [confirmRemoveKey, setConfirmRemoveKey] = useState<string | null>(null);
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
   const [receivedRedirectUri, setReceivedRedirectUri] = useState<string | undefined>(undefined);
   const [, navigate] = useLocation();
@@ -432,29 +433,84 @@ export default function LinkedAccounts() {
                 >
                   {updatingItemId !== null && updatingItemId === group.itemId ? 'Loading...' : 'Add/Remove Accounts'}
                 </button>
-                <button
-                  data-testid={`button-remove-bank-${instId}`}
-                  onClick={() => {
-                    const removalKey = group.itemId ?? `legacy_${group.accounts[0]?.id ?? 'unknown'}`;
-                    if (removingItemId !== removalKey) {
-                      handleRemoveBank(group.itemId, group.accounts);
-                    }
-                  }}
-                  disabled={removingItemId === (group.itemId ?? `legacy_${group.accounts[0]?.id ?? 'unknown'}`)}
-                  style={{
-                    fontSize: '13px',
-                    color: (removingItemId === (group.itemId ?? `legacy_${group.accounts[0]?.id ?? 'unknown'}`)) ? '#999' : '#c44',
-                    background: 'none',
-                    border: `1px solid ${(removingItemId === (group.itemId ?? `legacy_${group.accounts[0]?.id ?? 'unknown'}`)) ? '#ddd' : '#e0c0c0'}`,
-                    borderRadius: '6px',
-                    padding: '6px 12px',
-                    cursor: (removingItemId === (group.itemId ?? `legacy_${group.accounts[0]?.id ?? 'unknown'}`)) ? 'not-allowed' : 'pointer'
-                  }}
-                  onMouseEnter={(e) => { if (removingItemId !== (group.itemId ?? `legacy_${group.accounts[0]?.id ?? 'unknown'}`)) e.currentTarget.style.backgroundColor = '#fef5f5'; }}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                >
-                  {(removingItemId === (group.itemId ?? `legacy_${group.accounts[0]?.id ?? 'unknown'}`)) ? 'Removing...' : 'Remove Bank'}
-                </button>
+                {(() => {
+                  const removalKey = group.itemId ?? `legacy_${group.accounts[0]?.id ?? 'unknown'}`;
+                  const isRemoving = removingItemId === removalKey;
+                  const isConfirming = confirmRemoveKey === removalKey;
+                  if (isConfirming) {
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span
+                          data-testid={`text-confirm-remove-${instId}`}
+                          style={{ fontSize: '13px', color: '#b91c1c' }}
+                        >
+                          Remove all accounts for {group.name}?
+                        </span>
+                        <button
+                          data-testid={`button-confirm-remove-${instId}`}
+                          onClick={() => {
+                            setConfirmRemoveKey(null);
+                            handleRemoveBank(group.itemId, group.accounts);
+                          }}
+                          style={{
+                            fontSize: '13px',
+                            color: 'white',
+                            backgroundColor: '#c44',
+                            border: 'none',
+                            borderRadius: '6px',
+                            padding: '6px 12px',
+                            cursor: 'pointer'
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#a33'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#c44'; }}
+                        >
+                          Remove
+                        </button>
+                        <button
+                          data-testid={`button-cancel-remove-${instId}`}
+                          onClick={() => setConfirmRemoveKey(null)}
+                          style={{
+                            fontSize: '13px',
+                            color: '#555',
+                            background: 'none',
+                            border: '1px solid #ddd',
+                            borderRadius: '6px',
+                            padding: '6px 12px',
+                            cursor: 'pointer'
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f5f5f5'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    );
+                  }
+                  return (
+                    <button
+                      data-testid={`button-remove-bank-${instId}`}
+                      onClick={() => {
+                        if (!isRemoving) {
+                          setConfirmRemoveKey(removalKey);
+                        }
+                      }}
+                      disabled={isRemoving}
+                      style={{
+                        fontSize: '13px',
+                        color: isRemoving ? '#999' : '#c44',
+                        background: 'none',
+                        border: `1px solid ${isRemoving ? '#ddd' : '#e0c0c0'}`,
+                        borderRadius: '6px',
+                        padding: '6px 12px',
+                        cursor: isRemoving ? 'not-allowed' : 'pointer'
+                      }}
+                      onMouseEnter={(e) => { if (!isRemoving) e.currentTarget.style.backgroundColor = '#fef5f5'; }}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                      {isRemoving ? 'Removing...' : 'Remove Bank'}
+                    </button>
+                  );
+                })()}
               </div>
             </div>
           ))
