@@ -203,33 +203,39 @@ export default function LinkedAccounts() {
     }
   }, []);
 
-  const handleRemoveBank = useCallback(async (itemId: string, accountDocIds: string[]) => {
+  const handleRemoveBank = useCallback(async (itemId: string | null, accountDocIds: string[]) => {
     const user = auth.currentUser;
-    if (!user || !itemId) return;
-    setRemovingItemId(itemId);
+    if (!user) return;
+    // Use a stable key for tracking removal state: itemId if present, else a
+    // sentinel derived from the first doc ID so multiple legacy groups don't collide.
+    const removalKey = itemId ?? `legacy_${accountDocIds[0] ?? 'unknown'}`;
+    setRemovingItemId(removalKey);
     setError(null);
     let serverCleanedUp = false;
-    try {
-      // Server revokes Plaid access token and deletes plaid_items + accounts via firebase-admin.
-      await apiFetch('POST', '/api/plaid/remove-item', { itemId, userId: user.uid });
-      serverCleanedUp = true;
-    } catch (err: any) {
-      const is404 = err?.message?.startsWith('404');
-      if (!is404) {
-        // Unknown server error — don't touch local data, state may be inconsistent.
-        console.error('Failed to remove bank:', err);
-        setError(err?.message || 'Failed to remove bank account. Please try again.');
-        setRemovingItemId(null);
-        return;
+    if (itemId) {
+      try {
+        // Server revokes Plaid access token and deletes plaid_items + accounts via firebase-admin.
+        await apiFetch('POST', '/api/plaid/remove-item', { itemId, userId: user.uid });
+        serverCleanedUp = true;
+      } catch (err: any) {
+        const is404 = err?.message?.startsWith('404');
+        if (!is404) {
+          // Unknown server error — don't touch local data, state may be inconsistent.
+          console.error('Failed to remove bank:', err);
+          setError(err?.message || 'Failed to remove bank account. Please try again.');
+          setRemovingItemId(null);
+          return;
+        }
+        // 404 means plaid_items was never written (linked before gateway was active).
+        // Server skipped cleanup — fall through to client-side delete below.
+        console.warn('plaid_items not found for item — proceeding with local account cleanup only.');
       }
-      // 404 means plaid_items was never written (linked before gateway was active).
-      // Server skipped cleanup — fall through to client-side delete below.
-      console.warn('plaid_items not found for item — proceeding with local account cleanup only.');
     }
+    // No itemId: legacy account with no stored Plaid item — delete locally only.
 
     try {
       if (!serverCleanedUp) {
-        // Server didn't clean up — delete account docs from the client.
+        // Server didn't clean up (or there was no item to clean up) — delete account docs from the client.
         await deleteAccountsByIds(accountDocIds);
       }
       // Server already deleted everything — just refresh the UI.
@@ -244,15 +250,19 @@ export default function LinkedAccounts() {
 
   const grouped: Record<string, { name: string; itemId: string | null; accounts: Account[] }> = {};
   for (const acct of accounts) {
-    const instId = acct.plaid_institution_id || 'unknown';
-    if (!grouped[instId]) {
-      grouped[instId] = {
+    // Group by plaid_item_id when available so that legacy accounts (no item ID)
+    // and actively-linked accounts at the same institution are never merged into
+    // the same group. Legacy accounts share a per-institution bucket so they
+    // appear as one card per institution rather than one card per account.
+    const groupKey = acct.plaid_item_id || `legacy_${acct.plaid_institution_id || 'unknown'}`;
+    if (!grouped[groupKey]) {
+      grouped[groupKey] = {
         name: acct.plaid_institution_name || acct.name || 'Unknown Institution',
         itemId: acct.plaid_item_id || null,
         accounts: []
       };
     }
-    grouped[instId].accounts.push(acct);
+    grouped[groupKey].accounts.push(acct);
   }
 
   return (
@@ -407,22 +417,26 @@ export default function LinkedAccounts() {
                 </button>
                 <button
                   data-testid={`button-remove-bank-${instId}`}
-                  onClick={() => group.itemId && handleRemoveBank(group.itemId, group.accounts.map((a) => a.id))}
-                  disabled={!group.itemId || (removingItemId !== null && removingItemId === group.itemId)}
-                  title={!group.itemId ? 'Re-link this bank to enable removal' : undefined}
+                  onClick={() => {
+                    const removalKey = group.itemId ?? `legacy_${group.accounts[0]?.id ?? 'unknown'}`;
+                    if (removingItemId !== removalKey) {
+                      handleRemoveBank(group.itemId, group.accounts.map((a) => a.id));
+                    }
+                  }}
+                  disabled={removingItemId === (group.itemId ?? `legacy_${group.accounts[0]?.id ?? 'unknown'}`)}
                   style={{
                     fontSize: '13px',
-                    color: (!group.itemId || (removingItemId !== null && removingItemId === group.itemId)) ? '#999' : '#c44',
+                    color: (removingItemId === (group.itemId ?? `legacy_${group.accounts[0]?.id ?? 'unknown'}`)) ? '#999' : '#c44',
                     background: 'none',
-                    border: `1px solid ${(!group.itemId || (removingItemId !== null && removingItemId === group.itemId)) ? '#ddd' : '#e0c0c0'}`,
+                    border: `1px solid ${(removingItemId === (group.itemId ?? `legacy_${group.accounts[0]?.id ?? 'unknown'}`)) ? '#ddd' : '#e0c0c0'}`,
                     borderRadius: '6px',
                     padding: '6px 12px',
-                    cursor: (!group.itemId || (removingItemId !== null && removingItemId === group.itemId)) ? 'not-allowed' : 'pointer'
+                    cursor: (removingItemId === (group.itemId ?? `legacy_${group.accounts[0]?.id ?? 'unknown'}`)) ? 'not-allowed' : 'pointer'
                   }}
-                  onMouseEnter={(e) => { if (group.itemId && !(removingItemId !== null && removingItemId === group.itemId)) e.currentTarget.style.backgroundColor = '#fef5f5'; }}
+                  onMouseEnter={(e) => { if (removingItemId !== (group.itemId ?? `legacy_${group.accounts[0]?.id ?? 'unknown'}`)) e.currentTarget.style.backgroundColor = '#fef5f5'; }}
                   onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                 >
-                  {(removingItemId !== null && removingItemId === group.itemId) ? 'Removing...' : 'Remove Bank'}
+                  {(removingItemId === (group.itemId ?? `legacy_${group.accounts[0]?.id ?? 'unknown'}`)) ? 'Removing...' : 'Remove Bank'}
                 </button>
               </div>
             </div>
