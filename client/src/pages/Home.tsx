@@ -24,6 +24,8 @@ const Home = () => {
   const [autoExtend, setAutoExtend] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingForecast, setEditingForecast] = useState<Forecast | null>(null);
+  const [addingStandaloneForecast, setAddingStandaloneForecast] = useState(false);
+  const [standaloneForecastName, setStandaloneForecastName] = useState('');
   const [companyFilter, setCompanyFilter] = useState('');
   const [accountFilter, setAccountFilter] = useState('');
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -325,8 +327,15 @@ const Home = () => {
     endDate.setMonth(endDate.getMonth() + 12);
 
     const forecastsByAccount: Record<string, Record<string, number>> = {};
+    // Forecasts not tied to any account (e.g. a one-time expense) still
+    // affect the overall projected cushion, just not any single account's line.
+    const unassignedForecastsByDate: Record<string, number> = {};
     for (const f of visibleForecasts) {
-      if (!f.account_id) continue;
+      if (!f.account_id) {
+        const dateStr = f.date;
+        unassignedForecastsByDate[dateStr] = (unassignedForecastsByDate[dateStr] || 0) - f.amount;
+        continue;
+      }
       if (!forecastsByAccount[f.account_id]) forecastsByAccount[f.account_id] = {};
       const dateStr = f.date;
       if (!forecastsByAccount[f.account_id][dateStr]) forecastsByAccount[f.account_id][dateStr] = 0;
@@ -338,6 +347,7 @@ const Home = () => {
     for (const acct of accounts) {
       currentBalances[acct.account_id] = acct.available_balance ?? 0;
     }
+    let unassignedAdjustment = 0;
 
     const d = new Date(today);
     while (d <= endDate) {
@@ -350,11 +360,19 @@ const Home = () => {
           currentBalances[acct.account_id] += dayForecast;
         }
       }
+      const dayUnassigned = unassignedForecastsByDate[dateStr] || 0;
+      if (dayUnassigned !== 0) {
+        unassignedAdjustment += dayUnassigned;
+      }
 
       const point: Record<string, any> = { date: displayDate, fullDate: dateStr };
+      let total = unassignedAdjustment;
       for (const acct of accounts) {
-        point[acct.account_id] = Math.round(currentBalances[acct.account_id] * 100) / 100;
+        const rounded = Math.round(currentBalances[acct.account_id] * 100) / 100;
+        point[acct.account_id] = rounded;
+        total += currentBalances[acct.account_id];
       }
+      point.__total__ = Math.round(total * 100) / 100;
       data.push(point);
 
       d.setDate(d.getDate() + 1);
@@ -645,6 +663,9 @@ const Home = () => {
                       />
                       <Tooltip
                         formatter={(value: number, name: string) => {
+                          if (name === '__total__') {
+                            return [new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value), 'Total Cushion'];
+                          }
                           const acct = accounts.find(a => a.account_id === name);
                           const label = acct ? `${acct.name} ${acct.mask}` : name;
                           return [new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value), label];
@@ -654,10 +675,20 @@ const Home = () => {
                       />
                       <Legend
                         formatter={(value: string) => {
+                          if (value === '__total__') return 'Total Cushion';
                           const acct = accounts.find(a => a.account_id === value);
                           return acct ? `${acct.name} ${acct.mask}` : value;
                         }}
                         wrapperStyle={{ fontSize: '11px', paddingTop: '0px' }}
+                      />
+                      <Line
+                        key="__total__"
+                        type="stepAfter"
+                        dataKey="__total__"
+                        stroke="#212121"
+                        strokeWidth={2}
+                        strokeDasharray="4 2"
+                        dot={false}
                       />
                       {accounts.map((acct, i) => (
                         <Line
@@ -712,23 +743,49 @@ const Home = () => {
               )}
             </div>
           )}
-          <button
-            data-testid="button-toggle-chart"
-            onClick={() => setChartOpen(!chartOpen)}
-            style={{
-              display: 'block',
-              width: '100%',
-              padding: '4px',
-              fontSize: '12px',
-              color: '#666',
-              backgroundColor: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              textAlign: 'center'
-            }}
-          >
-            {chartOpen ? 'Hide Chart' : 'Show Chart'}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'stretch' }}>
+            <button
+              data-testid="button-toggle-chart"
+              onClick={() => setChartOpen(!chartOpen)}
+              style={{
+                flex: 1,
+                padding: '4px',
+                fontSize: '12px',
+                color: '#666',
+                backgroundColor: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                textAlign: 'center'
+              }}
+            >
+              {chartOpen ? 'Hide Chart' : 'Show Chart'}
+            </button>
+            <button
+              data-testid="button-add-expense"
+              onClick={() => {
+                setAddingStandaloneForecast(true);
+                setStandaloneForecastName('');
+                setForecastDate('');
+                setForecastAmount('');
+                setForecastType('single');
+                setModalView('forecast');
+              }}
+              style={{
+                flex: 1,
+                padding: '4px',
+                fontSize: '12px',
+                color: '#42A5F5',
+                fontWeight: 600,
+                backgroundColor: 'transparent',
+                border: 'none',
+                borderLeft: '1px solid #eee',
+                cursor: 'pointer',
+                textAlign: 'center'
+              }}
+            >
+              + Add Expense
+            </button>
+          </div>
         </div>
       </div>
 
@@ -923,7 +980,7 @@ const Home = () => {
         </div>
       )}
 
-      {(selectedTransaction || editingForecast) && (
+      {(selectedTransaction || editingForecast || addingStandaloneForecast) && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -939,6 +996,8 @@ const Home = () => {
         onClick={() => {
           setSelectedTransaction(null);
           setEditingForecast(null);
+          setAddingStandaloneForecast(false);
+          setStandaloneForecastName('');
           setModalView('details');
           setForecastDate('');
           setForecastAmount('');
@@ -1118,33 +1177,37 @@ const Home = () => {
               </>
             )}
 
-            {modalView === 'forecast' && selectedTransaction && (
+            {modalView === 'forecast' && (selectedTransaction || addingStandaloneForecast) && (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <button
-                      data-testid="button-back-to-details"
-                      onClick={() => {
-                        setModalView('details');
-                        setForecastDate('');
-                        setForecastAmount('');
-                      }}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        fontSize: '18px',
-                        cursor: 'pointer',
-                        color: '#666',
-                        padding: '4px'
-                      }}
-                    >
-                      &larr;
-                    </button>
-                    <h2 style={{ margin: 0 }}>Add Forecast</h2>
+                    {selectedTransaction && (
+                      <button
+                        data-testid="button-back-to-details"
+                        onClick={() => {
+                          setModalView('details');
+                          setForecastDate('');
+                          setForecastAmount('');
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          fontSize: '18px',
+                          cursor: 'pointer',
+                          color: '#666',
+                          padding: '4px'
+                        }}
+                      >
+                        &larr;
+                      </button>
+                    )}
+                    <h2 style={{ margin: 0 }}>{addingStandaloneForecast ? 'Add Expense' : 'Add Forecast'}</h2>
                   </div>
                   <button
                     onClick={() => {
                       setSelectedTransaction(null);
+                      setAddingStandaloneForecast(false);
+                      setStandaloneForecastName('');
                       setModalView('details');
                       setForecastDate('');
                       setForecastAmount('');
@@ -1162,9 +1225,32 @@ const Home = () => {
                   </button>
                 </div>
 
-                <p style={{ margin: '0 0 16px 0' }}>
-                  <strong>{selectedTransaction!.merchant_name || selectedTransaction!.counterparty_name}</strong>
-                </p>
+                {selectedTransaction ? (
+                  <p style={{ margin: '0 0 16px 0' }}>
+                    <strong>{selectedTransaction.merchant_name || selectedTransaction.counterparty_name}</strong>
+                  </p>
+                ) : (
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Holiday gift"
+                      data-testid="input-standalone-forecast-name"
+                      value={standaloneForecastName}
+                      onChange={(e) => setStandaloneForecastName(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        borderRadius: '4px',
+                        border: '1px solid #ccc',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    <span style={{ fontSize: '12px', color: '#888', marginTop: '4px', display: 'block' }}>
+                      Not tied to any account — only affects your Total Cushion projection.
+                    </span>
+                  </div>
+                )}
 
                 <div style={{ marginBottom: '16px' }}>
                   <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 500 }}>Type</label>
@@ -1379,6 +1465,8 @@ const Home = () => {
                 <div style={{ marginTop: '20px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                   <button
                     onClick={() => {
+                      setAddingStandaloneForecast(false);
+                      setStandaloneForecastName('');
                       setModalView('details');
                       setForecastDate('');
                       setForecastAmount('');
@@ -1399,20 +1487,31 @@ const Home = () => {
                   </button>
                   <button
                     data-testid="button-save-forecast"
-                    disabled={saving || !forecastDate || !forecastAmount}
+                    disabled={saving || !forecastDate || !forecastAmount || (addingStandaloneForecast && !standaloneForecastName.trim())}
                     onClick={async () => {
-                      if (!selectedTransaction || !auth.currentUser) return;
+                      if (!auth.currentUser) return;
+                      if (!selectedTransaction && !addingStandaloneForecast) return;
                       setSaving(true);
                       try {
-                        const merchantName = selectedTransaction.merchant_name || selectedTransaction.counterparty_name;
-                        const baseForecast = {
+                        const baseForecast = selectedTransaction ? {
                           user_id: auth.currentUser.uid,
-                          name: merchantName,
+                          name: selectedTransaction.merchant_name || selectedTransaction.counterparty_name,
                           merchant_entity_id: selectedTransaction.merchant_entity_id || null,
                           amount: -parseFloat(forecastAmount),
                           created_at: new Date().toISOString(),
                           account_id: selectedTransaction.account_id || null,
                           logo_url: selectedTransaction.logo_url || null,
+                          forecast_type: forecastType,
+                          forecast_interval: forecastType === 'every_x_days' ? forecastDayInterval : forecastType === 'monthly' ? 1 : null,
+                          auto_extend: forecastType !== 'single' ? autoExtend : false
+                        } : {
+                          user_id: auth.currentUser.uid,
+                          name: standaloneForecastName.trim(),
+                          merchant_entity_id: null,
+                          amount: -parseFloat(forecastAmount),
+                          created_at: new Date().toISOString(),
+                          account_id: null,
+                          logo_url: null,
                           forecast_type: forecastType,
                           forecast_interval: forecastType === 'every_x_days' ? forecastDayInterval : forecastType === 'monthly' ? 1 : null,
                           auto_extend: forecastType !== 'single' ? autoExtend : false
@@ -1433,6 +1532,8 @@ const Home = () => {
                         const updatedForecasts = await getForecasts(auth.currentUser.uid);
                         setForecasts(updatedForecasts);
                         setSelectedTransaction(null);
+                        setAddingStandaloneForecast(false);
+                        setStandaloneForecastName('');
                         setModalView('details');
                         setForecastDate('');
                         setForecastAmount('');
