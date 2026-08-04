@@ -11,6 +11,7 @@ import Login from "@/pages/Login";
 import Landing from "@/pages/Landing";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import LinkedAccounts from "@/pages/LinkedAccounts";
+import Build from "@/pages/Build";
 import NotFound from "@/pages/not-found";
 
 function Router({ user, loading }: { user: User | null; loading: boolean }) {
@@ -40,6 +41,7 @@ function Router({ user, loading }: { user: User | null; loading: boolean }) {
           <LinkedAccounts />
         </ProtectedRoute>
       </Route>
+      <Route path="/build" component={Build} />
       <Route component={NotFound} />
     </Switch>
   );

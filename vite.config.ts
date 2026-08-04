@@ -1,14 +1,28 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import { execSync } from "child_process";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+
+// Best-effort git info for the /build diagnostics page — falls back to
+// "unknown" when not run inside a git checkout (shouldn't normally happen
+// in this repo's CI, but keeps the build from failing if it ever isn't).
+function safeGit(cmd: string): string {
+  try {
+    return execSync(cmd, { encoding: "utf8" }).trim();
+  } catch {
+    return "unknown";
+  }
+}
 
 export default defineConfig({
   define: {
-    // Build-time stamp so a deployed build's freshness can be confirmed
-    // visually (e.g. on the Linked Accounts page) instead of guessing
-    // whether a Cloud Build run actually picked up the latest code.
+    // Build-time info so a deployed build's freshness can be confirmed on
+    // the /build page instead of guessing whether a Cloud Build run
+    // actually picked up the latest code.
     __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+    __COMMIT_HASH__: JSON.stringify(safeGit("git rev-parse --short HEAD")),
+    __COMMIT_MESSAGE__: JSON.stringify(safeGit("git log -1 --pretty=%s")),
   },
   plugins: [
     react(),

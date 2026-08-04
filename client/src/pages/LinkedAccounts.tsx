@@ -429,9 +429,6 @@ export default function LinkedAccounts() {
           ))
         )}
       </div>
-      <div style={{ textAlign: 'center', fontSize: '11px', color: '#bbb', marginTop: '24px' }}>
-        Build {__BUILD_TIME__}
-      </div>
     </div>
   );
 }
