@@ -9,6 +9,7 @@ substitutions:
   _VITE_PROJECT_ID: ''
   _VITE_STORAGE_BUCKET: ''
   _VITE_FUNCTIONS_URL: ''
+  _VITE_RECAPTCHA_SITE_KEY: ''
 
 steps:
   # 1. Install dependencies on the Cloud Build worker.
@@ -32,6 +33,7 @@ steps:
       - VITE_PROJECT_ID=$_VITE_PROJECT_ID
       - VITE_STORAGE_BUCKET=$_VITE_STORAGE_BUCKET
       - VITE_FUNCTIONS_URL=$_VITE_FUNCTIONS_URL
+      - VITE_RECAPTCHA_SITE_KEY=$_VITE_RECAPTCHA_SITE_KEY
     waitFor: [install]
 
   # 3a. Deploy dist/public to Firebase Hosting.
