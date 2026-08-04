@@ -403,7 +403,7 @@ export default function LinkedAccounts() {
                   onMouseEnter={(e) => { if (group.itemId && updatingItemId !== group.itemId && !linking) e.currentTarget.style.backgroundColor = '#f5f5f5'; }}
                   onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                 >
-                  {updatingItemId === group.itemId ? 'Loading...' : 'Add/Remove Accounts'}
+                  {updatingItemId !== null && updatingItemId === group.itemId ? 'Loading...' : 'Add/Remove Accounts'}
                 </button>
                 <button
                   data-testid={`button-remove-bank-${instId}`}
