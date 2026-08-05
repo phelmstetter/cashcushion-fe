@@ -54,17 +54,24 @@ function App() {
   useEffect(() => {
     let settled = false;
 
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        await saveUserToFirestore({
-          uid: currentUser.uid,
-          email: currentUser.email,
-          photoURL: currentUser.photoURL,
-        });
-      }
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      // Settle the UI immediately — never block on the profile write.
       setUser(currentUser);
       setLoading(false);
       settled = true;
+
+      // Kick off the best-effort profile save in the background.
+      // A Firestore failure (permissions hiccup, network blip, stalled retry)
+      // is logged for diagnosis but cannot affect the loading gate.
+      if (currentUser) {
+        saveUserToFirestore({
+          uid: currentUser.uid,
+          email: currentUser.email,
+          photoURL: currentUser.photoURL,
+        }).catch((err) => {
+          console.error('Failed to save user profile to Firestore:', err);
+        });
+      }
     });
 
     // Process any pending signInWithRedirect result. If onAuthStateChanged
@@ -72,15 +79,19 @@ function App() {
     // yet (fresh session after redirect), the result resolves the pending auth
     // and triggers onAuthStateChanged with the authenticated user.
     getRedirectResult(auth)
-      .then(async (result) => {
+      .then((result) => {
         if (result?.user && !settled) {
-          await saveUserToFirestore({
+          // Settle the UI immediately, then write the profile in the background.
+          setUser(result.user);
+          setLoading(false);
+
+          saveUserToFirestore({
             uid: result.user.uid,
             email: result.user.email,
             photoURL: result.user.photoURL,
+          }).catch((err) => {
+            console.error('Failed to save user profile to Firestore:', err);
           });
-          setUser(result.user);
-          setLoading(false);
         }
       })
       .catch((err) => {

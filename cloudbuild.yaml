@@ -36,10 +36,14 @@ steps:
       - VITE_RECAPTCHA_SITE_KEY=$_VITE_RECAPTCHA_SITE_KEY
     waitFor: [install]
 
-  # 3a. Deploy dist/public to Firebase Hosting.
-  #     Runs in parallel with the Docker build (both wait only for vite-build).
+  # 3a. Deploy dist/public to Firebase Hosting, and publish the current
+  #     Firestore security rules (firestore.rules). Rules changes committed
+  #     to the repo previously had no deploy step, so the live project could
+  #     silently keep running stale/mismatched rules after a rules change —
+  #     deploying both together keeps them in lockstep.
   #     Requires the Cloud Build service account to have the
-  #     Firebase Hosting Admin role (roles/firebasehosting.admin).
+  #     Firebase Hosting Admin role (roles/firebasehosting.admin) and
+  #     Cloud Datastore/Firebase Rules admin permissions for Firestore rules.
   - id: firebase-hosting
     name: node:20
     entrypoint: sh
@@ -47,7 +51,7 @@ steps:
       - -c
       - |
         npm install -g firebase-tools
-        firebase deploy --only hosting --project $PROJECT_ID
+        firebase deploy --only hosting,firestore:rules --project $PROJECT_ID
     waitFor: [vite-build]
 
   # 3b. Build the Docker image using the pre-built dist/public.
