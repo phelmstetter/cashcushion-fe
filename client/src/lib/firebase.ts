@@ -27,11 +27,15 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_APP_ID
 };
 
-// In development, Firebase App Check prints a debug token to the browser console.
-// Copy that token and register it in the Firebase console under
-// App Check → Apps → your web app → Manage debug tokens.
+// In development, App Check uses a pinned debug token so the same UUID is
+// presented every session rather than a randomly generated one.
+// To allow dev requests through, register this UUID in Firebase Console:
+//   App Check → Apps → cashcushion web app → Manage debug tokens.
+// Override with VITE_APP_CHECK_DEBUG_TOKEN if you need a different token locally.
+const APP_CHECK_DEBUG_TOKEN = '7E3E045C-7614-4DEB-8E0C-8C1CB2D5F4C6';
 if (import.meta.env.DEV) {
-  (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+  (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN =
+    import.meta.env.VITE_APP_CHECK_DEBUG_TOKEN ?? APP_CHECK_DEBUG_TOKEN;
 }
 
 const app = initializeApp(firebaseConfig);
