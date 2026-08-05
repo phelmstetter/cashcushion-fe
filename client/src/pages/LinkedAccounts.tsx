@@ -152,9 +152,15 @@ export default function LinkedAccounts() {
     }
   }, [loadAccounts, updatingItemId]);
 
+  // react-plaid-link only skips initializing Link when token, publicKey, AND
+  // receivedRedirectUri are all unset — a leftover receivedRedirectUri from a
+  // prior OAuth attempt is enough to make it initialize Link with a null/
+  // undefined token, which Plaid's own SDK rejects with a cryptic
+  // "string did not match the expected pattern" error. Only pass
+  // receivedRedirectUri through once we actually have a real link token.
   const { open, ready } = usePlaidLink({
     token: linkToken,
-    receivedRedirectUri,
+    receivedRedirectUri: linkToken ? receivedRedirectUri : undefined,
     onSuccess: (publicToken) => onPlaidSuccess(publicToken),
     onExit: (err) => {
       if (err) {
