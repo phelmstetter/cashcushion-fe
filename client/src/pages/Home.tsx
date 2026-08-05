@@ -57,28 +57,35 @@ const Home = () => {
       return;
     }
     
-    try {
-      const result = await getTransactions(userId, null);
+    const [transactionsResult, forecastsResult, accountsResult] = await Promise.allSettled([
+      getTransactions(userId, null),
+      getForecasts(userId),
+      getAccounts(userId),
+    ]);
+
+    if (transactionsResult.status === 'fulfilled') {
+      const result = transactionsResult.value;
       setTransactions(result.transactions);
       if (result.lastDate && result.lastId) {
         cursorRef.current = { date: result.lastDate, id: result.lastId };
       }
       setHasMore(result.hasMore);
-    } catch (error) {
-      console.error("Error loading transactions:", error);
+    } else {
+      console.error("Error loading transactions:", transactionsResult.reason);
     }
-    try {
-      const userForecasts = await getForecasts(userId);
-      setForecasts(userForecasts);
-    } catch (error) {
-      console.error("Error loading forecasts:", error);
+
+    if (forecastsResult.status === 'fulfilled') {
+      setForecasts(forecastsResult.value);
+    } else {
+      console.error("Error loading forecasts:", forecastsResult.reason);
     }
-    try {
-      const userAccounts = await getAccounts(userId);
-      setAccounts(userAccounts);
-    } catch (error) {
-      console.error("Error loading accounts:", error);
+
+    if (accountsResult.status === 'fulfilled') {
+      setAccounts(accountsResult.value);
+    } else {
+      console.error("Error loading accounts:", accountsResult.reason);
     }
+
     setInitialLoading(false);
   };
 
