@@ -9,7 +9,7 @@ substitutions:
   _VITE_PROJECT_ID: ''
   _VITE_STORAGE_BUCKET: ''
   _VITE_FUNCTIONS_URL: ''
-  _VITE_RECAPTCHA_SITE_KEY: ''
+  _VITE_RECAPTCHA_SITE_KEY: '6LfYwXctAAAAABew47npcMckcA4HoD-btV4eDIw4'
 
 steps:
   # 1. Install dependencies on the Cloud Build worker.
