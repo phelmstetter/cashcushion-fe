@@ -330,6 +330,7 @@ export async function getTransactions(
       date: data.date,
       counterparty_name: data.counterparty_name || data.name || 'Unknown',
       merchant_name: data.merchant_name,
+      merchant_entity_id: data.merchant_entity_id || null,
       logo_url: data.logo_url,
       account_id: data.account_id
     });
