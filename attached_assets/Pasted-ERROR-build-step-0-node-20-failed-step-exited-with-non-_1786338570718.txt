@@ -1,0 +1,29 @@
+ERROR: build step 0 "node:20" failed: step exited with non-zero status: 1
+ERROR
+Finished Step #0 - "install"
+npm error A complete log of this run can be found in: /builder/home/.npm/_logs/2026-08-10T05_02_31_813Z-debug-0.log
+npm error network 'proxy' config is set properly.  See: 'npm help config'
+npm error network If you are behind a proxy, please make sure that the
+npm error network
+npm error network In most cases you are behind a proxy or have bad network settings.
+npm error network This is a problem related to network connectivity.
+npm error network request to http://package-firewall.replit.local/npm/p-defer/-/p-defer-3.0.0.tgz failed, reason: getaddrinfo ENOTFOUND package-firewall.replit.local
+npm error errno ENOTFOUND
+npm error syscall getaddrinfo
+npm error code ENOTFOUND
+npm warn deprecated uuid@9.0.1: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
+npm warn deprecated uuid@9.0.1: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
+npm warn deprecated uuid@9.0.1: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
+npm warn deprecated uuid@8.3.2: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
+npm warn deprecated node-domexception@1.0.0: Use your platform's native DOMException instead
+docker.io/library/node:20
+Status: Downloaded newer image for node:20
+Digest: sha256:8f693eaa7e0a8e71560c9a82b55fd54c2ae920a2ba5d2cde28bac7d1c01c9ba5
+0b22ec2d9b1a: Pull complete
+2f2ab6e4eb46: Pull complete
+76e6b8204a89: Pull complete
+c83419f44309: Pull complete
+2933ecab0f11: Pull complete
+8fcda2b4d799: Pull complete
+e5203b2bfeff: Pull complete
+db5
