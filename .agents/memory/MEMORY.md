@@ -1,0 +1,1 @@
+- [Replit npm registry breaks external CI lockfiles](npm-registry-external-ci.md) — npm install here bakes an internal-only proxy URL into package-lock.json, breaking `npm ci` on Cloud Build/GitHub Actions/etc.
