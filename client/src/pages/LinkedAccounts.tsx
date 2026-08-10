@@ -40,6 +40,8 @@ export default function LinkedAccounts() {
   const [removingItemId, setRemovingItemId] = useState<string | null>(null);
   const [confirmRemoveKey, setConfirmRemoveKey] = useState<string | null>(null);
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
+  const [syncingItemId, setSyncingItemId] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<{ itemId: string; ok: boolean; message: string } | null>(null);
   const [receivedRedirectUri, setReceivedRedirectUri] = useState<string | undefined>(undefined);
   const [, navigate] = useLocation();
 
@@ -72,6 +74,12 @@ export default function LinkedAccounts() {
   useEffect(() => {
     loadAccounts();
   }, [loadAccounts]);
+
+  useEffect(() => {
+    if (!syncStatus) return;
+    const timer = setTimeout(() => setSyncStatus(null), 5000);
+    return () => clearTimeout(timer);
+  }, [syncStatus]);
 
   const fetchLinkToken = useCallback(async () => {
     const user = auth.currentUser;
@@ -207,6 +215,22 @@ export default function LinkedAccounts() {
       console.error('Failed to fetch update link token:', err);
       setError(err?.message || 'Failed to start account update. Please try again.');
       setUpdatingItemId(null);
+    }
+  }, []);
+
+  const handleSyncItem = useCallback(async (itemId: string) => {
+    const user = auth.currentUser;
+    if (!user) return;
+    setSyncingItemId(itemId);
+    setSyncStatus(null);
+    try {
+      await apiFetch('POST', '/api/plaid/sync-item', { itemId, userId: user.uid });
+      setSyncStatus({ itemId, ok: true, message: 'Sync requested' });
+    } catch (err: any) {
+      console.error('Failed to request sync:', err);
+      setSyncStatus({ itemId, ok: false, message: err?.message || 'Failed to request sync. Please try again.' });
+    } finally {
+      setSyncingItemId(null);
     }
   }, []);
 
@@ -439,6 +463,25 @@ export default function LinkedAccounts() {
                 >
                   {updatingItemId !== null && updatingItemId === group.itemId ? 'Loading...' : 'Add/Remove Accounts'}
                 </button>
+                <button
+                  data-testid={`button-sync-${instId}`}
+                  onClick={() => group.itemId && handleSyncItem(group.itemId)}
+                  disabled={!group.itemId || syncingItemId === group.itemId}
+                  title={!group.itemId ? 'Re-link this bank to sync' : undefined}
+                  style={{
+                    fontSize: '13px',
+                    color: (!group.itemId || syncingItemId === group.itemId) ? '#999' : '#555',
+                    background: 'none',
+                    border: `1px solid ${(!group.itemId || syncingItemId === group.itemId) ? '#e0e0e0' : '#ddd'}`,
+                    borderRadius: '6px',
+                    padding: '6px 12px',
+                    cursor: (!group.itemId || syncingItemId === group.itemId) ? 'not-allowed' : 'pointer'
+                  }}
+                  onMouseEnter={(e) => { if (group.itemId && syncingItemId !== group.itemId) e.currentTarget.style.backgroundColor = '#f5f5f5'; }}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                >
+                  {syncingItemId === group.itemId ? 'Syncing...' : 'Sync'}
+                </button>
                 {(() => {
                   const removalKey = group.itemId ?? `legacy_${group.accounts[0]?.id ?? 'unknown'}`;
                   const isRemoving = removingItemId === removalKey;
@@ -518,6 +561,19 @@ export default function LinkedAccounts() {
                   );
                 })()}
               </div>
+              {syncStatus && syncStatus.itemId === group.itemId && (
+                <div
+                  data-testid={`text-sync-status-${instId}`}
+                  style={{
+                    padding: '8px 16px',
+                    fontSize: '13px',
+                    color: syncStatus.ok ? '#2a7a3a' : '#b91c1c',
+                    borderTop: '1px solid #eee'
+                  }}
+                >
+                  {syncStatus.message}
+                </div>
+              )}
             </div>
           ))
         )}

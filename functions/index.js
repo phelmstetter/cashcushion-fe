@@ -6,6 +6,7 @@ const exchangeToken = require("./plaid/exchangeToken");
 const removeItem = require("./plaid/removeItem");
 const createUpdateLinkToken = require("./plaid/createUpdateLinkToken");
 const refreshAccounts = require("./plaid/refreshAccounts");
+const syncItem = require("./plaid/syncItem");
 
 initializeApp();
 
@@ -19,6 +20,7 @@ const routes = {
   "POST /api/plaid/remove-item": removeItem.handler,
   "POST /api/plaid/create-update-link-token": createUpdateLinkToken.handler,
   "POST /api/plaid/refresh-accounts": refreshAccounts.handler,
+  "POST /api/plaid/sync-item": syncItem.handler,
 };
 
 /**
