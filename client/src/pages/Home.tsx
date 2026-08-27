@@ -709,7 +709,7 @@ const Home = () => {
                           {/* Vertical guide line pinpointing the date of the minimum */}
                           <ReferenceLine
                             x={minBalancePoint.date}
-                            stroke="#e57373"
+                            stroke="#90a4ae"
                             strokeDasharray="3 3"
                             strokeWidth={1}
                             ifOverflow="extendDomain"
@@ -721,7 +721,7 @@ const Home = () => {
                               where the minimum falls on the timeline. */}
                           <ReferenceLine
                             y={minBalancePoint.__total__}
-                            stroke="#e57373"
+                            stroke="#90a4ae"
                             strokeDasharray="4 4"
                             strokeWidth={1.5}
                             ifOverflow="extendDomain"
@@ -729,14 +729,14 @@ const Home = () => {
                               value: `Min: ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(minBalancePoint.__total__)} (${minBalancePoint.date})`,
                               position: 'insideTopRight',
                               fontSize: 10,
-                              fill: '#d32f2f',
+                              fill: '#546e7a',
                             }}
                           />
                           <ReferenceDot
                             x={minBalancePoint.date}
                             y={minBalancePoint.__total__}
                             r={4}
-                            fill="#d32f2f"
+                            fill="#546e7a"
                             stroke="white"
                             ifOverflow="extendDomain"
                             isFront
