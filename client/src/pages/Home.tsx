@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { signOut } from "firebase/auth";
 import { auth, getTransactions, Transaction, saveForecast, saveSeriesForecasts, saveDayIntervalForecasts, updateForecast, updateSeriesForecasts, deleteForecast, deleteSeriesForecasts, getForecasts, Forecast, reconcileForecast, unreconcileForecast, getAccounts, Account } from "@/lib/firebase";
 import { useLocation } from "wouter";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, ReferenceLine, ReferenceDot } from 'recharts';
 
 const LONG_PRESS_MS = 500;
 
@@ -388,6 +388,15 @@ const Home = () => {
     return data;
   }, [accounts, visibleForecasts]);
 
+  const minBalancePoint = useMemo(() => {
+    if (chartData.length === 0) return null;
+    let min = chartData[0];
+    for (const point of chartData) {
+      if (point.__total__ < min.__total__) min = point;
+    }
+    return min;
+  }, [chartData]);
+
   type MergedItem = 
     | { type: 'transaction'; data: Transaction }
     | { type: 'forecast'; data: Forecast };
@@ -688,6 +697,29 @@ const Home = () => {
                         }}
                         wrapperStyle={{ fontSize: '11px', paddingTop: '0px' }}
                       />
+                      <ReferenceLine
+                        y={0}
+                        stroke="#999"
+                        strokeDasharray="3 3"
+                        strokeWidth={1}
+                        ifOverflow="extendDomain"
+                      />
+                      {minBalancePoint && (
+                        <ReferenceDot
+                          x={minBalancePoint.date}
+                          y={minBalancePoint.__total__}
+                          r={4}
+                          fill="#d32f2f"
+                          stroke="white"
+                          ifOverflow="extendDomain"
+                          label={{
+                            value: `Min: ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(minBalancePoint.__total__)}`,
+                            position: 'top',
+                            fontSize: 10,
+                            fill: '#d32f2f',
+                          }}
+                        />
+                      )}
                       <Line
                         key="__total__"
                         type="stepAfter"
