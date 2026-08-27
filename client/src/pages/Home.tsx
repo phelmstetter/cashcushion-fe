@@ -391,19 +391,10 @@ const Home = () => {
   const minBalancePoint = useMemo(() => {
     if (chartData.length === 0) return null;
     let min = chartData[0];
-    let minIndex = 0;
-    chartData.forEach((point, i) => {
-      if (point.__total__ < min.__total__) {
-        min = point;
-        minIndex = i;
-      }
-    });
-    // Anchor the label away from the axis when the minimum falls near
-    // either edge of the chart, so it doesn't get clipped or overlap the
-    // y-axis tick text (common case: the lowest point is right at "today").
-    const fraction = chartData.length > 1 ? minIndex / (chartData.length - 1) : 0.5;
-    const anchor: 'start' | 'middle' | 'end' = fraction < 0.12 ? 'start' : fraction > 0.88 ? 'end' : 'middle';
-    return { ...min, anchor } as Record<string, any> & { anchor: 'start' | 'middle' | 'end' };
+    for (const point of chartData) {
+      if (point.__total__ < min.__total__) min = point;
+    }
+    return min;
   }, [chartData]);
 
   type MergedItem = 
@@ -714,53 +705,43 @@ const Home = () => {
                         ifOverflow="extendDomain"
                       />
                       {minBalancePoint && (
-                        <ReferenceDot
-                          x={minBalancePoint.date}
-                          y={minBalancePoint.__total__}
-                          r={4}
-                          fill="#d32f2f"
-                          stroke="white"
-                          ifOverflow="extendDomain"
-                          isFront
-                          label={(props: any) => {
-                            // ReferenceDot's label render prop only gets `viewBox`
-                            // (the dot's bounding box), not cx/cy directly.
-                            const cx = props.viewBox.x + props.viewBox.width / 2;
-                            const cy = props.viewBox.y + props.viewBox.height / 2;
-                            const text = `Min: ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(minBalancePoint.__total__)}`;
-                            const charWidth = 5.3;
-                            const boxWidth = text.length * charWidth + 8;
-                            const boxHeight = 14;
-                            const anchor = minBalancePoint.anchor;
-                            const boxX = anchor === 'start' ? cx - 2 : anchor === 'end' ? cx - boxWidth + 2 : cx - boxWidth / 2;
-                            const boxY = cy - boxHeight - 8;
-                            return (
-                              <g>
-                                <rect
-                                  x={boxX}
-                                  y={boxY}
-                                  width={boxWidth}
-                                  height={boxHeight}
-                                  rx={3}
-                                  fill="white"
-                                  fillOpacity={0.9}
-                                  stroke="#d32f2f"
-                                  strokeWidth={0.5}
-                                />
-                                <text
-                                  x={boxX + boxWidth / 2}
-                                  y={boxY + boxHeight / 2}
-                                  textAnchor="middle"
-                                  dominantBaseline="middle"
-                                  fontSize={10}
-                                  fill="#d32f2f"
-                                >
-                                  {text}
-                                </text>
-                              </g>
-                            );
-                          }}
-                        />
+                        <>
+                          {/* Vertical guide line pinpointing the date of the minimum */}
+                          <ReferenceLine
+                            x={minBalancePoint.date}
+                            stroke="#e57373"
+                            strokeDasharray="3 3"
+                            strokeWidth={1}
+                            ifOverflow="extendDomain"
+                          />
+                          {/* Horizontal guide line at the minimum balance level, carrying
+                              the callout. Anchored to a fixed corner (not the exact data
+                              point) via Recharts' own supported label positions, so it can
+                              never be miscomputed or clipped regardless of screen size or
+                              where the minimum falls on the timeline. */}
+                          <ReferenceLine
+                            y={minBalancePoint.__total__}
+                            stroke="#e57373"
+                            strokeDasharray="4 4"
+                            strokeWidth={1.5}
+                            ifOverflow="extendDomain"
+                            label={{
+                              value: `Min: ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(minBalancePoint.__total__)} (${minBalancePoint.date})`,
+                              position: 'insideTopRight',
+                              fontSize: 10,
+                              fill: '#d32f2f',
+                            }}
+                          />
+                          <ReferenceDot
+                            x={minBalancePoint.date}
+                            y={minBalancePoint.__total__}
+                            r={4}
+                            fill="#d32f2f"
+                            stroke="white"
+                            ifOverflow="extendDomain"
+                            isFront
+                          />
+                        </>
                       )}
                       <Line
                         key="__total__"
