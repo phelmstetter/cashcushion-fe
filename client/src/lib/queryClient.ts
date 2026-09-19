@@ -3,8 +3,16 @@ import { auth, getAppCheckToken } from "./firebase";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    let message = res.statusText || "Request failed";
+    try {
+      const body = await res.json();
+      if (typeof body?.error === "string" && body.error.length <= 200) {
+        message = body.error;
+      }
+    } catch {
+      // Do not surface arbitrary response bodies to customers.
+    }
+    throw new Error(`${res.status}: ${message}`);
   }
 }
 

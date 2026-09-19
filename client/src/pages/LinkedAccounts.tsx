@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { usePlaidLink } from 'react-plaid-link';
-import { auth, getAccounts, saveLinkedAccounts, deleteAccountsByIds, markAccountsRemoved, type Account, type PlaidAccountData } from '@/lib/firebase';
+import { auth, getAccounts, type Account } from '@/lib/firebase';
 import { apiFetch } from '@/lib/queryClient';
 
 // Many US banks require an OAuth login step in Plaid Link: the user gets
@@ -13,22 +13,15 @@ import { apiFetch } from '@/lib/queryClient';
 const OAUTH_LINK_TOKEN_KEY = 'plaid_oauth_link_token';
 const OAUTH_UPDATING_ITEM_KEY = 'plaid_oauth_updating_item_id';
 
-function getRedirectUri() {
-  return `${window.location.origin}/linked-accounts`;
+function getRedirectUri(): string | undefined {
+  const uri = new URL('/linked-accounts', window.location.origin);
+  // OAuth redirects require HTTPS. Omit the optional redirect for local HTTP
+  // development instead of sending an unapproved client value to the server.
+  return uri.protocol === 'https:' ? uri.toString() : undefined;
 }
 
 function isOAuthRedirect() {
   return new URLSearchParams(window.location.search).has('oauth_state_id');
-}
-
-// Surfaces Plaid's own error taxonomy (e.g. INVALID_FIELD for an
-// unregistered redirect_uri) instead of a generic message, so failures are
-// diagnosable from the UI alone.
-function formatPlaidError(data: any, fallback: string): string {
-  if (data?.plaid_error_code) {
-    return `${fallback} (${data.plaid_error_code}${data.plaid_error_message ? `: ${data.plaid_error_message}` : ''})`;
-  }
-  return data?.error || fallback;
 }
 
 export default function LinkedAccounts() {
@@ -44,6 +37,10 @@ export default function LinkedAccounts() {
   const [syncStatus, setSyncStatus] = useState<{ itemId: string; ok: boolean; message: string } | null>(null);
   const [receivedRedirectUri, setReceivedRedirectUri] = useState<string | undefined>(undefined);
   const [, navigate] = useLocation();
+  const customerError = (err: unknown, fallback: string) => {
+    const message = err instanceof Error ? err.message.replace(/^\d{3}:\s*/, '') : '';
+    return message && message.length <= 200 ? message : fallback;
+  };
 
   // Resume an in-flight Link session after returning from a bank's OAuth
   // login redirect. Runs once on mount, before the normal "fetch a fresh
@@ -89,26 +86,24 @@ export default function LinkedAccounts() {
     }
     setError(null);
     try {
-      const res = await apiFetch('POST', '/api/plaid/create-link-token', { userId: user.uid, redirectUri: getRedirectUri() });
+      const res = await apiFetch('POST', '/api/plaid/create-link-token', { redirectUri: getRedirectUri() });
       const data = await res.json();
       if (data.link_token) {
         sessionStorage.setItem(OAUTH_LINK_TOKEN_KEY, data.link_token);
         sessionStorage.removeItem(OAUTH_UPDATING_ITEM_KEY);
         setLinkToken(data.link_token);
       } else {
-        setError(formatPlaidError(data, 'Failed to start bank connection. Please try again.'));
+        setError(data?.error || 'We couldn’t start your bank connection. Please try again.');
       }
     } catch (err: any) {
       console.error('Failed to fetch link token:', err);
-      setError(err?.message || 'Failed to start bank connection. Please try again.');
+      setError(customerError(err, 'We couldn’t start your bank connection. Please try again.'));
     }
   }, []);
 
   interface PlaidFlowResponse {
-    accounts: PlaidAccountData[];
+    ok?: boolean;
     item_id: string;
-    institution_id: string | null;
-    institution_name: string | null;
     error?: string;
   }
 
@@ -136,22 +131,17 @@ export default function LinkedAccounts() {
         await apiFetch('POST', '/api/plaid/refresh-accounts', { itemId: updatingItemId });
         await loadAccounts();
       } else {
-        const res = await apiFetch('POST', '/api/plaid/exchange-token', { publicToken, userId: user.uid });
+        const res = await apiFetch('POST', '/api/plaid/exchange-token', { publicToken });
         const data: PlaidFlowResponse = await res.json();
-        if (data.accounts) {
-          await saveLinkedAccounts(
-            user.uid,
-            data.accounts,
-            data.item_id,
-            data.institution_id,
-            data.institution_name
-          );
+        if (data.ok) {
           await loadAccounts();
+        } else {
+          setError(data.error || 'We couldn’t save your bank connection. Please try again.');
         }
       }
     } catch (err: any) {
       console.error('Failed to complete Plaid flow:', err);
-      setError(err?.message || 'Failed to save the account changes. Please try again.');
+      setError(customerError(err, 'We couldn’t save the account changes. Please try again.'));
     } finally {
       setLinking(false);
       setLinkToken(null);
@@ -172,7 +162,9 @@ export default function LinkedAccounts() {
     onSuccess: (publicToken) => onPlaidSuccess(publicToken),
     onExit: (err) => {
       if (err) {
-        console.error('Plaid Link exited with error:', err);
+        // Plaid Link diagnostics stay with the provider/server logs rather
+        // than being written into a customer browser console.
+        console.info('Plaid Link exited before the bank connection completed.');
         setError('Bank connection was cancelled or failed. Please try again.');
       }
       setLinking(false);
@@ -201,19 +193,19 @@ export default function LinkedAccounts() {
     setError(null);
     setUpdatingItemId(itemId);
     try {
-      const res = await apiFetch('POST', '/api/plaid/create-update-link-token', { itemId, userId: user.uid, redirectUri: getRedirectUri() });
+      const res = await apiFetch('POST', '/api/plaid/create-update-link-token', { itemId, redirectUri: getRedirectUri() });
       const data = await res.json();
       if (data.link_token) {
         sessionStorage.setItem(OAUTH_LINK_TOKEN_KEY, data.link_token);
         sessionStorage.setItem(OAUTH_UPDATING_ITEM_KEY, itemId);
         setLinkToken(data.link_token);
       } else {
-        setError(formatPlaidError(data, 'Failed to start account update. Please try again.'));
+        setError(data?.error || 'We couldn’t start the account update. Please try again.');
         setUpdatingItemId(null);
       }
     } catch (err: any) {
       console.error('Failed to fetch update link token:', err);
-      setError(err?.message || 'Failed to start account update. Please try again.');
+      setError(customerError(err, 'We couldn’t start the account update. Please try again.'));
       setUpdatingItemId(null);
     }
   }, []);
@@ -224,11 +216,11 @@ export default function LinkedAccounts() {
     setSyncingItemId(itemId);
     setSyncStatus(null);
     try {
-      await apiFetch('POST', '/api/plaid/sync-item', { itemId, userId: user.uid });
+      await apiFetch('POST', '/api/plaid/sync-item', { itemId });
       setSyncStatus({ itemId, ok: true, message: 'Sync requested' });
     } catch (err: any) {
       console.error('Failed to request sync:', err);
-      setSyncStatus({ itemId, ok: false, message: err?.message || 'Failed to request sync. Please try again.' });
+      setSyncStatus({ itemId, ok: false, message: customerError(err, 'We couldn’t request a bank sync. Please try again.') });
     } finally {
       setSyncingItemId(null);
     }
@@ -237,60 +229,21 @@ export default function LinkedAccounts() {
   const handleRemoveBank = useCallback(async (itemId: string | null, accountsToRemove: Account[]) => {
     const user = auth.currentUser;
     if (!user) return;
-    const accountDocIds = accountsToRemove.map((a) => a.id);
     const plaidAccountIds = accountsToRemove.map((a) => a.account_id).filter(Boolean);
     // Use a stable key for tracking removal state: itemId if present, else a
     // sentinel derived from the first doc ID so multiple legacy groups don't collide.
-    const removalKey = itemId ?? `legacy_${accountDocIds[0] ?? 'unknown'}`;
+    const removalKey = itemId ?? `legacy_${accountsToRemove[0]?.id ?? 'unknown'}`;
     setRemovingItemId(removalKey);
     setError(null);
 
-    // Write tombstones BEFORE any deletion so the account_ids are protected
-    // from the moment removal begins — a concurrent sync or re-link can never
-    // re-create them even if a later step partially fails.
     try {
-      if (plaidAccountIds.length > 0) {
-        await markAccountsRemoved(user.uid, plaidAccountIds);
-      }
-    } catch (err: any) {
-      console.error('Failed to write removal tombstones:', err);
-      setError(err?.message || 'Failed to remove bank account. Please try again.');
-      setRemovingItemId(null);
-      return;
-    }
-
-    let serverCleanedUp = false;
-    if (itemId) {
-      try {
-        // Server revokes Plaid access token and deletes plaid_items + accounts via firebase-admin.
-        await apiFetch('POST', '/api/plaid/remove-item', { itemId, userId: user.uid });
-        serverCleanedUp = true;
-      } catch (err: any) {
-        const is404 = err?.message?.startsWith('404');
-        if (!is404) {
-          // Unknown server error — don't touch local data, state may be inconsistent.
-          console.error('Failed to remove bank:', err);
-          setError(err?.message || 'Failed to remove bank account. Please try again.');
-          setRemovingItemId(null);
-          return;
-        }
-        // 404 means plaid_items was never written (linked before gateway was active).
-        // Server skipped cleanup — fall through to client-side delete below.
-        console.warn('plaid_items not found for item — proceeding with local account cleanup only.');
-      }
-    }
-    // No itemId: legacy account with no stored Plaid item — delete locally only.
-
-    try {
-      if (!serverCleanedUp) {
-        // Server didn't clean up (or there was no item to clean up) — delete account docs from the client.
-        await deleteAccountsByIds(accountDocIds);
-      }
-      // Server already deleted everything — just refresh the UI.
+      // The server creates tombstones, revokes the item when present, and
+      // removes only the current user's bank-managed records.
+      await apiFetch('POST', '/api/plaid/remove-item', { itemId, accountIds: plaidAccountIds });
       await loadAccounts();
     } catch (err: any) {
       console.error('Failed to complete local account cleanup:', err);
-      setError(err?.message || 'Failed to remove bank account. Please try again.');
+      setError(customerError(err, 'We couldn’t remove this bank connection. Please try again.'));
     } finally {
       setRemovingItemId(null);
     }

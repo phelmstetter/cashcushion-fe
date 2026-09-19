@@ -1,5 +1,6 @@
 const { getPlaidClient } = require('../lib/plaidClient');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+const { logPlaidError, publicError } = require('../lib/bankingSecurity');
 
 /**
  * Handler for POST /api/plaid/remove-item
@@ -11,22 +12,26 @@ const { getFirestore, FieldValue } = require('firebase-admin/firestore');
  */
 async function handler(uid, req, res) {
   try {
-    const { itemId } = req.body;
-    if (!itemId) {
-      return res.status(400).json({ error: 'itemId is required' });
+    const { itemId, accountIds: requestedAccountIds } = req.body;
+    if ((!itemId || typeof itemId !== 'string') && (!Array.isArray(requestedAccountIds) || requestedAccountIds.length === 0)) {
+      return publicError(res, 400, 'Please choose a bank connection and try again.');
+    }
+    if (Array.isArray(requestedAccountIds) && (requestedAccountIds.length > 10 || requestedAccountIds.some((id) => typeof id !== 'string' || !id))) {
+      return publicError(res, 400, 'Please choose a bank connection and try again.');
     }
 
     const db = getFirestore();
+    let itemDoc = null;
 
     // Look up the access token for this item.
-    const itemDoc = await db.collection('plaid_items').doc(itemId).get();
+    if (itemId) itemDoc = await db.collection('plaid_items').doc(itemId).get();
 
-    if (itemDoc.exists) {
+    if (itemDoc?.exists) {
       const itemData = itemDoc.data();
 
       // Verify the item belongs to the requesting user.
       if (itemData.user_id !== uid) {
-        return res.status(403).json({ error: 'Forbidden' });
+        return publicError(res, 403, 'You do not have access to this bank connection.');
       }
 
       // Tell Plaid to remove the item.
@@ -34,43 +39,61 @@ async function handler(uid, req, res) {
         const client = await getPlaidClient();
         await client.itemRemove({ access_token: itemData.access_token });
       } catch (err) {
-        console.warn('Plaid itemRemove failed (continuing with local cleanup):', err?.response?.data || err.message);
+        // A remote revocation failure is logged for follow-up, but local data
+        // is still removed so it is no longer available in this application.
+        logPlaidError('remove-item', err);
       }
-    } else {
-      console.warn(`plaid_items/${itemId} not found — skipping Plaid revocation and Firestore cleanup`);
     }
 
-    // Delete all Firestore data associated with this item in parallel.
-    const batch = db.batch();
+    // Locate only records owned by the signed-in user. For a legacy account
+    // group without a plaid_items document, accountIds provide the narrow,
+    // user-owned set that must be removed.
+    let accountsSnap;
+    if (itemId) {
+      accountsSnap = await db.collection('accounts')
+        .where('user_id', '==', uid)
+        .where('plaid_item_id', '==', itemId)
+        .get();
+    } else {
+      accountsSnap = await db.collection('accounts')
+        .where('user_id', '==', uid)
+        .where('account_id', 'in', requestedAccountIds)
+        .get();
+    }
+    if (!itemDoc?.exists && accountsSnap.empty) {
+      return publicError(res, 404, 'This bank connection is no longer available. Please link it again.');
+    }
 
-    // Soft-deactivate the plaid_items document instead of deleting it, so a
-    // record survives for troubleshooting (e.g. did Plaid's itemRemove call
-    // actually succeed, when was the item last used before it was removed).
-    if (itemDoc.exists) {
+    // Create immutable server-owned tombstones before deleting accounts. This
+    // prevents a later sync or re-link from silently recreating a removed one.
+    const batch = db.batch();
+    if (itemDoc?.exists) {
       batch.set(db.collection('plaid_items').doc(itemId), {
         deactivated_at: FieldValue.serverTimestamp(),
       }, { merge: true });
     }
 
-    // Delete accounts linked to this item and collect their account_ids.
-    const accountsSnap = await db.collection('accounts')
-      .where('plaid_item_id', '==', itemId)
-      .get();
     const accountIds = [];
     accountsSnap.forEach((doc) => {
       batch.delete(doc.ref);
       const aid = doc.data().account_id;
-      if (aid) accountIds.push(aid);
+      if (aid) {
+        accountIds.push(aid);
+        batch.set(db.collection('removed_accounts').doc(`${uid}_${aid}`), {
+          user_id: uid,
+          account_id: aid,
+          removed_at: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
     });
 
-    // Delete transactions and forecasts in parallel (both keyed off item/account).
-    const cleanupQueries = [
-      db.collection('transactions').where('item_id', '==', itemId).get(),
-    ];
-    // Forecasts are keyed by account_id — only query if we have accounts to match.
+    // Keep all cleanup scoped to the signed-in user's records.
+    const cleanupQueries = itemId
+      ? [db.collection('transactions').where('user_id', '==', uid).where('item_id', '==', itemId).get()]
+      : [];
     if (accountIds.length > 0) {
       cleanupQueries.push(
-        db.collection('forecasts').where('account_id', 'in', accountIds).get()
+        db.collection('forecasts').where('user_id', '==', uid).where('account_id', 'in', accountIds).get()
       );
     }
     const snapshots = await Promise.all(cleanupQueries);
@@ -80,8 +103,8 @@ async function handler(uid, req, res) {
 
     return res.status(200).json({ ok: true });
   } catch (error) {
-    console.error('Error removing item:', error?.response?.data || error.message);
-    return res.status(500).json({ error: 'Failed to remove bank account' });
+    logPlaidError('remove-item', error);
+    return publicError(res, 502, 'We couldn’t remove this bank connection. Please try again.');
   }
 }
 

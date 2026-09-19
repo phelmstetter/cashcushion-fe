@@ -1,6 +1,12 @@
 const { getPlaidClient } = require('../lib/plaidClient');
 const { CountryCode } = require('plaid');
 const { getFirestore } = require('firebase-admin/firestore');
+const {
+  getApprovedRedirectUri,
+  hasValidRedirectUri,
+  logPlaidError,
+  publicError,
+} = require('../lib/bankingSecurity');
 
 /**
  * Handler for POST /api/plaid/create-update-link-token
@@ -15,24 +21,28 @@ async function handler(uid, req, res) {
   try {
     const { itemId, redirectUri } = req.body;
     if (!itemId) {
-      return res.status(400).json({ error: 'itemId is required' });
+      return publicError(res, 400, 'Please choose a bank connection and try again.');
     }
+    if (!hasValidRedirectUri(redirectUri)) {
+      return publicError(res, 400, 'This bank connection redirect is not allowed.');
+    }
+    const approvedRedirectUri = getApprovedRedirectUri(redirectUri);
 
     const db = getFirestore();
     const itemDoc = await db.collection('plaid_items').doc(itemId).get();
     if (!itemDoc.exists) {
-      return res.status(404).json({ error: 'Item not found' });
+      return publicError(res, 404, 'This bank connection is no longer available. Please link it again.');
     }
 
     const itemData = itemDoc.data();
     if (itemData.user_id !== uid) {
-      return res.status(403).json({ error: 'Forbidden' });
+      return publicError(res, 403, 'You do not have access to this bank connection.');
     }
     if (itemData.deactivated_at) {
-      return res.status(404).json({ error: 'Item not found' });
+      return publicError(res, 404, 'This bank connection is no longer available. Please link it again.');
     }
     if (!itemData.access_token) {
-      return res.status(422).json({ error: 'Access token missing — try re-linking the bank' });
+      return publicError(res, 422, 'This bank needs to be linked again before it can be updated.');
     }
 
     const accessToken = itemData.access_token;
@@ -49,18 +59,13 @@ async function handler(uid, req, res) {
       // banks). Without it, Link redirects the user to the bank's OAuth page
       // and has no way to hand control back to the app. Must exactly match a
       // URI registered in the Plaid Dashboard's "Allowed redirect URIs".
-      ...(redirectUri ? { redirect_uri: redirectUri } : {}),
+      ...(approvedRedirectUri ? { redirect_uri: approvedRedirectUri } : {}),
     });
 
     return res.status(200).json({ link_token: response.data.link_token });
   } catch (error) {
-    const plaidError = error?.response?.data;
-    console.error('Error creating update link token:', plaidError || error.message);
-    return res.status(500).json({
-      error: 'Failed to create update link token',
-      plaid_error_code: plaidError?.error_code,
-      plaid_error_message: plaidError?.error_message,
-    });
+    logPlaidError('create-update-link-token', error);
+    return publicError(res, 502, 'We couldn’t start the account update. Please try again.');
   }
 }
 

@@ -1,5 +1,6 @@
 const { getFirestore } = require('firebase-admin/firestore');
 const { PubSub } = require('@google-cloud/pubsub');
+const { publicError } = require('../lib/bankingSecurity');
 
 const SYNC_PUBSUB_TOPIC = 'plaid-sync-trigger';
 
@@ -27,21 +28,21 @@ async function handler(uid, req, res) {
   try {
     const { itemId } = req.body;
     if (!itemId) {
-      return res.status(400).json({ error: 'itemId is required' });
+      return publicError(res, 400, 'Please choose a bank connection and try again.');
     }
 
     const db = getFirestore();
     const itemDoc = await db.collection('plaid_items').doc(itemId).get();
     if (!itemDoc.exists) {
-      return res.status(404).json({ error: 'Item not found — try re-linking the bank' });
+      return publicError(res, 404, 'This bank connection is no longer available. Please link it again.');
     }
 
     const itemData = itemDoc.data();
     if (itemData.user_id !== uid) {
-      return res.status(403).json({ error: 'Forbidden' });
+      return publicError(res, 403, 'You do not have access to this bank connection.');
     }
     if (itemData.deactivated_at) {
-      return res.status(404).json({ error: 'Item not found — try re-linking the bank' });
+      return publicError(res, 404, 'This bank connection is no longer available. Please link it again.');
     }
 
     try {
@@ -49,13 +50,13 @@ async function handler(uid, req, res) {
       await getPubSubClient().topic(SYNC_PUBSUB_TOPIC).publishMessage({ data: dataBuffer });
     } catch (error) {
       console.error('Error publishing plaid-sync-trigger message:', error?.message || error);
-      return res.status(500).json({ error: 'Failed to request sync — please try again' });
+      return publicError(res, 502, 'We couldn’t request a bank sync. Please try again.');
     }
 
     return res.status(200).json({ ok: true });
   } catch (error) {
     console.error('Error handling sync-item request:', error?.message || error);
-    return res.status(500).json({ error: 'Failed to request sync' });
+    return publicError(res, 502, 'We couldn’t request a bank sync. Please try again.');
   }
 }
 

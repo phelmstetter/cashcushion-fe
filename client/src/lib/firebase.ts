@@ -27,15 +27,10 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_APP_ID
 };
 
-// In development, App Check uses a pinned debug token so the same UUID is
-// presented every session rather than a randomly generated one.
-// To allow dev requests through, register this UUID in Firebase Console:
-//   App Check → Apps → cashcushion web app → Manage debug tokens.
-// Override with VITE_APP_CHECK_DEBUG_TOKEN if you need a different token locally.
-const APP_CHECK_DEBUG_TOKEN = '7E3E045C-7614-4DEB-8E0C-8C1CB2D5F4C6';
-if (import.meta.env.DEV) {
-  (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN =
-    import.meta.env.VITE_APP_CHECK_DEBUG_TOKEN ?? APP_CHECK_DEBUG_TOKEN;
+// Debug tokens must only be supplied through a local, uncommitted .env.local.
+// Production builds never enable the App Check debug bypass.
+if (import.meta.env.DEV && import.meta.env.VITE_APP_CHECK_DEBUG_TOKEN) {
+  (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = import.meta.env.VITE_APP_CHECK_DEBUG_TOKEN;
 }
 
 const app = initializeApp(firebaseConfig);
@@ -43,8 +38,8 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-// App Check — reCAPTCHA v3 in production, debug token bypasses this in dev.
-// Set VITE_RECAPTCHA_SITE_KEY in your environment for production builds.
+// App Check uses reCAPTCHA v3 in production. Set VITE_RECAPTCHA_SITE_KEY in
+// the deployment environment; see SECURITY.md for safe local debug setup.
 export const appCheck = initializeAppCheck(app, {
   provider: new ReCaptchaV3Provider(
     import.meta.env.VITE_RECAPTCHA_SITE_KEY ?? 'debug-placeholder'
@@ -65,7 +60,7 @@ export interface UserData {
   user_id: string;
   email: string;
   profile_pic: string;
-  plaid_sync_error: boolean;
+  plaid_sync_error?: boolean;
 }
 
 export async function saveUserToFirestore(user: {
@@ -81,7 +76,6 @@ export async function saveUserToFirestore(user: {
       user_id: user.uid,
       email: user.email || '',
       profile_pic: user.photoURL || '',
-      plaid_sync_error: false
     };
     
     await setDoc(userRef, userData, { merge: true });
@@ -160,30 +154,6 @@ export async function getAccounts(userId: string): Promise<Account[]> {
   return accounts.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export async function deleteAccountsByIds(docIds: string[]): Promise<void> {
-  await Promise.all(
-    docIds.map((id) => deleteDoc(doc(db, 'accounts', id)))
-  );
-}
-
-/**
- * Write tombstone records for the given Plaid account_ids so that sync and
- * re-link flows never re-create accounts the user has intentionally removed.
- * Doc ID: `{userId}_{account_id}` — one doc per (user, Plaid account).
- */
-export async function markAccountsRemoved(userId: string, plaidAccountIds: string[]): Promise<void> {
-  const removedAt = new Date().toISOString();
-  await Promise.all(
-    plaidAccountIds.map((account_id) =>
-      setDoc(doc(db, 'removed_accounts', `${userId}_${account_id}`), {
-        user_id: userId,
-        account_id,
-        removed_at: removedAt,
-      })
-    )
-  );
-}
-
 async function getRemovedAccountIds(userId: string): Promise<Set<string>> {
   const snap = await getDocs(
     query(collection(db, 'removed_accounts'), where('user_id', '==', userId))
@@ -202,77 +172,6 @@ export interface PlaidAccountData {
   subtype: string | null;
   available_balance: number | null;
   current_balance: number | null;
-}
-
-export async function saveLinkedAccounts(
-  userId: string,
-  accounts: PlaidAccountData[],
-  itemId: string,
-  institutionId: string | null,
-  institutionName: string | null
-): Promise<void> {
-  const removedIds = await getRemovedAccountIds(userId);
-  for (const acct of accounts) {
-    // Never re-create an account the user has explicitly removed.
-    if (removedIds.has(acct.account_id)) continue;
-    const docId = `${userId}_${itemId}_${acct.account_id}`;
-    await setDoc(doc(db, 'accounts', docId), {
-      user_id: userId,
-      account_id: acct.account_id,
-      name: acct.name,
-      official_name: acct.official_name,
-      mask: acct.mask,
-      type: acct.type,
-      subtype: acct.subtype,
-      available_balance: acct.available_balance,
-      current_balance: acct.current_balance,
-      plaid_item_id: itemId,
-      plaid_institution_id: institutionId,
-      plaid_institution_name: institutionName,
-    }, { merge: true });
-  }
-}
-
-export async function saveLinkedAccountsForItem(
-  userId: string,
-  accounts: PlaidAccountData[],
-  itemId: string,
-  institutionId: string | null,
-  institutionName: string | null
-): Promise<void> {
-  const [existingSnap, removedIds] = await Promise.all([
-    getDocs(query(collection(db, 'accounts'), where('user_id', '==', userId), where('plaid_item_id', '==', itemId))),
-    getRemovedAccountIds(userId),
-  ]);
-
-  // Only upsert accounts the user hasn't removed; treat removed ones as absent
-  // from the fresh set so their stale docs get cleaned up below.
-  const activeAccounts = accounts.filter((a) => !removedIds.has(a.account_id));
-  const freshAccountIds = new Set(activeAccounts.map((a) => a.account_id));
-
-  const deleteOps = existingSnap.docs
-    .filter((d) => !freshAccountIds.has(d.data().account_id as string))
-    .map((d) => deleteDoc(d.ref));
-
-  const upsertOps = activeAccounts.map((acct) => {
-    const docId = `${userId}_${itemId}_${acct.account_id}`;
-    return setDoc(doc(db, 'accounts', docId), {
-      user_id: userId,
-      account_id: acct.account_id,
-      name: acct.name,
-      official_name: acct.official_name,
-      mask: acct.mask,
-      type: acct.type,
-      subtype: acct.subtype,
-      available_balance: acct.available_balance,
-      current_balance: acct.current_balance,
-      plaid_item_id: itemId,
-      plaid_institution_id: institutionId,
-      plaid_institution_name: institutionName,
-    }, { merge: true });
-  });
-
-  await Promise.all([...deleteOps, ...upsertOps]);
 }
 
 export interface Transaction {

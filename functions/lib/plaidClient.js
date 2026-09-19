@@ -53,6 +53,7 @@ async function getPlaidClient() {
   const configuration = new Configuration({
     basePath,
     baseOptions: {
+      timeout: 25000,
       headers: {
         'PLAID-CLIENT-ID': clientId,
         'PLAID-SECRET': secretKey,

@@ -1,5 +1,11 @@
 const { getPlaidClient } = require('../lib/plaidClient');
 const { Products, CountryCode } = require('plaid');
+const {
+  getApprovedRedirectUri,
+  hasValidRedirectUri,
+  logPlaidError,
+  publicError,
+} = require('../lib/bankingSecurity');
 
 /**
  * Handler for POST /api/plaid/create-link-token
@@ -12,6 +18,10 @@ const { Products, CountryCode } = require('plaid');
 async function handler(uid, req, res) {
   try {
     const { redirectUri } = req.body;
+    if (!hasValidRedirectUri(redirectUri)) {
+      return publicError(res, 400, 'This bank connection redirect is not allowed.');
+    }
+    const approvedRedirectUri = getApprovedRedirectUri(redirectUri);
     const client = await getPlaidClient();
 
     const response = await client.linkTokenCreate({
@@ -31,20 +41,13 @@ async function handler(uid, req, res) {
       // banks). Without it, Link redirects the user to the bank's OAuth page
       // and has no way to hand control back to the app. Must exactly match a
       // URI registered in the Plaid Dashboard's "Allowed redirect URIs".
-      ...(redirectUri ? { redirect_uri: redirectUri } : {}),
+      ...(approvedRedirectUri ? { redirect_uri: approvedRedirectUri } : {}),
     });
 
     return res.status(200).json({ link_token: response.data.link_token });
   } catch (error) {
-    const plaidError = error?.response?.data;
-    console.error('Error creating link token:', plaidError || error.message);
-    return res.status(500).json({
-      error: 'Failed to create link token',
-      // Surfaced so the client-visible error is actionable instead of opaque —
-      // this is safe to expose: it's Plaid's own error taxonomy, not secrets.
-      plaid_error_code: plaidError?.error_code,
-      plaid_error_message: plaidError?.error_message,
-    });
+    logPlaidError('create-link-token', error);
+    return publicError(res, 502, 'We couldn’t start your bank connection. Please try again.');
   }
 }
 

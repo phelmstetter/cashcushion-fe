@@ -7,7 +7,8 @@
     "node": "22"
   },
   "scripts": {
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "node --test test/*.test.js"
   },
   "dependencies": {
     "@google-cloud/pubsub": "^4.9.0",

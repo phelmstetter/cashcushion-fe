@@ -1,6 +1,7 @@
 const { getPlaidClient } = require('../lib/plaidClient');
 const { CountryCode } = require('plaid');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+const { logPlaidError, publicError } = require('../lib/bankingSecurity');
 
 /**
  * Handler for POST /api/plaid/exchange-token
@@ -15,7 +16,7 @@ async function handler(uid, req, res) {
   try {
     const { publicToken } = req.body;
     if (!publicToken) {
-      return res.status(400).json({ error: 'publicToken is required' });
+      return publicError(res, 400, 'The bank connection could not be completed. Please try again.');
     }
 
     const client = await getPlaidClient();
@@ -31,6 +32,11 @@ async function handler(uid, req, res) {
     // deactivated_at is explicitly cleared so re-linking a previously removed
     // item (same item_id) reactivates it instead of leaving it marked inactive.
     const db = getFirestore();
+    const existingItem = await db.collection('plaid_items').doc(itemId).get();
+    if (existingItem.exists && existingItem.data().user_id !== uid) {
+      console.warn('[plaid:exchange-token] rejected item already owned by another user', { itemId });
+      return publicError(res, 403, 'You do not have access to this bank connection.');
+    }
     await db.collection('plaid_items').doc(itemId).set({
       access_token: accessToken,
       item_id: itemId,
@@ -71,15 +77,29 @@ async function handler(uid, req, res) {
       current_balance: acct.balances.current ?? null,
     }));
 
-    return res.status(200).json({
-      item_id: itemId,
-      institution_id: institutionId,
-      institution_name: institutionName,
-      accounts,
-    });
+    // Bank-managed account records are written only with the Admin SDK. Browser
+    // clients can read their account records but cannot forge balances, metadata,
+    // ownership, or Plaid IDs.
+    const tombstoneSnap = await db.collection('removed_accounts').where('user_id', '==', uid).get();
+    const removedAccountIds = new Set();
+    tombstoneSnap.forEach((doc) => removedAccountIds.add(doc.data().account_id));
+    const activeAccounts = accounts.filter((account) => !removedAccountIds.has(account.account_id));
+    const batch = db.batch();
+    for (const account of activeAccounts) {
+      batch.set(db.collection('accounts').doc(`${uid}_${itemId}_${account.account_id}`), {
+        ...account,
+        user_id: uid,
+        plaid_item_id: itemId,
+        plaid_institution_id: institutionId,
+        plaid_institution_name: institutionName,
+      }, { merge: true });
+    }
+    await batch.commit();
+
+    return res.status(200).json({ ok: true, item_id: itemId });
   } catch (error) {
-    console.error('Error exchanging token:', error?.response?.data || error.message);
-    return res.status(500).json({ error: 'Failed to exchange token' });
+    logPlaidError('exchange-token', error);
+    return publicError(res, 502, 'We couldn’t save your bank connection. Please try again.');
   }
 }
 
