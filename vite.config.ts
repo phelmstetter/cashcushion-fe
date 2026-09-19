@@ -50,6 +50,15 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "react-vendor": ["react", "react-dom", "@tanstack/react-query", "wouter"],
+          "firebase-vendor": ["firebase/app", "firebase/auth", "firebase/app-check", "firebase/firestore"],
+          charts: ["recharts"],
+        },
+      },
+    },
   },
   server: {
     fs: {

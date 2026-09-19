@@ -18,9 +18,14 @@ const Login = () => {
       const e = err as { code?: string; message?: string };
       if (e.code === "auth/popup-blocked") {
         // Browser blocked the popup (common on mobile) — fall back to redirect.
-        await signInWithRedirect(auth, provider);
+        try {
+          await signInWithRedirect(auth, provider);
+        } catch {
+          setError("We couldn’t start Google sign-in. Please allow popups or try again.");
+          setLoading(false);
+        }
       } else {
-        setError(e.message ?? "Sign-in failed. Please try again.");
+        setError("We couldn’t sign you in. Please try again.");
         setLoading(false);
       }
     }
@@ -42,7 +47,7 @@ const Login = () => {
               {loading ? "Signing in..." : "Sign in with Google"}
             </button>
           </div>
-          {error && <p className="error-message" data-testid="text-error">{error}</p>}
+          {error && <p role="alert" className="error-message" data-testid="text-error">{error}</p>}
         </div>
       </div>
     </div>

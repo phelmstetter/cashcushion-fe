@@ -62,7 +62,9 @@ export default function LinkedAccounts() {
     try {
       const accts = await getAccounts(user.uid);
       setAccounts(accts);
-    } catch {
+      setError(null);
+    } catch (err) {
+      setError(customerError(err, 'We couldn’t load your linked accounts. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -217,7 +219,7 @@ export default function LinkedAccounts() {
     setSyncStatus(null);
     try {
       await apiFetch('POST', '/api/plaid/sync-item', { itemId });
-      setSyncStatus({ itemId, ok: true, message: 'Sync requested' });
+      setSyncStatus({ itemId, ok: true, message: 'Sync requested. Your newest transactions will appear shortly.' });
     } catch (err: any) {
       console.error('Failed to request sync:', err);
       setSyncStatus({ itemId, ok: false, message: customerError(err, 'We couldn’t request a bank sync. Please try again.') });
@@ -241,6 +243,7 @@ export default function LinkedAccounts() {
       // removes only the current user's bank-managed records.
       await apiFetch('POST', '/api/plaid/remove-item', { itemId, accountIds: plaidAccountIds });
       await loadAccounts();
+      setConfirmRemoveKey(null);
     } catch (err: any) {
       console.error('Failed to complete local account cleanup:', err);
       setError(customerError(err, 'We couldn’t remove this bank connection. Please try again.'));
@@ -281,6 +284,7 @@ export default function LinkedAccounts() {
       }}>
         <button
           data-testid="button-back"
+          aria-label="Back to dashboard"
           onClick={() => navigate('/home')}
           style={{
             background: 'none',
@@ -326,6 +330,7 @@ export default function LinkedAccounts() {
         {error && (
           <div
             data-testid="text-link-error"
+            role="alert"
             style={{
               marginBottom: '16px',
               padding: '10px 14px',
@@ -337,15 +342,21 @@ export default function LinkedAccounts() {
             }}
           >
             {error}
+            <button
+              onClick={loadAccounts}
+              style={{ display: 'block', marginTop: '8px', padding: '5px 9px', border: '1px solid #b91c1c', borderRadius: '4px', background: 'white', color: '#b91c1c', cursor: 'pointer' }}
+            >
+              Retry
+            </button>
           </div>
         )}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
-            Loading accounts...
+          <div aria-busy="true" style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
+            Loading your linked accounts…
           </div>
         ) : Object.keys(grouped).length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
-            No linked accounts found.
+            No linked accounts found. Add a bank account to see balances and transactions here.
           </div>
         ) : (
           Object.entries(grouped).map(([instId, group]) => (
@@ -395,6 +406,7 @@ export default function LinkedAccounts() {
                 padding: '10px 16px',
                 display: 'flex',
                 gap: '12px',
+                flexWrap: 'wrap',
                 borderTop: '1px solid #eee'
               }}>
                 <button
@@ -441,19 +453,19 @@ export default function LinkedAccounts() {
                   const isConfirming = confirmRemoveKey === removalKey;
                   if (isConfirming) {
                     return (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <div role="alertdialog" aria-label={`Confirm removal of ${group.name}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         <span
                           data-testid={`text-confirm-remove-${instId}`}
                           style={{ fontSize: '13px', color: '#b91c1c' }}
                         >
-                          Remove all accounts for {group.name}?
+                          Remove {group.accounts.length} account{group.accounts.length === 1 ? '' : 's'} from {group.name}? Bank-managed transactions and forecasts for these accounts will also be removed.
                         </span>
                         <button
                           data-testid={`button-confirm-remove-${instId}`}
                           onClick={() => {
-                            setConfirmRemoveKey(null);
                             handleRemoveBank(group.itemId, group.accounts);
                           }}
+                          disabled={isRemoving}
                           style={{
                             fontSize: '13px',
                             color: 'white',
@@ -461,7 +473,7 @@ export default function LinkedAccounts() {
                             border: 'none',
                             borderRadius: '6px',
                             padding: '6px 12px',
-                            cursor: 'pointer'
+                            cursor: isRemoving ? 'not-allowed' : 'pointer'
                           }}
                           onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#a33'; }}
                           onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#c44'; }}

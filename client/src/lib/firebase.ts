@@ -15,7 +15,8 @@ import {
   where,
   addDoc,
   updateDoc,
-  deleteDoc
+  deleteDoc,
+  writeBatch
 } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -199,24 +200,14 @@ export async function getTransactions(
 ): Promise<TransactionsResult> {
   const transactionsRef = collection(db, 'transactions');
   
-  let q;
-  if (cursor) {
-    q = query(
-      transactionsRef,
-      where('user_id', '==', userId),
-      orderBy('date', 'desc'),
-      orderBy('__name__', 'desc'),
-      startAfter(cursor.date, cursor.id),
-      limit(pageSize)
-    );
-  } else {
-    q = query(
-      transactionsRef,
-      where('user_id', '==', userId),
-      orderBy('date', 'desc'),
-      limit(pageSize)
-    );
-  }
+  const constraints = [
+    where('user_id', '==', userId),
+    orderBy('date', 'desc'),
+    orderBy('__name__', 'desc'),
+  ];
+  const q = cursor
+    ? query(transactionsRef, ...constraints, startAfter(cursor.date, cursor.id), limit(pageSize))
+    : query(transactionsRef, ...constraints, limit(pageSize));
   
   const querySnapshot = await getDocs(q);
   const transactions: Transaction[] = [];
@@ -277,6 +268,7 @@ export async function saveSeriesForecasts(
   const seriesId = crypto.randomUUID ? crypto.randomUUID() : `series_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   const forecastsRef = collection(db, 'forecasts');
 
+  const forecasts: Omit<Forecast, 'id'>[] = [];
   for (let i = 0; i < monthCount; i++) {
     const d = new Date(startDate + 'T00:00:00');
     d.setMonth(d.getMonth() + i);
@@ -284,12 +276,13 @@ export async function saveSeriesForecasts(
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
 
-    await addDoc(forecastsRef, {
+    forecasts.push({
       ...baseForecast,
       date: `${yyyy}-${mm}-${dd}`,
       series_id: seriesId
     });
   }
+  await writeForecastsInBatches(forecastsRef, forecasts);
 
   return seriesId;
 }
@@ -303,6 +296,7 @@ export async function saveDayIntervalForecasts(
   const seriesId = crypto.randomUUID ? crypto.randomUUID() : `series_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   const forecastsRef = collection(db, 'forecasts');
 
+  const forecasts: Omit<Forecast, 'id'>[] = [];
   for (let i = 0; i < count; i++) {
     const d = new Date(startDate + 'T00:00:00');
     d.setDate(d.getDate() + (dayInterval * i));
@@ -310,12 +304,13 @@ export async function saveDayIntervalForecasts(
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
 
-    await addDoc(forecastsRef, {
+    forecasts.push({
       ...baseForecast,
       date: `${yyyy}-${mm}-${dd}`,
       series_id: seriesId
     });
   }
+  await writeForecastsInBatches(forecastsRef, forecasts);
 
   return seriesId;
 }
@@ -337,11 +332,9 @@ export async function updateSeriesForecasts(
     where('series_id', '==', seriesId)
   );
   const snapshot = await getDocs(q);
-  const promises: Promise<void>[] = [];
-  snapshot.forEach((d) => {
-    promises.push(updateDoc(doc(db, 'forecasts', d.id), updates));
+  await writeInBatches(snapshot.docs, (batch, forecastDoc) => {
+    batch.update(forecastDoc.ref, updates);
   });
-  await Promise.all(promises);
 }
 
 export async function getForecasts(userId: string): Promise<Forecast[]> {
@@ -366,7 +359,10 @@ export async function getForecasts(userId: string): Promise<Forecast[]> {
       matched_transaction_id: data.matched_transaction_id || null,
       series_id: data.series_id || null,
       account_id: data.account_id || null,
-      logo_url: data.logo_url || null
+      logo_url: data.logo_url || null,
+      forecast_type: data.forecast_type || 'single',
+      forecast_interval: data.forecast_interval ?? null,
+      auto_extend: Boolean(data.auto_extend)
     });
   });
   return forecasts;
@@ -385,11 +381,37 @@ export async function deleteSeriesForecasts(seriesId: string, userId: string): P
     where('series_id', '==', seriesId)
   );
   const snapshot = await getDocs(q);
-  const promises: Promise<void>[] = [];
-  snapshot.forEach((d) => {
-    promises.push(deleteDoc(doc(db, 'forecasts', d.id)));
+  await writeInBatches(snapshot.docs, (batch, forecastDoc) => {
+    batch.delete(forecastDoc.ref);
   });
-  await Promise.all(promises);
+}
+
+const MAX_BATCH_OPERATIONS = 400;
+
+async function writeForecastsInBatches(
+  forecastsRef: ReturnType<typeof collection>,
+  forecasts: Omit<Forecast, 'id'>[]
+): Promise<void> {
+  for (let index = 0; index < forecasts.length; index += MAX_BATCH_OPERATIONS) {
+    const batch = writeBatch(db);
+    for (const forecast of forecasts.slice(index, index + MAX_BATCH_OPERATIONS)) {
+      batch.set(doc(forecastsRef), forecast);
+    }
+    await batch.commit();
+  }
+}
+
+async function writeInBatches<T extends { ref: ReturnType<typeof doc> }>(
+  records: T[],
+  write: (batch: ReturnType<typeof writeBatch>, record: T) => void
+): Promise<void> {
+  for (let index = 0; index < records.length; index += MAX_BATCH_OPERATIONS) {
+    const batch = writeBatch(db);
+    for (const record of records.slice(index, index + MAX_BATCH_OPERATIONS)) {
+      write(batch, record);
+    }
+    await batch.commit();
+  }
 }
 
 export async function reconcileForecast(forecastId: string, transactionId: string): Promise<void> {

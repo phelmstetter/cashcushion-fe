@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { signOut } from "firebase/auth";
 import { auth, getTransactions, Transaction, saveForecast, saveSeriesForecasts, saveDayIntervalForecasts, updateForecast, updateSeriesForecasts, deleteForecast, deleteSeriesForecasts, getForecasts, Forecast, reconcileForecast, unreconcileForecast, getAccounts, Account } from "@/lib/firebase";
 import { useLocation } from "wouter";
@@ -13,16 +13,22 @@ const Home = () => {
   const hasMoreRef = useRef(true);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [initialError, setInitialError] = useState<string | null>(null);
+  const [paginationError, setPaginationError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [modalView, setModalView] = useState<'details' | 'forecast' | 'editForecast'>('details');
   const [forecastDate, setForecastDate] = useState('');
   const [forecastAmount, setForecastAmount] = useState('');
   const [forecastType, setForecastType] = useState<'single' | 'monthly' | 'every_x_days'>('single');
+  const [forecastDirection, setForecastDirection] = useState<'expense' | 'income'>('expense');
   const [forecastMonths, setForecastMonths] = useState(12);
   const [forecastDayInterval, setForecastDayInterval] = useState(14);
   const [forecastDayCount, setForecastDayCount] = useState(12);
   const [autoExtend, setAutoExtend] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState<'one' | 'series' | null>(null);
+  const [matchTransactionId, setMatchTransactionId] = useState('');
   const [editingForecast, setEditingForecast] = useState<Forecast | null>(null);
   const [addingStandaloneForecast, setAddingStandaloneForecast] = useState(false);
   const [standaloneForecastName, setStandaloneForecastName] = useState('');
@@ -44,6 +50,49 @@ const Home = () => {
   const dragStartPosRef = useRef<{ x: number; y: number } | null>(null);
   const scrollAnchorRef = useRef<HTMLDivElement | null>(null);
   const hasAutoScrolled = useRef(false);
+  const profileMenuButtonRef = useRef<HTMLButtonElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+
+  const closeModal = useCallback(() => {
+    setSelectedTransaction(null);
+    setEditingForecast(null);
+    setAddingStandaloneForecast(false);
+    setStandaloneForecastName('');
+    setModalView('details');
+    setForecastDate('');
+    setForecastAmount('');
+    setForecastType('single');
+    setForecastDirection('expense');
+    setForecastMonths(12);
+    setAutoExtend(false);
+    setActionError(null);
+    setConfirmingDelete(null);
+    setMatchTransactionId('');
+  }, []);
+
+  const isModalOpen = Boolean(selectedTransaction || editingForecast || addingStandaloneForecast);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (isModalOpen) {
+        event.preventDefault();
+        closeModal();
+      } else if (profileMenuOpen) {
+        setProfileMenuOpen(false);
+        profileMenuButtonRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [closeModal, isModalOpen, profileMenuOpen]);
+
+  useEffect(() => {
+    if (isModalOpen) {
+      dialogRef.current?.focus();
+    }
+  }, [isModalOpen, modalView]);
 
   const handleSignOut = async () => {
     await signOut(auth);
@@ -53,10 +102,14 @@ const Home = () => {
   const loadInitialTransactions = async () => {
     const userId = auth.currentUser?.uid;
     if (!userId) {
+      setInitialError('Your session has ended. Please sign in again.');
       setInitialLoading(false);
       return;
     }
-    
+
+    setInitialLoading(true);
+    setInitialError(null);
+    setPaginationError(null);
     const [transactionsResult, forecastsResult, accountsResult] = await Promise.allSettled([
       getTransactions(userId, null),
       getForecasts(userId),
@@ -70,6 +123,7 @@ const Home = () => {
         cursorRef.current = { date: result.lastDate, id: result.lastId };
       }
       setHasMore(result.hasMore);
+      hasMoreRef.current = result.hasMore;
     } else {
       console.error("Error loading transactions:", transactionsResult.reason);
     }
@@ -84,6 +138,10 @@ const Home = () => {
       setAccounts(accountsResult.value);
     } else {
       console.error("Error loading accounts:", accountsResult.reason);
+    }
+
+    if ([transactionsResult, forecastsResult, accountsResult].some((result) => result.status === 'rejected')) {
+      setInitialError('Some dashboard data could not be loaded. Check your connection and try again.');
     }
 
     setInitialLoading(false);
@@ -104,10 +162,15 @@ const Home = () => {
     
     loadingRef.current = true;
     setLoading(true);
+    setPaginationError(null);
     try {
       const result = await getTransactions(userId, cursorRef.current);
       if (result.transactions.length > 0) {
-        setTransactions(prev => [...prev, ...result.transactions]);
+        setTransactions(prev => {
+          const existingIds = new Set(prev.map((transaction) => transaction.id));
+          const nextPage = result.transactions.filter((transaction) => !existingIds.has(transaction.id));
+          return nextPage.length ? [...prev, ...nextPage] : prev;
+        });
         if (result.lastDate && result.lastId) {
           cursorRef.current = { date: result.lastDate, id: result.lastId };
         }
@@ -119,6 +182,7 @@ const Home = () => {
       }
     } catch (error) {
       console.error("Error loading more:", error);
+      setPaginationError('We couldn’t load older transactions. Try again.');
     } finally {
       loadingRef.current = false;
       setLoading(false);
@@ -153,21 +217,7 @@ const Home = () => {
         observerRef.current.disconnect();
       }
     };
-  }, [hasMore, transactions.length, forecasts.length]);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!hasMoreRef.current || loadingRef.current) return;
-      const scrollY = window.scrollY || document.documentElement.scrollTop;
-      const windowHeight = window.innerHeight;
-      const docHeight = document.documentElement.scrollHeight;
-      if (scrollY + windowHeight >= docHeight - 300) {
-        loadMoreTransactions();
-      }
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [initialLoading, hasMore]);
 
   const getClientPos = (e: React.TouchEvent | React.MouseEvent | TouchEvent | MouseEvent) => {
     if ('touches' in e && e.touches.length > 0) {
@@ -251,7 +301,7 @@ const Home = () => {
           );
         } catch (error: any) {
           console.error('Error reconciling forecast:', error);
-          alert('Error reconciling: ' + (error?.message || 'Unknown error'));
+          setActionError('We couldn’t match that forecast. Please try again.');
         }
       }
 
@@ -288,7 +338,9 @@ const Home = () => {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(dateString)
+      ? new Date(`${dateString}T00:00:00`)
+      : new Date(dateString);
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -305,14 +357,22 @@ const Home = () => {
       .slice(0, 2);
   };
 
-  const visibleForecasts = forecasts.filter(f => !f.matched_transaction_id);
+  const signedForecastAmount = () => {
+    const enteredAmount = Math.abs(parseFloat(forecastAmount));
+    return forecastDirection === 'expense' ? enteredAmount : -enteredAmount;
+  };
 
-  const companyNames: string[] = Array.from(new Set([
+  const visibleForecasts = useMemo(
+    () => forecasts.filter((forecast) => !forecast.matched_transaction_id),
+    [forecasts]
+  );
+
+  const companyNames = useMemo(() => Array.from(new Set([
     ...transactions.map(t => t.merchant_name || t.counterparty_name),
     ...visibleForecasts.map(f => f.name)
-  ])).filter(Boolean).sort((a, b) => a.localeCompare(b));
+  ])).filter((name): name is string => Boolean(name)).sort((a, b) => a.localeCompare(b)), [transactions, visibleForecasts]);
 
-  const accountOptions = Array.from(
+  const accountOptions = useMemo(() => Array.from(
     new Map(
       accounts
         .filter(a => a.account_id)
@@ -321,7 +381,7 @@ const Home = () => {
           { label: a.name ? `${a.name} ${a.mask}` : a.mask, value: a.account_id }
         ])
     ).values()
-  );
+  ), [accounts]);
 
   const CHART_COLORS = ['#1976d2', '#e53935', '#43a047', '#fb8c00', '#8e24aa', '#00acc1', '#d81b60', '#6d4c41'];
 
@@ -401,7 +461,7 @@ const Home = () => {
     | { type: 'transaction'; data: Transaction }
     | { type: 'forecast'; data: Forecast };
 
-  const mergedItems: MergedItem[] = [
+  const mergedItems = useMemo<MergedItem[]>(() => [
     ...visibleForecasts.map(f => ({ type: 'forecast' as const, data: f })),
     ...transactions.map(t => ({ type: 'transaction' as const, data: t })),
   ].sort((a, b) => b.data.date.localeCompare(a.data.date))
@@ -421,7 +481,7 @@ const Home = () => {
     }
     const tx = item.data as Transaction;
     return (tx.merchant_name || tx.counterparty_name) === companyFilter;
-  });
+  }), [visibleForecasts, transactions, accountFilter, companyFilter]);
 
   const matchedTransactionIds = useMemo(() => {
     const ids = new Set<string>();
@@ -518,24 +578,29 @@ const Home = () => {
             ))}
           </select>
           <div style={{ position: 'relative', flexShrink: 0 }}>
-            <div
+            <button
+              ref={profileMenuButtonRef}
               data-testid="button-profile-menu"
               onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px' }}
+              aria-label="Open account menu"
+              aria-haspopup="menu"
+              aria-expanded={profileMenuOpen}
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', border: 'none', background: 'transparent', borderRadius: '4px' }}
             >
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round">
                 <line x1="3" y1="5" x2="17" y2="5" />
                 <line x1="3" y1="10" x2="17" y2="10" />
                 <line x1="3" y1="15" x2="17" y2="15" />
               </svg>
-            </div>
+            </button>
             {profileMenuOpen && (
               <>
                 <div
+                  aria-hidden="true"
                   style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000 }}
                   onClick={() => setProfileMenuOpen(false)}
                 />
-                <div style={{
+                <div role="menu" aria-label="Account menu" style={{
                   position: 'absolute',
                   top: '40px',
                   right: 0,
@@ -579,13 +644,15 @@ const Home = () => {
                   </div>
                   {[
                     { label: 'Linked Accounts', testId: 'menu-linked-accounts', path: '/linked-accounts' },
-                    { label: 'Profile', testId: 'menu-profile', path: '' },
-                    { label: 'Billing', testId: 'menu-billing', path: '' },
-                    { label: 'Settings', testId: 'menu-settings', path: '' }
+                    { label: 'Profile (coming soon)', testId: 'menu-profile', path: '', disabled: true },
+                    { label: 'Billing (coming soon)', testId: 'menu-billing', path: '', disabled: true },
+                    { label: 'Settings (coming soon)', testId: 'menu-settings', path: '', disabled: true }
                   ].map((item) => (
                     <button
                       key={item.testId}
                       data-testid={item.testId}
+                      role="menuitem"
+                      disabled={item.disabled}
                       onClick={() => {
                         setProfileMenuOpen(false);
                         if (item.path) setLocation(item.path);
@@ -599,7 +666,7 @@ const Home = () => {
                         backgroundColor: 'white',
                         border: 'none',
                         cursor: 'pointer',
-                        color: '#333'
+                        color: item.disabled ? '#999' : '#333'
                       }}
                       onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f5f5f5')}
                       onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
@@ -665,10 +732,11 @@ const Home = () => {
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
                       <XAxis
-                        dataKey="date"
+                        dataKey="fullDate"
                         tick={{ fontSize: 10 }}
                         interval={Math.floor(chartData.length / 6)}
                         tickLine={false}
+                        tickFormatter={(value: string) => formatDate(value).replace(/, \d{4}$/, '')}
                       />
                       <YAxis
                         tick={{ fontSize: 10 }}
@@ -686,7 +754,7 @@ const Home = () => {
                           const label = acct ? `${acct.name} ${acct.mask}` : name;
                           return [new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value), label];
                         }}
-                        labelFormatter={(label: string) => label}
+                        labelFormatter={(label: string) => formatDate(label)}
                         contentStyle={{ fontSize: '12px', borderRadius: '6px' }}
                       />
                       <Legend
@@ -708,7 +776,7 @@ const Home = () => {
                         <>
                           {/* Vertical guide line pinpointing the date of the minimum */}
                           <ReferenceLine
-                            x={minBalancePoint.date}
+                            x={minBalancePoint.fullDate}
                             stroke="#90a4ae"
                             strokeDasharray="3 3"
                             strokeWidth={1}
@@ -733,7 +801,7 @@ const Home = () => {
                             }}
                           />
                           <ReferenceDot
-                            x={minBalancePoint.date}
+                            x={minBalancePoint.fullDate}
                             y={minBalancePoint.__total__}
                             r={4}
                             fill="#546e7a"
@@ -830,6 +898,7 @@ const Home = () => {
                 setForecastDate('');
                 setForecastAmount('');
                 setForecastType('single');
+                setForecastDirection('expense');
                 setModalView('forecast');
               }}
               style={{
@@ -852,11 +921,31 @@ const Home = () => {
       </div>
 
       {initialLoading ? (
-        <p>Loading...</p>
+        <div aria-busy="true" style={{ padding: '24px 12px', color: '#666', textAlign: 'center' }}>
+          Loading your transactions and forecasts…
+        </div>
+      ) : initialError && mergedItems.length === 0 ? (
+        <div role="alert" style={{ margin: '16px 8px', padding: '16px', borderRadius: '8px', background: '#fff8e1', color: '#6b5300', textAlign: 'center' }}>
+          <p style={{ margin: '0 0 10px' }}>{initialError}</p>
+          <button onClick={loadInitialTransactions} style={{ padding: '7px 12px', border: '1px solid #b08800', borderRadius: '4px', background: 'white', color: '#6b5300', cursor: 'pointer' }}>
+            Retry dashboard load
+          </button>
+        </div>
       ) : mergedItems.length === 0 ? (
-        <p>No transactions found</p>
+        <div style={{ padding: '32px 18px', textAlign: 'center', color: '#555' }}>
+          <p style={{ margin: '0 0 8px', fontWeight: 600 }}>No transactions to show yet.</p>
+          <p style={{ margin: 0, fontSize: '14px' }}>Link an account or try refreshing after your bank has synced.</p>
+        </div>
       ) : (
         <>
+          {initialError && (
+            <div role="alert" style={{ margin: '8px', padding: '12px', borderRadius: '8px', background: '#fff8e1', color: '#6b5300', fontSize: '14px' }}>
+              <div>{initialError}</div>
+              <button onClick={loadInitialTransactions} style={{ marginTop: '8px', padding: '6px 10px', border: '1px solid #b08800', borderRadius: '4px', background: 'white', color: '#6b5300', cursor: 'pointer' }}>
+                Retry dashboard load
+              </button>
+            </div>
+          )}
           {mergedItems.map((item, idx) => {
             const isForecast = item.type === 'forecast';
             const date = item.data.date;
@@ -919,8 +1008,25 @@ const Home = () => {
                   const fc = item.data as Forecast;
                   setEditingForecast(fc);
                   setForecastDate(fc.date);
-                  setForecastAmount((-fc.amount).toString());
+                  setForecastAmount(Math.abs(fc.amount).toString());
+                  setForecastDirection(fc.amount >= 0 ? 'expense' : 'income');
+                  setMatchTransactionId('');
                   setModalView('editForecast');
+                } : undefined}
+                role={isForecast ? 'button' : undefined}
+                tabIndex={isForecast ? 0 : undefined}
+                aria-label={isForecast ? `Edit ${displayName} ${amountDisplay} forecast` : undefined}
+                onKeyDown={isForecast ? (event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    const fc = item.data as Forecast;
+                    setEditingForecast(fc);
+                    setForecastDate(fc.date);
+                    setForecastAmount(Math.abs(fc.amount).toString());
+                    setForecastDirection(fc.amount >= 0 ? 'expense' : 'income');
+                    setMatchTransactionId('');
+                    setModalView('editForecast');
+                  }
                 } : undefined}
                 style={{
                   display: 'flex',
@@ -936,7 +1042,9 @@ const Home = () => {
                   cursor: isForecast ? 'grab' : 'default',
                   userSelect: 'none',
                   transition: 'background-color 0.15s, box-shadow 0.15s',
-                  touchAction: draggingForecast ? 'none' : 'auto'
+                  touchAction: draggingForecast ? 'none' : 'auto',
+                  contentVisibility: 'auto',
+                  containIntrinsicSize: '64px'
                 }}
               >
                 {logoUrl ? (
@@ -972,7 +1080,9 @@ const Home = () => {
                     {displayName}
                   </div>
                   {isForecast && (
-                    <div style={{ fontSize: '11px', color: '#42A5F5', fontWeight: 600 }}>FORECAST</div>
+                    <div style={{ fontSize: '11px', color: '#1976d2', fontWeight: 600 }}>
+                      FORECAST · {amount >= 0 ? 'EXPENSE' : 'INCOME'}
+                    </div>
                   )}
                 </div>
                 
@@ -988,6 +1098,7 @@ const Home = () => {
                 {!isForecast && transactionForModal && (
                   <button 
                     data-testid={`button-details-${(item.data as Transaction).id}`}
+                    aria-label={`View details for ${displayName}`}
                     style={{
                       padding: '6px 10px',
                       fontSize: '18px',
@@ -1003,7 +1114,7 @@ const Home = () => {
                       setModalView('details');
                     }}
                   >
-                    ...
+                    Details
                   </button>
                 )}
               </div>
@@ -1011,7 +1122,15 @@ const Home = () => {
           })}
           
           <div ref={sentinelRef} style={{ textAlign: 'center', padding: '20px' }}>
-            {loading && <p>Loading...</p>}
+            {loading && <p aria-live="polite">Loading older transactions…</p>}
+            {paginationError && (
+              <div role="alert" style={{ color: '#a33' }}>
+                <p>{paginationError}</p>
+                <button onClick={loadMoreTransactions} style={{ padding: '6px 10px', border: '1px solid #a33', borderRadius: '4px', background: 'white', color: '#a33', cursor: 'pointer' }}>
+                  Try again
+                </button>
+              </div>
+            )}
             {!hasMore && <p style={{ color: '#666' }}>No more transactions</p>}
           </div>
         </>
@@ -1042,7 +1161,7 @@ const Home = () => {
         </div>
       )}
 
-      {(selectedTransaction || editingForecast || addingStandaloneForecast) && (
+      {isModalOpen && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -1055,32 +1174,35 @@ const Home = () => {
           justifyContent: 'center',
           zIndex: 1000
         }}
-        onClick={() => {
-          setSelectedTransaction(null);
-          setEditingForecast(null);
-          setAddingStandaloneForecast(false);
-          setStandaloneForecastName('');
-          setModalView('details');
-          setForecastDate('');
-          setForecastAmount('');
-          setForecastType('single');
-          setForecastMonths(12);
-          setAutoExtend(false);
+        onMouseDown={(event) => {
+          if (event.target === event.currentTarget && !saving) closeModal();
         }}>
-          <div style={{
+          <div
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="forecast-dialog-title"
+            tabIndex={-1}
+            style={{
             backgroundColor: 'white',
             padding: '24px',
             borderRadius: '8px',
             maxWidth: '400px',
             width: '90%'
-          }} onClick={(e) => e.stopPropagation()}>
+          }}>
+            {actionError && (
+              <div role="alert" style={{ marginBottom: '16px', padding: '10px 12px', borderRadius: '6px', background: '#fef2f2', color: '#b91c1c', fontSize: '14px' }}>
+                {actionError}
+              </div>
+            )}
 
             {modalView === 'details' && selectedTransaction && (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <h2 style={{ margin: 0 }}>Transaction Details</h2>
+                  <h2 id="forecast-dialog-title" style={{ margin: 0 }}>Transaction Details</h2>
                   <button
                     data-testid="button-close-modal"
+                    aria-label="Close transaction details"
                     onClick={() => {
                       setSelectedTransaction(null);
                       setModalView('details');
@@ -1093,9 +1215,7 @@ const Home = () => {
                       color: '#666',
                       padding: '4px 8px'
                     }}
-                  >
-                    X
-                  </button>
+                  >×</button>
                 </div>
 
                 <button
@@ -1108,7 +1228,8 @@ const Home = () => {
                       const mm = String(txDate.getMonth() + 1).padStart(2, '0');
                       const dd = String(txDate.getDate()).padStart(2, '0');
                       setForecastDate(`${yyyy}-${mm}-${dd}`);
-                      setForecastAmount((-selectedTransaction.amount).toString());
+                      setForecastAmount(Math.abs(selectedTransaction.amount).toString());
+                      setForecastDirection(selectedTransaction.amount >= 0 ? 'expense' : 'income');
                     }
                     setModalView('forecast');
                   }}
@@ -1259,20 +1380,15 @@ const Home = () => {
                           color: '#666',
                           padding: '4px'
                         }}
-                      >
-                        &larr;
-                      </button>
+                          aria-label="Back to transaction details"
+                        >←</button>
                     )}
-                    <h2 style={{ margin: 0 }}>{addingStandaloneForecast ? 'Add Expense' : 'Add Forecast'}</h2>
+                    <h2 id="forecast-dialog-title" style={{ margin: 0 }}>Add forecast</h2>
                   </div>
                   <button
+                    aria-label="Close forecast form"
                     onClick={() => {
-                      setSelectedTransaction(null);
-                      setAddingStandaloneForecast(false);
-                      setStandaloneForecastName('');
-                      setModalView('details');
-                      setForecastDate('');
-                      setForecastAmount('');
+                      closeModal();
                     }}
                     style={{
                       background: 'none',
@@ -1282,9 +1398,7 @@ const Home = () => {
                       color: '#666',
                       padding: '4px 8px'
                     }}
-                  >
-                    X
-                  </button>
+                  >×</button>
                 </div>
 
                 {selectedTransaction ? (
@@ -1393,9 +1507,39 @@ const Home = () => {
                 </div>
                 
                 <div style={{ marginTop: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Amount</label>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 500 }}>Cash-flow direction</label>
+                  <div role="group" aria-label="Forecast cash-flow direction" style={{ display: 'flex', marginBottom: '10px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setForecastDirection('expense')}
+                      aria-pressed={forecastDirection === 'expense'}
+                      style={{
+                        flex: 1, padding: '8px', border: '1px solid #ccc', borderRadius: '4px 0 0 4px',
+                        background: forecastDirection === 'expense' ? '#37474f' : '#f5f5f5',
+                        color: forecastDirection === 'expense' ? 'white' : '#333', cursor: 'pointer'
+                      }}
+                    >
+                      Expense
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setForecastDirection('income')}
+                      aria-pressed={forecastDirection === 'income'}
+                      style={{
+                        flex: 1, padding: '8px', border: '1px solid #ccc', borderLeft: 'none', borderRadius: '0 4px 4px 0',
+                        background: forecastDirection === 'income' ? '#2e7d32' : '#f5f5f5',
+                        color: forecastDirection === 'income' ? 'white' : '#333', cursor: 'pointer'
+                      }}
+                    >
+                      Income
+                    </button>
+                  </div>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>
+                    Amount (enter a positive number)
+                  </label>
                   <input 
                     type="number" 
+                    min="0"
                     step="0.01"
                     placeholder="0.00"
                     data-testid="input-forecast-amount"
@@ -1409,6 +1553,11 @@ const Home = () => {
                       boxSizing: 'border-box'
                     }}
                   />
+                  <span style={{ display: 'block', marginTop: '4px', color: '#666', fontSize: '12px' }}>
+                    {forecastDirection === 'expense'
+                      ? 'This lowers the projected balance on the selected date.'
+                      : 'This raises the projected balance on the selected date.'}
+                  </span>
                 </div>
 
                 {forecastType === 'every_x_days' && (
@@ -1554,12 +1703,14 @@ const Home = () => {
                       if (!auth.currentUser) return;
                       if (!selectedTransaction && !addingStandaloneForecast) return;
                       setSaving(true);
+                      setActionError(null);
                       try {
+                        const amount = signedForecastAmount();
                         const baseForecast = selectedTransaction ? {
                           user_id: auth.currentUser.uid,
                           name: selectedTransaction.merchant_name || selectedTransaction.counterparty_name,
                           merchant_entity_id: selectedTransaction.merchant_entity_id || null,
-                          amount: -parseFloat(forecastAmount),
+                          amount,
                           created_at: new Date().toISOString(),
                           account_id: selectedTransaction.account_id || null,
                           logo_url: selectedTransaction.logo_url || null,
@@ -1570,7 +1721,7 @@ const Home = () => {
                           user_id: auth.currentUser.uid,
                           name: standaloneForecastName.trim(),
                           merchant_entity_id: null,
-                          amount: -parseFloat(forecastAmount),
+                          amount,
                           created_at: new Date().toISOString(),
                           account_id: null,
                           logo_url: null,
@@ -1604,7 +1755,7 @@ const Home = () => {
                         setAutoExtend(false);
                       } catch (error: any) {
                         console.error('Error saving forecast:', error?.code, error?.message, error);
-                        alert('Error: ' + (error?.code || '') + ' ' + (error?.message || 'Unknown error'));
+                        setActionError('We couldn’t save this forecast. Please check the details and try again.');
                       } finally {
                         setSaving(false);
                       }
@@ -1628,9 +1779,10 @@ const Home = () => {
             {modalView === 'editForecast' && editingForecast && (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <h2 style={{ margin: 0 }}>Edit Forecast</h2>
+                  <h2 id="forecast-dialog-title" style={{ margin: 0 }}>Edit Forecast</h2>
                   <button
                     data-testid="button-close-edit-forecast"
+                    aria-label="Close forecast editor"
                     onClick={() => {
                       setEditingForecast(null);
                       setModalView('details');
@@ -1648,9 +1800,7 @@ const Home = () => {
                       color: '#666',
                       padding: '4px 8px'
                     }}
-                  >
-                    X
-                  </button>
+                  >×</button>
                 </div>
 
                 <p style={{ margin: '0 0 16px 0' }}>
@@ -1659,6 +1809,51 @@ const Home = () => {
                     <span style={{ fontSize: '12px', color: '#42A5F5', marginLeft: '8px', fontWeight: 600 }}>SERIES</span>
                   )}
                 </p>
+
+                <div style={{ padding: '12px', marginBottom: '16px', borderRadius: '6px', background: '#f4f8fb' }}>
+                  <label htmlFor="match-forecast-transaction" style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: 500 }}>
+                    Match to an actual transaction
+                  </label>
+                  <select
+                    id="match-forecast-transaction"
+                    value={matchTransactionId}
+                    onChange={(event) => setMatchTransactionId(event.target.value)}
+                    style={{ width: '100%', padding: '8px', border: '1px solid #b8c7d1', borderRadius: '4px', background: 'white' }}
+                  >
+                    <option value="">Select a transaction</option>
+                    {transactions.map((transaction) => (
+                      <option key={transaction.id} value={transaction.id}>
+                        {formatDate(transaction.date)} · {transaction.merchant_name || transaction.counterparty_name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    disabled={saving || !matchTransactionId}
+                    onClick={async () => {
+                      if (!editingForecast?.id || !matchTransactionId) return;
+                      setSaving(true);
+                      setActionError(null);
+                      try {
+                        await reconcileForecast(editingForecast.id, matchTransactionId);
+                        setForecasts((current) => current.map((forecast) =>
+                          forecast.id === editingForecast.id
+                            ? { ...forecast, matched_transaction_id: matchTransactionId }
+                            : forecast
+                        ));
+                        closeModal();
+                      } catch (error) {
+                        console.error('Error matching forecast:', error);
+                        setActionError('We couldn’t match this forecast. Please try again.');
+                      } finally {
+                        setSaving(false);
+                      }
+                    }}
+                    style={{ marginTop: '8px', padding: '7px 10px', border: 'none', borderRadius: '4px', background: '#1976d2', color: 'white', cursor: saving || !matchTransactionId ? 'not-allowed' : 'pointer', opacity: saving || !matchTransactionId ? 0.6 : 1 }}
+                  >
+                    Match forecast
+                  </button>
+                </div>
 
                 <div style={{ marginTop: '0' }}>
                   <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Date</label>
@@ -1703,10 +1898,11 @@ const Home = () => {
                     onClick={async () => {
                       if (!editingForecast?.id || !auth.currentUser) return;
                       setSaving(true);
+                      setActionError(null);
                       try {
                         await updateForecast(editingForecast.id, {
                           date: forecastDate,
-                          amount: -parseFloat(forecastAmount)
+                          amount: signedForecastAmount()
                         });
                         const updatedForecasts = await getForecasts(auth.currentUser.uid);
                         setForecasts(updatedForecasts);
@@ -1716,7 +1912,7 @@ const Home = () => {
                         setForecastAmount('');
                       } catch (error: any) {
                         console.error('Error updating forecast:', error);
-                        alert('Error: ' + (error?.message || 'Unknown error'));
+                        setActionError('We couldn’t update this forecast. Please try again.');
                       } finally {
                         setSaving(false);
                       }
@@ -1742,11 +1938,12 @@ const Home = () => {
                       onClick={async () => {
                         if (!editingForecast?.series_id || !auth.currentUser) return;
                         setSaving(true);
+                        setActionError(null);
                         try {
                           await updateSeriesForecasts(
                             editingForecast.series_id,
                             auth.currentUser.uid,
-                            { amount: -parseFloat(forecastAmount) }
+                            { amount: signedForecastAmount() }
                           );
                           const updatedForecasts = await getForecasts(auth.currentUser.uid);
                           setForecasts(updatedForecasts);
@@ -1756,7 +1953,7 @@ const Home = () => {
                           setForecastAmount('');
                         } catch (error: any) {
                           console.error('Error updating series:', error);
-                          alert('Error: ' + (error?.message || 'Unknown error'));
+                          setActionError('We couldn’t update this forecast series. Please try again.');
                         } finally {
                           setSaving(false);
                         }
@@ -1777,13 +1974,27 @@ const Home = () => {
                   )}
 
                   <div style={{ borderTop: '1px solid #eee', paddingTop: '8px', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {confirmingDelete && (
+                      <div role="alert" style={{ padding: '10px', background: '#fef2f2', color: '#991b1b', borderRadius: '6px', fontSize: '13px' }}>
+                        {confirmingDelete === 'series'
+                          ? 'This will permanently delete every forecast in this series.'
+                          : 'This will permanently delete this forecast.'}
+                        <button onClick={() => setConfirmingDelete(null)} style={{ marginLeft: '8px', background: 'transparent', border: 'none', color: '#991b1b', textDecoration: 'underline', cursor: 'pointer' }}>
+                          Cancel
+                        </button>
+                      </div>
+                    )}
                     <button
                       data-testid="button-delete-this-forecast"
                       disabled={saving}
                       onClick={async () => {
                         if (!editingForecast?.id || !auth.currentUser) return;
-                        if (!confirm('Delete this forecast?')) return;
+                        if (confirmingDelete !== 'one') {
+                          setConfirmingDelete('one');
+                          return;
+                        }
                         setSaving(true);
+                        setActionError(null);
                         try {
                           await deleteForecast(editingForecast.id);
                           const updatedForecasts = await getForecasts(auth.currentUser.uid);
@@ -1797,9 +2008,10 @@ const Home = () => {
                           setAutoExtend(false);
                         } catch (error: any) {
                           console.error('Error deleting forecast:', error);
-                          alert('Error: ' + (error?.message || 'Unknown error'));
+                          setActionError('We couldn’t delete this forecast. Please try again.');
                         } finally {
                           setSaving(false);
+                          setConfirmingDelete(null);
                         }
                       }}
                       style={{
@@ -1813,7 +2025,7 @@ const Home = () => {
                         fontWeight: 600
                       }}
                     >
-                      {saving ? 'Deleting...' : 'Delete This Forecast'}
+                      {saving ? 'Deleting...' : confirmingDelete === 'one' ? 'Confirm Delete This Forecast' : 'Delete This Forecast'}
                     </button>
 
                     {editingForecast.series_id && (
@@ -1822,8 +2034,12 @@ const Home = () => {
                         disabled={saving}
                         onClick={async () => {
                           if (!editingForecast?.series_id || !auth.currentUser) return;
-                          if (!confirm('Delete all forecasts in this series?')) return;
+                          if (confirmingDelete !== 'series') {
+                            setConfirmingDelete('series');
+                            return;
+                          }
                           setSaving(true);
+                          setActionError(null);
                           try {
                             await deleteSeriesForecasts(editingForecast.series_id, auth.currentUser.uid);
                             const updatedForecasts = await getForecasts(auth.currentUser.uid);
@@ -1837,9 +2053,10 @@ const Home = () => {
                             setAutoExtend(false);
                           } catch (error: any) {
                             console.error('Error deleting series:', error);
-                            alert('Error: ' + (error?.message || 'Unknown error'));
+                            setActionError('We couldn’t delete this forecast series. Please try again.');
                           } finally {
                             setSaving(false);
+                            setConfirmingDelete(null);
                           }
                         }}
                         style={{
@@ -1853,7 +2070,7 @@ const Home = () => {
                           fontWeight: 600
                         }}
                       >
-                        {saving ? 'Deleting...' : 'Delete Entire Series'}
+                        {saving ? 'Deleting...' : confirmingDelete === 'series' ? 'Confirm Delete Entire Series' : 'Delete Entire Series'}
                       </button>
                     )}
                   </div>

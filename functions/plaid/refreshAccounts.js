@@ -3,6 +3,32 @@ const { CountryCode } = require('plaid');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { logPlaidError, publicError } = require('../lib/bankingSecurity');
 
+const MAX_BATCH_OPERATIONS = 400;
+const MAX_IN_QUERY_VALUES = 10;
+
+async function commitInBatches(db, operations) {
+  for (let index = 0; index < operations.length; index += MAX_BATCH_OPERATIONS) {
+    const batch = db.batch();
+    for (const operation of operations.slice(index, index + MAX_BATCH_OPERATIONS)) {
+      operation(batch);
+    }
+    await batch.commit();
+  }
+}
+
+async function getRecordsForAccountIds(db, collectionName, uid, accountIds) {
+  const records = [];
+  for (let index = 0; index < accountIds.length; index += MAX_IN_QUERY_VALUES) {
+    const ids = accountIds.slice(index, index + MAX_IN_QUERY_VALUES);
+    const snapshot = await db.collection(collectionName)
+      .where('user_id', '==', uid)
+      .where('account_id', 'in', ids)
+      .get();
+    snapshot.forEach((record) => records.push(record));
+  }
+  return records;
+}
+
 /**
  * Handler for POST /api/plaid/refresh-accounts
  * Fetches the current account list for an existing Plaid item, reconciles
@@ -87,45 +113,41 @@ async function handler(uid, req, res) {
       .where('plaid_item_id', '==', itemId)
       .get();
 
-    const staleAccountIds = [];
+    const staleAccountIds = new Set();
     existingSnap.forEach((d) => {
       const aid = d.data().account_id;
       // An account is stale if Plaid no longer returns it, OR if the user has
       // tombstoned it — in either case its Firestore doc should be removed.
       if (aid && !freshAccountIds.has(aid)) {
-        staleAccountIds.push(aid);
+        staleAccountIds.add(aid);
       }
     });
 
-    // Build batch: delete stale data, upsert fresh accounts.
-    const batch = db.batch();
+    const staleAccountIdList = Array.from(staleAccountIds);
+    const [staleTransactions, staleForecasts] = staleAccountIdList.length > 0
+      ? await Promise.all([
+          getRecordsForAccountIds(db, 'transactions', uid, staleAccountIdList),
+          getRecordsForAccountIds(db, 'forecasts', uid, staleAccountIdList),
+        ])
+      : [[], []];
 
-    // Record that this item was successfully used just now.
-    batch.set(db.collection('plaid_items').doc(itemId), {
-      last_used_at: FieldValue.serverTimestamp(),
-    }, { merge: true });
+    const operations = [
+      (batch) => batch.set(db.collection('plaid_items').doc(itemId), {
+        last_used_at: FieldValue.serverTimestamp(),
+      }, { merge: true }),
+    ];
 
-    // Delete stale account docs.
-    existingSnap.forEach((d) => {
-      if (staleAccountIds.includes(d.data().account_id)) {
-        batch.delete(d.ref);
+    existingSnap.forEach((record) => {
+      if (staleAccountIds.has(record.data().account_id)) {
+        operations.push((batch) => batch.delete(record.ref));
       }
     });
+    staleTransactions.forEach((record) => operations.push((batch) => batch.delete(record.ref)));
+    staleForecasts.forEach((record) => operations.push((batch) => batch.delete(record.ref)));
 
-    // Delete transactions and forecasts for removed accounts.
-    if (staleAccountIds.length > 0) {
-      const [staleTxSnap, staleForecastSnap] = await Promise.all([
-        db.collection('transactions').where('user_id', '==', uid).where('account_id', 'in', staleAccountIds).get(),
-        db.collection('forecasts').where('user_id', '==', uid).where('account_id', 'in', staleAccountIds).get(),
-      ]);
-      staleTxSnap.forEach((d) => batch.delete(d.ref));
-      staleForecastSnap.forEach((d) => batch.delete(d.ref));
-    }
-
-    // Upsert fresh (non-tombstoned) accounts.
     for (const acct of freshAccounts) {
       const docId = `${uid}_${itemId}_${acct.account_id}`;
-      batch.set(db.collection('accounts').doc(docId), {
+      operations.push((batch) => batch.set(db.collection('accounts').doc(docId), {
         user_id: uid,
         account_id: acct.account_id,
         name: acct.name,
@@ -138,10 +160,10 @@ async function handler(uid, req, res) {
         plaid_item_id: itemId,
         plaid_institution_id: institutionId,
         plaid_institution_name: institutionName,
-      }, { merge: true });
+      }, { merge: true }));
     }
 
-    await batch.commit();
+    await commitInBatches(db, operations);
 
     return res.status(200).json({
       ok: true,
