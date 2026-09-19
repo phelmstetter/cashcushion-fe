@@ -5,8 +5,7 @@ substitutions:
   _PLAID_ALLOWED_REDIRECT_URIS: ''
 
 steps:
-  # 1. Install dependencies — versions are pinned exactly in package.json (no ^ ranges),
-  #    so npm install is reproducible without needing a committed package-lock.json.
+  # 1. Install the committed dependency graph reproducibly.
   - name: 'node:22'
     id: 'Install'
     entrypoint: 'bash'
@@ -16,7 +15,7 @@ steps:
         echo "Cleaning old modules..."
         rm -rf node_modules
         echo "Installing dependencies..."
-        npm install
+        npm ci
     dir: 'functions'
 
   # 2. Deploy Gen2 gateway function to Cloud Functions
@@ -29,7 +28,7 @@ steps:
       - 'gateway'
       - '--gen2'
       - '--region=us-central1'
-      - '--runtime=nodejs20'
+      - '--runtime=nodejs22'
       - '--source=.'
       - '--entry-point=gateway'
       - '--trigger-http'

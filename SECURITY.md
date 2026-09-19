@@ -31,3 +31,18 @@ comma-separated allowlist of full callback URLs, and register the same URLs in
 **Plaid Dashboard → Developers → API → Allowed redirect URIs**. Use
 `functions/.env.example` as the format reference; do not commit real environment
 files.
+
+## Firebase Realtime Database dependency advisory
+
+The Firebase SDK currently includes an optional Realtime Database compatibility
+dependency that brings in `websocket-driver`. This application does not initialize
+or import Firebase Realtime Database: the browser uses Firebase Auth, Firestore,
+and App Check, while the server and Cloud Function use Admin Auth, Firestore, and
+Storage only. There is no WebSocket endpoint or Realtime Database client exposed
+by the application.
+
+The dependency remains in the SDK's installed graph until Firebase removes or
+updates it upstream. Keep Firebase packages at their current supported releases,
+and re-run `npm audit --omit=dev` for both the root app and `functions` before
+each release. Any future Realtime Database import or WebSocket feature requires a
+fresh exposure review before release.
