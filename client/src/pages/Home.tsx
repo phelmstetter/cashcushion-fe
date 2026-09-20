@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { signOut } from "firebase/auth";
-import { auth, getTransactions, Transaction, saveForecast, saveSeriesForecasts, saveDayIntervalForecasts, updateForecast, updateSeriesForecasts, deleteForecast, deleteSeriesForecasts, getForecasts, Forecast, reconcileForecast, unreconcileForecast, getAccounts, Account } from "@/lib/firebase";
+import { auth, getTransactions, Transaction, saveForecast, saveSeriesForecasts, saveDayIntervalForecasts, updateForecast, updateSeriesForecasts, deleteForecast, deleteSeriesForecasts, getForecasts, Forecast, reconcileForecast, unreconcileForecast, getAccounts, Account, invalidateDashboardCache } from "@/lib/firebase";
 import { useLocation } from "wouter";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, ReferenceLine, ReferenceDot } from 'recharts';
 
 const LONG_PRESS_MS = 500;
+const TIMELINE_ROW_HEIGHT = 76;
+const TIMELINE_OVERSCAN = 6;
+type CashFlowDirection = 'expense' | 'income';
 
 const Home = () => {
   const [, setLocation] = useLocation();
@@ -13,22 +16,20 @@ const Home = () => {
   const hasMoreRef = useRef(true);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [initialError, setInitialError] = useState<string | null>(null);
-  const [paginationError, setPaginationError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [modalView, setModalView] = useState<'details' | 'forecast' | 'editForecast'>('details');
   const [forecastDate, setForecastDate] = useState('');
   const [forecastAmount, setForecastAmount] = useState('');
+  const [forecastDirection, setForecastDirection] = useState<CashFlowDirection>('expense');
   const [forecastType, setForecastType] = useState<'single' | 'monthly' | 'every_x_days'>('single');
-  const [forecastDirection, setForecastDirection] = useState<'expense' | 'income'>('expense');
   const [forecastMonths, setForecastMonths] = useState(12);
   const [forecastDayInterval, setForecastDayInterval] = useState(14);
   const [forecastDayCount, setForecastDayCount] = useState(12);
   const [autoExtend, setAutoExtend] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [confirmingDelete, setConfirmingDelete] = useState<'one' | 'series' | null>(null);
-  const [matchTransactionId, setMatchTransactionId] = useState('');
   const [editingForecast, setEditingForecast] = useState<Forecast | null>(null);
   const [addingStandaloneForecast, setAddingStandaloneForecast] = useState(false);
   const [standaloneForecastName, setStandaloneForecastName] = useState('');
@@ -41,75 +42,62 @@ const Home = () => {
   const [draggingForecast, setDraggingForecast] = useState<Forecast | null>(null);
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  const [matchTransactionId, setMatchTransactionId] = useState('');
+  const [timelineScrollTop, setTimelineScrollTop] = useState(0);
+  const [timelineHeight, setTimelineHeight] = useState(480);
+  const [isNarrow, setIsNarrow] = useState(() => window.innerWidth < 480);
   const cursorRef = useRef<{ date: string; id: string } | null>(null);
   const loadingRef = useRef(false);
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transactionRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const dragStartPosRef = useRef<{ x: number; y: number } | null>(null);
-  const scrollAnchorRef = useRef<HTMLDivElement | null>(null);
-  const hasAutoScrolled = useRef(false);
-  const profileMenuButtonRef = useRef<HTMLButtonElement | null>(null);
-  const dialogRef = useRef<HTMLDivElement | null>(null);
-
-  const closeModal = useCallback(() => {
-    setSelectedTransaction(null);
-    setEditingForecast(null);
-    setAddingStandaloneForecast(false);
-    setStandaloneForecastName('');
-    setModalView('details');
-    setForecastDate('');
-    setForecastAmount('');
-    setForecastType('single');
-    setForecastDirection('expense');
-    setForecastMonths(12);
-    setAutoExtend(false);
-    setActionError(null);
-    setConfirmingDelete(null);
-    setMatchTransactionId('');
-  }, []);
-
-  const isModalOpen = Boolean(selectedTransaction || editingForecast || addingStandaloneForecast);
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      if (isModalOpen) {
-        event.preventDefault();
-        closeModal();
-      } else if (profileMenuOpen) {
-        setProfileMenuOpen(false);
-        profileMenuButtonRef.current?.focus();
-      }
-    };
-
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [closeModal, isModalOpen, profileMenuOpen]);
-
-  useEffect(() => {
-    if (isModalOpen) {
-      dialogRef.current?.focus();
-    }
-  }, [isModalOpen, modalView]);
+  const timelineRef = useRef<HTMLDivElement | null>(null);
+  const modalRef = useRef<HTMLDivElement | null>(null);
 
   const handleSignOut = async () => {
     await signOut(auth);
     setLocation("/login");
   };
 
-  const loadInitialTransactions = async () => {
+  const resetForecastForm = useCallback(() => {
+    setForecastDate('');
+    setForecastAmount('');
+    setForecastDirection('expense');
+    setForecastType('single');
+    setForecastMonths(12);
+    setForecastDayInterval(14);
+    setForecastDayCount(12);
+    setAutoExtend(false);
+    setMatchTransactionId('');
+  }, []);
+
+  const closeModal = useCallback((checkForUnsavedChanges = true) => {
+    const isForecastForm = modalView === 'forecast' || modalView === 'editForecast';
+    const hasDraft = Boolean(forecastDate || forecastAmount || standaloneForecastName);
+    if (checkForUnsavedChanges && isForecastForm && hasDraft && !window.confirm('Discard the changes to this forecast?')) {
+      return;
+    }
+    setSelectedTransaction(null);
+    setEditingForecast(null);
+    setAddingStandaloneForecast(false);
+    setStandaloneForecastName('');
+    setModalView('details');
+    resetForecastForm();
+  }, [forecastAmount, forecastDate, modalView, resetForecastForm, standaloneForecastName]);
+
+  const loadInitialTransactions = useCallback(async (force = false) => {
     const userId = auth.currentUser?.uid;
     if (!userId) {
-      setInitialError('Your session has ended. Please sign in again.');
       setInitialLoading(false);
       return;
     }
 
+    if (force) invalidateDashboardCache(userId);
     setInitialLoading(true);
-    setInitialError(null);
-    setPaginationError(null);
+    setLoadError(null);
+    setLoadMoreError(null);
+    cursorRef.current = null;
+    hasMoreRef.current = true;
     const [transactionsResult, forecastsResult, accountsResult] = await Promise.allSettled([
       getTransactions(userId, null),
       getForecasts(userId),
@@ -140,19 +128,16 @@ const Home = () => {
       console.error("Error loading accounts:", accountsResult.reason);
     }
 
-    if ([transactionsResult, forecastsResult, accountsResult].some((result) => result.status === 'rejected')) {
-      setInitialError('Some dashboard data could not be loaded. Check your connection and try again.');
+    const failedSections = [
+      transactionsResult.status === 'rejected' ? 'activity' : null,
+      forecastsResult.status === 'rejected' ? 'forecasts' : null,
+      accountsResult.status === 'rejected' ? 'accounts' : null,
+    ].filter(Boolean);
+    if (failedSections.length > 0) {
+      setLoadError(`We couldn’t load ${failedSections.join(', ')}. Check your connection and try again.`);
     }
-
     setInitialLoading(false);
-  };
-
-  const reobserveSentinel = () => {
-    if (observerRef.current && sentinelRef.current) {
-      observerRef.current.unobserve(sentinelRef.current);
-      observerRef.current.observe(sentinelRef.current);
-    }
-  };
+  }, []);
 
   const loadMoreTransactions = async () => {
     if (loadingRef.current || !hasMoreRef.current) return;
@@ -162,62 +147,61 @@ const Home = () => {
     
     loadingRef.current = true;
     setLoading(true);
-    setPaginationError(null);
+    setLoadMoreError(null);
     try {
       const result = await getTransactions(userId, cursorRef.current);
       if (result.transactions.length > 0) {
         setTransactions(prev => {
           const existingIds = new Set(prev.map((transaction) => transaction.id));
           const nextPage = result.transactions.filter((transaction) => !existingIds.has(transaction.id));
-          return nextPage.length ? [...prev, ...nextPage] : prev;
+          return nextPage.length > 0 ? [...prev, ...nextPage] : prev;
         });
         if (result.lastDate && result.lastId) {
           cursorRef.current = { date: result.lastDate, id: result.lastId };
         }
         hasMoreRef.current = result.hasMore;
         setHasMore(result.hasMore);
+        setLoadMoreError(null);
       } else {
         hasMoreRef.current = false;
         setHasMore(false);
       }
     } catch (error) {
       console.error("Error loading more:", error);
-      setPaginationError('We couldn’t load older transactions. Try again.');
+      setLoadMoreError('We couldn’t load older activity. Try again.');
     } finally {
       loadingRef.current = false;
       setLoading(false);
-      setTimeout(() => reobserveSentinel(), 100);
     }
   };
 
   useEffect(() => {
     loadInitialTransactions();
+  }, [loadInitialTransactions]);
+
+  useEffect(() => {
+    const updateViewport = () => {
+      setIsNarrow(window.innerWidth < 480);
+      if (timelineRef.current) setTimelineHeight(timelineRef.current.clientHeight);
+    };
+    updateViewport();
+    window.addEventListener('resize', updateViewport);
+    return () => window.removeEventListener('resize', updateViewport);
   }, []);
 
   useEffect(() => {
-    if (observerRef.current) {
-      observerRef.current.disconnect();
-    }
-
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMoreRef.current && !loadingRef.current) {
-          loadMoreTransactions();
-        }
-      },
-      { threshold: 0.1, rootMargin: '200px' }
-    );
-
-    if (sentinelRef.current) {
-      observerRef.current.observe(sentinelRef.current);
-    }
-
-    return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
+    const hasOpenDialog = Boolean(selectedTransaction || editingForecast || addingStandaloneForecast);
+    if (!hasOpenDialog) return;
+    modalRef.current?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeModal();
       }
     };
-  }, [initialLoading, hasMore]);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [addingStandaloneForecast, closeModal, editingForecast, selectedTransaction]);
 
   const getClientPos = (e: React.TouchEvent | React.MouseEvent | TouchEvent | MouseEvent) => {
     if ('touches' in e && e.touches.length > 0) {
@@ -293,7 +277,7 @@ const Home = () => {
 
       if (draggingForecast.id && target) {
         try {
-          await reconcileForecast(draggingForecast.id, target);
+          await reconcileForecast(draggingForecast.id, target, auth.currentUser!.uid);
           setForecasts(prev =>
             prev.map(f =>
               f.id === draggingForecast.id ? { ...f, matched_transaction_id: target } : f
@@ -301,7 +285,7 @@ const Home = () => {
           );
         } catch (error: any) {
           console.error('Error reconciling forecast:', error);
-          setActionError('We couldn’t match that forecast. Please try again.');
+          alert('Error reconciling: ' + (error?.message || 'Unknown error'));
         }
       }
 
@@ -325,22 +309,21 @@ const Home = () => {
   }, [draggingForecast]);
 
   const formatAmount = (amount: number) => {
-    const flippedAmount = -amount;
+    const isExpense = amount >= 0;
     const formatted = new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
-    }).format(flippedAmount);
+    }).format(Math.abs(amount));
     
     return {
-      display: formatted,
-      isPositive: flippedAmount >= 0
+      display: `${isExpense ? '−' : '+'}${formatted}`,
+      direction: isExpense ? 'Expense' : 'Income',
+      isPositive: !isExpense
     };
   };
 
   const formatDate = (dateString: string) => {
-    const date = /^\d{4}-\d{2}-\d{2}$/.test(dateString)
-      ? new Date(`${dateString}T00:00:00`)
-      : new Date(dateString);
+    const date = new Date(`${dateString}T00:00:00`);
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -357,20 +340,15 @@ const Home = () => {
       .slice(0, 2);
   };
 
-  const signedForecastAmount = () => {
-    const enteredAmount = Math.abs(parseFloat(forecastAmount));
-    return forecastDirection === 'expense' ? enteredAmount : -enteredAmount;
-  };
-
   const visibleForecasts = useMemo(
-    () => forecasts.filter((forecast) => !forecast.matched_transaction_id),
+    () => forecasts.filter(f => !f.matched_transaction_id),
     [forecasts]
   );
 
-  const companyNames = useMemo(() => Array.from(new Set([
+  const companyNames: string[] = useMemo(() => Array.from(new Set([
     ...transactions.map(t => t.merchant_name || t.counterparty_name),
     ...visibleForecasts.map(f => f.name)
-  ])).filter((name): name is string => Boolean(name)).sort((a, b) => a.localeCompare(b)), [transactions, visibleForecasts]);
+  ])).filter(Boolean).sort((a, b) => a.localeCompare(b)), [transactions, visibleForecasts]);
 
   const accountOptions = useMemo(() => Array.from(
     new Map(
@@ -445,8 +423,9 @@ const Home = () => {
       d.setDate(d.getDate() + 1);
     }
 
-    return data;
-  }, [accounts, visibleForecasts]);
+    if (!isNarrow) return data;
+    return data.filter((_, index) => index % 7 === 0 || index === data.length - 1);
+  }, [accounts, isNarrow, visibleForecasts]);
 
   const minBalancePoint = useMemo(() => {
     if (chartData.length === 0) return null;
@@ -461,7 +440,7 @@ const Home = () => {
     | { type: 'transaction'; data: Transaction }
     | { type: 'forecast'; data: Forecast };
 
-  const mergedItems = useMemo<MergedItem[]>(() => [
+  const mergedItems: MergedItem[] = useMemo(() => [
     ...visibleForecasts.map(f => ({ type: 'forecast' as const, data: f })),
     ...transactions.map(t => ({ type: 'transaction' as const, data: t })),
   ].sort((a, b) => b.data.date.localeCompare(a.data.date))
@@ -481,7 +460,7 @@ const Home = () => {
     }
     const tx = item.data as Transaction;
     return (tx.merchant_name || tx.counterparty_name) === companyFilter;
-  }), [visibleForecasts, transactions, accountFilter, companyFilter]);
+  }), [accountFilter, companyFilter, transactions, visibleForecasts]);
 
   const matchedTransactionIds = useMemo(() => {
     const ids = new Set<string>();
@@ -491,24 +470,22 @@ const Home = () => {
     return ids;
   }, [forecasts]);
 
-  const scrollAnchorIndex = useMemo(() => {
-    const firstTxIndex = mergedItems.findIndex(item => item.type === 'transaction');
-    if (firstTxIndex <= 0) return 0;
-    return Math.max(0, firstTxIndex - 3);
-  }, [mergedItems]);
+  const visibleTimelineRange = useMemo(() => {
+    const start = Math.max(0, Math.floor(timelineScrollTop / TIMELINE_ROW_HEIGHT) - TIMELINE_OVERSCAN);
+    const visibleCount = Math.ceil(timelineHeight / TIMELINE_ROW_HEIGHT) + (TIMELINE_OVERSCAN * 2);
+    return { start, end: Math.min(mergedItems.length, start + visibleCount) };
+  }, [mergedItems.length, timelineHeight, timelineScrollTop]);
 
-  useEffect(() => {
-    if (!initialLoading && !hasAutoScrolled.current && scrollAnchorRef.current) {
-      hasAutoScrolled.current = true;
-      requestAnimationFrame(() => {
-        if (!scrollAnchorRef.current) return;
-        const rect = scrollAnchorRef.current.getBoundingClientRect();
-        const fixedHeaderHeight = chartOpen ? 56 + window.innerHeight * 0.3 + 6 : 56 + 30;
-        const scrollTarget = window.scrollY + rect.top - fixedHeaderHeight;
-        window.scrollTo({ top: Math.max(0, scrollTarget), behavior: 'auto' });
-      });
-    }
-  }, [initialLoading, mergedItems.length]);
+  const visibleTimelineItems = useMemo(
+    () => mergedItems.slice(visibleTimelineRange.start, visibleTimelineRange.end),
+    [mergedItems, visibleTimelineRange]
+  );
+
+  const projectionSummary = useMemo(() => ({
+    current: typeof chartData[0]?.__total__ === 'number' ? chartData[0].__total__ : null,
+    minimum: typeof minBalancePoint?.__total__ === 'number' ? minBalancePoint.__total__ : null,
+    minimumDate: minBalancePoint?.fullDate ?? null,
+  }), [chartData, minBalancePoint]);
 
   const currentUser = auth.currentUser;
 
@@ -579,13 +556,13 @@ const Home = () => {
           </select>
           <div style={{ position: 'relative', flexShrink: 0 }}>
             <button
-              ref={profileMenuButtonRef}
+              type="button"
               data-testid="button-profile-menu"
               onClick={() => setProfileMenuOpen(!profileMenuOpen)}
               aria-label="Open account menu"
               aria-haspopup="menu"
               aria-expanded={profileMenuOpen}
-              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', border: 'none', background: 'transparent', borderRadius: '4px' }}
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', background: 'transparent', border: 'none', borderRadius: '4px' }}
             >
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round">
                 <line x1="3" y1="5" x2="17" y2="5" />
@@ -596,11 +573,15 @@ const Home = () => {
             {profileMenuOpen && (
               <>
                 <div
-                  aria-hidden="true"
                   style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000 }}
                   onClick={() => setProfileMenuOpen(false)}
                 />
-                <div role="menu" aria-label="Account menu" style={{
+                <div role="menu" aria-label="Account menu" onKeyDown={(event) => {
+                  if (event.key === 'Escape') {
+                    event.preventDefault();
+                    setProfileMenuOpen(false);
+                  }
+                }} style={{
                   position: 'absolute',
                   top: '40px',
                   right: 0,
@@ -642,17 +623,11 @@ const Home = () => {
                       </span>
                     )}
                   </div>
-                  {[
-                    { label: 'Linked Accounts', testId: 'menu-linked-accounts', path: '/linked-accounts' },
-                    { label: 'Profile (coming soon)', testId: 'menu-profile', path: '', disabled: true },
-                    { label: 'Billing (coming soon)', testId: 'menu-billing', path: '', disabled: true },
-                    { label: 'Settings (coming soon)', testId: 'menu-settings', path: '', disabled: true }
-                  ].map((item) => (
+                  {[{ label: 'Linked Accounts', testId: 'menu-linked-accounts', path: '/linked-accounts' }].map((item) => (
                     <button
                       key={item.testId}
                       data-testid={item.testId}
                       role="menuitem"
-                      disabled={item.disabled}
                       onClick={() => {
                         setProfileMenuOpen(false);
                         if (item.path) setLocation(item.path);
@@ -666,7 +641,7 @@ const Home = () => {
                         backgroundColor: 'white',
                         border: 'none',
                         cursor: 'pointer',
-                        color: item.disabled ? '#999' : '#333'
+                        color: '#333'
                       }}
                       onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f5f5f5')}
                       onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
@@ -677,6 +652,7 @@ const Home = () => {
                   <div style={{ borderTop: '1px solid #eee' }} />
                   <button
                     data-testid="button-sign-out"
+                    role="menuitem"
                     onClick={() => {
                       setProfileMenuOpen(false);
                       handleSignOut();
@@ -713,6 +689,12 @@ const Home = () => {
         backgroundColor: '#f5f5f5'
       }}>
         <div style={{ maxWidth: '600px', margin: '0 auto', padding: '2px 2px 0 2px' }}>
+          {loadError && (
+            <div role="alert" style={{ margin: '4px 2px', padding: '8px 10px', borderRadius: '6px', color: '#9f1239', background: '#fff1f2', border: '1px solid #fecdd3', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+              <span>{loadError}</span>
+              <button type="button" onClick={() => loadInitialTransactions(true)} style={{ border: '1px solid #be123c', borderRadius: '4px', padding: '4px 7px', background: 'white', color: '#9f1239', cursor: 'pointer', flexShrink: 0 }}>Retry</button>
+            </div>
+          )}
           {chartOpen && (
             <div
               data-testid="chart-container"
@@ -727,16 +709,19 @@ const Home = () => {
                 overflow: 'hidden'
               }}
             >
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '6px 10px', fontSize: '11px', color: '#4b5563', borderBottom: '1px solid #f3f4f6' }}>
+                <strong style={{ color: '#374151' }}>Projected balance</strong>
+                <span>Expenses lower · income raises</span>
+              </div>
               <div style={{ flex: 1, minHeight: 0, width: '100%' }}>
                 {chartData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
                       <XAxis
-                        dataKey="fullDate"
+                        dataKey="date"
                         tick={{ fontSize: 10 }}
                         interval={Math.floor(chartData.length / 6)}
                         tickLine={false}
-                        tickFormatter={(value: string) => formatDate(value).replace(/, \d{4}$/, '')}
                       />
                       <YAxis
                         tick={{ fontSize: 10 }}
@@ -754,17 +739,17 @@ const Home = () => {
                           const label = acct ? `${acct.name} ${acct.mask}` : name;
                           return [new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value), label];
                         }}
-                        labelFormatter={(label: string) => formatDate(label)}
+                        labelFormatter={(label: string) => label}
                         contentStyle={{ fontSize: '12px', borderRadius: '6px' }}
                       />
-                      <Legend
+                      {!isNarrow && <Legend
                         formatter={(value: string) => {
                           if (value === '__total__') return 'Total Cushion';
                           const acct = accounts.find(a => a.account_id === value);
                           return acct ? `${acct.name} ${acct.mask}` : value;
                         }}
                         wrapperStyle={{ fontSize: '11px', paddingTop: '0px' }}
-                      />
+                      />}
                       <ReferenceLine
                         y={0}
                         stroke="#999"
@@ -776,7 +761,7 @@ const Home = () => {
                         <>
                           {/* Vertical guide line pinpointing the date of the minimum */}
                           <ReferenceLine
-                            x={minBalancePoint.fullDate}
+                            x={minBalancePoint.date}
                             stroke="#90a4ae"
                             strokeDasharray="3 3"
                             strokeWidth={1}
@@ -801,7 +786,7 @@ const Home = () => {
                             }}
                           />
                           <ReferenceDot
-                            x={minBalancePoint.fullDate}
+                            x={minBalancePoint.date}
                             y={minBalancePoint.__total__}
                             r={4}
                             fill="#546e7a"
@@ -873,6 +858,12 @@ const Home = () => {
               )}
             </div>
           )}
+          {(projectionSummary.current !== null || projectionSummary.minimum !== null) && (
+            <div data-testid="projection-summary" aria-live="polite" style={{ padding: '6px 10px', background: 'white', border: '1px solid #eee', borderRadius: chartOpen ? '0 0 8px 8px' : '8px', display: 'flex', justifyContent: 'space-between', gap: '8px', fontSize: '12px', color: '#4b5563' }}>
+              <span>Today: <strong>{projectionSummary.current === null ? '—' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(projectionSummary.current)}</strong></span>
+              <span>Lowest: <strong>{projectionSummary.minimum === null ? '—' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(projectionSummary.minimum)}</strong>{projectionSummary.minimumDate ? ` on ${formatDate(projectionSummary.minimumDate)}` : ''}</span>
+            </div>
+          )}
           <div style={{ display: 'flex', alignItems: 'stretch' }}>
             <button
               data-testid="button-toggle-chart"
@@ -897,8 +888,8 @@ const Home = () => {
                 setStandaloneForecastName('');
                 setForecastDate('');
                 setForecastAmount('');
-                setForecastType('single');
                 setForecastDirection('expense');
+                setForecastType('single');
                 setModalView('forecast');
               }}
               style={{
@@ -921,32 +912,28 @@ const Home = () => {
       </div>
 
       {initialLoading ? (
-        <div aria-busy="true" style={{ padding: '24px 12px', color: '#666', textAlign: 'center' }}>
-          Loading your transactions and forecasts…
-        </div>
-      ) : initialError && mergedItems.length === 0 ? (
-        <div role="alert" style={{ margin: '16px 8px', padding: '16px', borderRadius: '8px', background: '#fff8e1', color: '#6b5300', textAlign: 'center' }}>
-          <p style={{ margin: '0 0 10px' }}>{initialError}</p>
-          <button onClick={loadInitialTransactions} style={{ padding: '7px 12px', border: '1px solid #b08800', borderRadius: '4px', background: 'white', color: '#6b5300', cursor: 'pointer' }}>
-            Retry dashboard load
-          </button>
-        </div>
+        <div role="status" aria-live="polite" style={{ padding: '36px 16px', textAlign: 'center', color: '#666' }}>Loading your activity and projections…</div>
       ) : mergedItems.length === 0 ? (
-        <div style={{ padding: '32px 18px', textAlign: 'center', color: '#555' }}>
-          <p style={{ margin: '0 0 8px', fontWeight: 600 }}>No transactions to show yet.</p>
-          <p style={{ margin: 0, fontSize: '14px' }}>Link an account or try refreshing after your bank has synced.</p>
+        <div style={{ padding: '36px 20px', textAlign: 'center', background: 'white', borderRadius: '8px', color: '#4b5563' }}>
+          <strong style={{ display: 'block', color: '#1f2937', marginBottom: '6px' }}>No activity yet</strong>
+          Add a bank account or an upcoming cash flow to see it here.
         </div>
       ) : (
-        <>
-          {initialError && (
-            <div role="alert" style={{ margin: '8px', padding: '12px', borderRadius: '8px', background: '#fff8e1', color: '#6b5300', fontSize: '14px' }}>
-              <div>{initialError}</div>
-              <button onClick={loadInitialTransactions} style={{ marginTop: '8px', padding: '6px 10px', border: '1px solid #b08800', borderRadius: '4px', background: 'white', color: '#6b5300', cursor: 'pointer' }}>
-                Retry dashboard load
-              </button>
-            </div>
-          )}
-          {mergedItems.map((item, idx) => {
+        <div
+          ref={timelineRef}
+          aria-label="Activity timeline"
+          onScroll={(event) => {
+            const target = event.currentTarget;
+            setTimelineScrollTop(target.scrollTop);
+            if (visibleTimelineRange.end >= mergedItems.length - 4 && hasMoreRef.current && !loadingRef.current) {
+              loadMoreTransactions();
+            }
+          }}
+          style={{ height: chartOpen ? 'calc(70vh - 72px)' : 'calc(100vh - 104px)', minHeight: '280px', overflowY: 'auto', padding: '2px', borderRadius: '8px', background: '#f5f5f5' }}
+        >
+          <div style={{ position: 'relative', height: `${mergedItems.length * TIMELINE_ROW_HEIGHT}px` }}>
+          {visibleTimelineItems.map((item, visibleIndex) => {
+            const idx = visibleTimelineRange.start + visibleIndex;
             const isForecast = item.type === 'forecast';
             const date = item.data.date;
             const amount = item.data.amount;
@@ -977,12 +964,7 @@ const Home = () => {
               );
             })();
 
-            const { display: amountDisplay, isPositive } = isForecast 
-              ? { 
-                  display: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(-amount),
-                  isPositive: -amount > 0
-                }
-              : formatAmount(amount);
+            const { display: amountDisplay, isPositive, direction } = formatAmount(amount);
             
             const itemKey = isForecast ? `forecast-${(item.data as Forecast).id}` : `tx-${(item.data as Transaction).id}`;
             const isDropTarget = !isForecast && dropTargetId === (item.data as Transaction).id;
@@ -992,9 +974,6 @@ const Home = () => {
               <div
                 key={itemKey}
                 ref={(el) => {
-                  if (idx === scrollAnchorIndex && el) {
-                    scrollAnchorRef.current = el;
-                  }
                   if (!isForecast && el) {
                     transactionRefs.current.set((item.data as Transaction).id, el);
                   }
@@ -1010,12 +989,12 @@ const Home = () => {
                   setForecastDate(fc.date);
                   setForecastAmount(Math.abs(fc.amount).toString());
                   setForecastDirection(fc.amount >= 0 ? 'expense' : 'income');
-                  setMatchTransactionId('');
+                  setMatchTransactionId(fc.matched_transaction_id || '');
                   setModalView('editForecast');
                 } : undefined}
                 role={isForecast ? 'button' : undefined}
                 tabIndex={isForecast ? 0 : undefined}
-                aria-label={isForecast ? `Edit ${displayName} ${amountDisplay} forecast` : undefined}
+                aria-label={isForecast ? `Edit ${displayName} forecast, ${direction} ${amountDisplay}` : undefined}
                 onKeyDown={isForecast ? (event) => {
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
@@ -1024,11 +1003,16 @@ const Home = () => {
                     setForecastDate(fc.date);
                     setForecastAmount(Math.abs(fc.amount).toString());
                     setForecastDirection(fc.amount >= 0 ? 'expense' : 'income');
-                    setMatchTransactionId('');
+                    setMatchTransactionId(fc.matched_transaction_id || '');
                     setModalView('editForecast');
                   }
                 } : undefined}
                 style={{
+                  position: 'absolute',
+                  top: `${idx * TIMELINE_ROW_HEIGHT}px`,
+                  left: 0,
+                  right: 0,
+                  minHeight: `${TIMELINE_ROW_HEIGHT - 2}px`,
                   display: 'flex',
                   alignItems: 'center',
                   gap: '12px',
@@ -1042,9 +1026,7 @@ const Home = () => {
                   cursor: isForecast ? 'grab' : 'default',
                   userSelect: 'none',
                   transition: 'background-color 0.15s, box-shadow 0.15s',
-                  touchAction: draggingForecast ? 'none' : 'auto',
-                  contentVisibility: 'auto',
-                  containIntrinsicSize: '64px'
+                  touchAction: draggingForecast ? 'none' : 'auto'
                 }}
               >
                 {logoUrl ? (
@@ -1080,16 +1062,15 @@ const Home = () => {
                     {displayName}
                   </div>
                   {isForecast && (
-                    <div style={{ fontSize: '11px', color: '#1976d2', fontWeight: 600 }}>
-                      FORECAST · {amount >= 0 ? 'EXPENSE' : 'INCOME'}
-                    </div>
+                    <div style={{ fontSize: '11px', color: '#1d4ed8', fontWeight: 600 }}>FORECAST · {direction.toUpperCase()}</div>
                   )}
                 </div>
                 
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 600, color: isForecast ? '#42A5F5' : (isPositive ? 'green' : 'inherit') }}>
+                  <div style={{ fontWeight: 600, color: isPositive ? '#15803d' : '#b91c1c' }}>
                     {amountDisplay}
                   </div>
+                  <div style={{ fontSize: '11px', color: isPositive ? '#15803d' : '#b91c1c' }}>{direction}</div>
                   <div style={{ fontSize: '12px', color: '#666' }}>
                     {formatDate(date)}
                   </div>
@@ -1114,26 +1095,19 @@ const Home = () => {
                       setModalView('details');
                     }}
                   >
-                    Details
+                    <span aria-hidden="true">…</span>
                   </button>
                 )}
               </div>
             );
           })}
-          
-          <div ref={sentinelRef} style={{ textAlign: 'center', padding: '20px' }}>
-            {loading && <p aria-live="polite">Loading older transactions…</p>}
-            {paginationError && (
-              <div role="alert" style={{ color: '#a33' }}>
-                <p>{paginationError}</p>
-                <button onClick={loadMoreTransactions} style={{ padding: '6px 10px', border: '1px solid #a33', borderRadius: '4px', background: 'white', color: '#a33', cursor: 'pointer' }}>
-                  Try again
-                </button>
-              </div>
-            )}
-            {!hasMore && <p style={{ color: '#666' }}>No more transactions</p>}
           </div>
-        </>
+          <div style={{ textAlign: 'center', padding: '12px', color: '#666', fontSize: '13px' }}>
+            {loading && <span role="status">Loading older activity…</span>}
+            {loadMoreError && <span role="alert">{loadMoreError} <button type="button" onClick={loadMoreTransactions} style={{ color: '#1d4ed8', background: 'none', border: 'none', textDecoration: 'underline', cursor: 'pointer' }}>Retry</button></span>}
+            {!loading && !loadMoreError && !hasMore && <span>No more activity</span>}
+          </div>
+        </div>
       )}
 
       {draggingForecast && dragPos && (
@@ -1161,7 +1135,7 @@ const Home = () => {
         </div>
       )}
 
-      {isModalOpen && (
+      {(selectedTransaction || editingForecast || addingStandaloneForecast) && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -1174,39 +1148,46 @@ const Home = () => {
           justifyContent: 'center',
           zIndex: 1000
         }}
-        onMouseDown={(event) => {
-          if (event.target === event.currentTarget && !saving) closeModal();
-        }}>
+        onClick={() => closeModal()}>
           <div
-            ref={dialogRef}
+            ref={modalRef}
             role="dialog"
             aria-modal="true"
-            aria-labelledby="forecast-dialog-title"
+            aria-labelledby="dashboard-modal-title"
             tabIndex={-1}
+            onKeyDown={(event) => {
+              if (event.key !== 'Tab') return;
+              const focusable = Array.from(
+                event.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])')
+              );
+              if (focusable.length === 0) return;
+              const first = focusable[0];
+              const last = focusable[focusable.length - 1];
+              if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+              } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+              }
+            }}
             style={{
             backgroundColor: 'white',
             padding: '24px',
             borderRadius: '8px',
             maxWidth: '400px',
             width: '90%'
-          }}>
-            {actionError && (
-              <div role="alert" style={{ marginBottom: '16px', padding: '10px 12px', borderRadius: '6px', background: '#fef2f2', color: '#b91c1c', fontSize: '14px' }}>
-                {actionError}
-              </div>
-            )}
+          }} onClick={(e) => e.stopPropagation()}>
+            {actionError && <div role="alert" style={{ marginBottom: '12px', padding: '8px', borderRadius: '4px', background: '#fff1f2', color: '#9f1239', fontSize: '13px' }}>{actionError}</div>}
 
             {modalView === 'details' && selectedTransaction && (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <h2 id="forecast-dialog-title" style={{ margin: 0 }}>Transaction Details</h2>
+                  <h2 id="dashboard-modal-title" style={{ margin: 0 }}>Transaction Details</h2>
                   <button
                     data-testid="button-close-modal"
                     aria-label="Close transaction details"
-                    onClick={() => {
-                      setSelectedTransaction(null);
-                      setModalView('details');
-                    }}
+                    onClick={() => closeModal(false)}
                     style={{
                       background: 'none',
                       border: 'none',
@@ -1215,7 +1196,9 @@ const Home = () => {
                       color: '#666',
                       padding: '4px 8px'
                     }}
-                  >×</button>
+                  >
+                    <span aria-hidden="true">×</span>
+                  </button>
                 </div>
 
                 <button
@@ -1333,7 +1316,7 @@ const Home = () => {
                           data-testid="button-undo-match"
                           onClick={async () => {
                             try {
-                              await unreconcileForecast(matchedForecast.id!);
+                              await unreconcileForecast(matchedForecast.id!, auth.currentUser!.uid);
                               const updatedForecasts = await getForecasts(auth.currentUser!.uid);
                               setForecasts(updatedForecasts);
                             } catch (error) {
@@ -1367,6 +1350,7 @@ const Home = () => {
                     {selectedTransaction && (
                       <button
                         data-testid="button-back-to-details"
+                        aria-label="Back to transaction details"
                         onClick={() => {
                           setModalView('details');
                           setForecastDate('');
@@ -1380,16 +1364,15 @@ const Home = () => {
                           color: '#666',
                           padding: '4px'
                         }}
-                          aria-label="Back to transaction details"
-                        >←</button>
+                      >
+                        &larr;
+                      </button>
                     )}
-                    <h2 id="forecast-dialog-title" style={{ margin: 0 }}>Add forecast</h2>
+                    <h2 id="dashboard-modal-title" style={{ margin: 0 }}>{addingStandaloneForecast ? 'Add cash flow' : 'Add forecast'}</h2>
                   </div>
                   <button
                     aria-label="Close forecast form"
-                    onClick={() => {
-                      closeModal();
-                    }}
+                    onClick={() => closeModal()}
                     style={{
                       background: 'none',
                       border: 'none',
@@ -1398,7 +1381,9 @@ const Home = () => {
                       color: '#666',
                       padding: '4px 8px'
                     }}
-                  >×</button>
+                  >
+                    <span aria-hidden="true">×</span>
+                  </button>
                 </div>
 
                 {selectedTransaction ? (
@@ -1427,6 +1412,18 @@ const Home = () => {
                     </span>
                   </div>
                 )}
+
+                <fieldset style={{ margin: '0 0 16px', padding: 0, border: 'none' }}>
+                  <legend style={{ marginBottom: '6px', fontSize: '14px', fontWeight: 500 }}>Cash flow direction</legend>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <label style={{ flex: 1, padding: '8px', border: `1px solid ${forecastDirection === 'expense' ? '#b91c1c' : '#ccc'}`, borderRadius: '4px', cursor: 'pointer', color: '#991b1b' }}>
+                      <input type="radio" name="forecast-direction" value="expense" checked={forecastDirection === 'expense'} onChange={() => setForecastDirection('expense')} /> Expense
+                    </label>
+                    <label style={{ flex: 1, padding: '8px', border: `1px solid ${forecastDirection === 'income' ? '#15803d' : '#ccc'}`, borderRadius: '4px', cursor: 'pointer', color: '#166534' }}>
+                      <input type="radio" name="forecast-direction" value="income" checked={forecastDirection === 'income'} onChange={() => setForecastDirection('income')} /> Income
+                    </label>
+                  </div>
+                </fieldset>
 
                 <div style={{ marginBottom: '16px' }}>
                   <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 500 }}>Type</label>
@@ -1507,39 +1504,10 @@ const Home = () => {
                 </div>
                 
                 <div style={{ marginTop: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 500 }}>Cash-flow direction</label>
-                  <div role="group" aria-label="Forecast cash-flow direction" style={{ display: 'flex', marginBottom: '10px' }}>
-                    <button
-                      type="button"
-                      onClick={() => setForecastDirection('expense')}
-                      aria-pressed={forecastDirection === 'expense'}
-                      style={{
-                        flex: 1, padding: '8px', border: '1px solid #ccc', borderRadius: '4px 0 0 4px',
-                        background: forecastDirection === 'expense' ? '#37474f' : '#f5f5f5',
-                        color: forecastDirection === 'expense' ? 'white' : '#333', cursor: 'pointer'
-                      }}
-                    >
-                      Expense
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setForecastDirection('income')}
-                      aria-pressed={forecastDirection === 'income'}
-                      style={{
-                        flex: 1, padding: '8px', border: '1px solid #ccc', borderLeft: 'none', borderRadius: '0 4px 4px 0',
-                        background: forecastDirection === 'income' ? '#2e7d32' : '#f5f5f5',
-                        color: forecastDirection === 'income' ? 'white' : '#333', cursor: 'pointer'
-                      }}
-                    >
-                      Income
-                    </button>
-                  </div>
-                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>
-                    Amount (enter a positive number)
-                  </label>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Amount (positive value)</label>
                   <input 
                     type="number" 
-                    min="0"
+                    min="0.01"
                     step="0.01"
                     placeholder="0.00"
                     data-testid="input-forecast-amount"
@@ -1553,11 +1521,6 @@ const Home = () => {
                       boxSizing: 'border-box'
                     }}
                   />
-                  <span style={{ display: 'block', marginTop: '4px', color: '#666', fontSize: '12px' }}>
-                    {forecastDirection === 'expense'
-                      ? 'This lowers the projected balance on the selected date.'
-                      : 'This raises the projected balance on the selected date.'}
-                  </span>
                 </div>
 
                 {forecastType === 'every_x_days' && (
@@ -1703,14 +1666,12 @@ const Home = () => {
                       if (!auth.currentUser) return;
                       if (!selectedTransaction && !addingStandaloneForecast) return;
                       setSaving(true);
-                      setActionError(null);
                       try {
-                        const amount = signedForecastAmount();
                         const baseForecast = selectedTransaction ? {
                           user_id: auth.currentUser.uid,
                           name: selectedTransaction.merchant_name || selectedTransaction.counterparty_name,
                           merchant_entity_id: selectedTransaction.merchant_entity_id || null,
-                          amount,
+                          amount: (forecastDirection === 'expense' ? 1 : -1) * Math.abs(parseFloat(forecastAmount)),
                           created_at: new Date().toISOString(),
                           account_id: selectedTransaction.account_id || null,
                           logo_url: selectedTransaction.logo_url || null,
@@ -1721,7 +1682,7 @@ const Home = () => {
                           user_id: auth.currentUser.uid,
                           name: standaloneForecastName.trim(),
                           merchant_entity_id: null,
-                          amount,
+                          amount: (forecastDirection === 'expense' ? 1 : -1) * Math.abs(parseFloat(forecastAmount)),
                           created_at: new Date().toISOString(),
                           account_id: null,
                           logo_url: null,
@@ -1742,6 +1703,7 @@ const Home = () => {
                           });
                         }
 
+                        invalidateDashboardCache(auth.currentUser.uid, ['forecasts']);
                         const updatedForecasts = await getForecasts(auth.currentUser.uid);
                         setForecasts(updatedForecasts);
                         setSelectedTransaction(null);
@@ -1755,7 +1717,7 @@ const Home = () => {
                         setAutoExtend(false);
                       } catch (error: any) {
                         console.error('Error saving forecast:', error?.code, error?.message, error);
-                        setActionError('We couldn’t save this forecast. Please check the details and try again.');
+                        alert('Error: ' + (error?.code || '') + ' ' + (error?.message || 'Unknown error'));
                       } finally {
                         setSaving(false);
                       }
@@ -1779,19 +1741,11 @@ const Home = () => {
             {modalView === 'editForecast' && editingForecast && (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <h2 id="forecast-dialog-title" style={{ margin: 0 }}>Edit Forecast</h2>
+                  <h2 id="dashboard-modal-title" style={{ margin: 0 }}>Edit forecast</h2>
                   <button
                     data-testid="button-close-edit-forecast"
                     aria-label="Close forecast editor"
-                    onClick={() => {
-                      setEditingForecast(null);
-                      setModalView('details');
-                      setForecastDate('');
-                      setForecastAmount('');
-                      setForecastType('single');
-                      setForecastMonths(12);
-                      setAutoExtend(false);
-                    }}
+                    onClick={() => closeModal()}
                     style={{
                       background: 'none',
                       border: 'none',
@@ -1800,7 +1754,9 @@ const Home = () => {
                       color: '#666',
                       padding: '4px 8px'
                     }}
-                  >×</button>
+                  >
+                    <span aria-hidden="true">×</span>
+                  </button>
                 </div>
 
                 <p style={{ margin: '0 0 16px 0' }}>
@@ -1810,50 +1766,15 @@ const Home = () => {
                   )}
                 </p>
 
-                <div style={{ padding: '12px', marginBottom: '16px', borderRadius: '6px', background: '#f4f8fb' }}>
-                  <label htmlFor="match-forecast-transaction" style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: 500 }}>
-                    Match to an actual transaction
+                <fieldset style={{ margin: '0 0 16px', padding: 0, border: 'none' }}>
+                  <legend style={{ marginBottom: '6px', fontSize: '14px', fontWeight: 500 }}>Cash flow direction</legend>
+                  <label style={{ marginRight: '16px', color: '#991b1b' }}>
+                    <input type="radio" name="edit-forecast-direction" checked={forecastDirection === 'expense'} onChange={() => setForecastDirection('expense')} /> Expense
                   </label>
-                  <select
-                    id="match-forecast-transaction"
-                    value={matchTransactionId}
-                    onChange={(event) => setMatchTransactionId(event.target.value)}
-                    style={{ width: '100%', padding: '8px', border: '1px solid #b8c7d1', borderRadius: '4px', background: 'white' }}
-                  >
-                    <option value="">Select a transaction</option>
-                    {transactions.map((transaction) => (
-                      <option key={transaction.id} value={transaction.id}>
-                        {formatDate(transaction.date)} · {transaction.merchant_name || transaction.counterparty_name}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    disabled={saving || !matchTransactionId}
-                    onClick={async () => {
-                      if (!editingForecast?.id || !matchTransactionId) return;
-                      setSaving(true);
-                      setActionError(null);
-                      try {
-                        await reconcileForecast(editingForecast.id, matchTransactionId);
-                        setForecasts((current) => current.map((forecast) =>
-                          forecast.id === editingForecast.id
-                            ? { ...forecast, matched_transaction_id: matchTransactionId }
-                            : forecast
-                        ));
-                        closeModal();
-                      } catch (error) {
-                        console.error('Error matching forecast:', error);
-                        setActionError('We couldn’t match this forecast. Please try again.');
-                      } finally {
-                        setSaving(false);
-                      }
-                    }}
-                    style={{ marginTop: '8px', padding: '7px 10px', border: 'none', borderRadius: '4px', background: '#1976d2', color: 'white', cursor: saving || !matchTransactionId ? 'not-allowed' : 'pointer', opacity: saving || !matchTransactionId ? 0.6 : 1 }}
-                  >
-                    Match forecast
-                  </button>
-                </div>
+                  <label style={{ color: '#166534' }}>
+                    <input type="radio" name="edit-forecast-direction" checked={forecastDirection === 'income'} onChange={() => setForecastDirection('income')} /> Income
+                  </label>
+                </fieldset>
 
                 <div style={{ marginTop: '0' }}>
                   <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Date</label>
@@ -1873,9 +1794,10 @@ const Home = () => {
                 </div>
                 
                 <div style={{ marginTop: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Amount</label>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Amount (positive value)</label>
                   <input 
                     type="number" 
+                    min="0.01"
                     step="0.01"
                     placeholder="0.00"
                     data-testid="input-edit-forecast-amount"
@@ -1891,6 +1813,40 @@ const Home = () => {
                   />
                 </div>
 
+                <div style={{ marginTop: '16px', paddingTop: '14px', borderTop: '1px solid #eee' }}>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: 500 }}>Match to a transaction (optional)</label>
+                  <select value={matchTransactionId} onChange={(event) => setMatchTransactionId(event.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', background: 'white' }}>
+                    <option value="">Choose a recent transaction</option>
+                    {transactions.slice(0, 100).map((transaction) => (
+                      <option key={transaction.id} value={transaction.id}>
+                        {formatDate(transaction.date)} · {transaction.merchant_name || transaction.counterparty_name} · {formatAmount(transaction.amount).display}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    disabled={saving || !matchTransactionId}
+                    onClick={async () => {
+                      if (!editingForecast?.id || !auth.currentUser || !matchTransactionId) return;
+                      setSaving(true);
+                      setActionError(null);
+                      try {
+                        await reconcileForecast(editingForecast.id, matchTransactionId, auth.currentUser.uid);
+                        setForecasts(await getForecasts(auth.currentUser.uid));
+                        closeModal(false);
+                      } catch (error) {
+                        console.error('Error matching forecast:', error);
+                        setActionError('We couldn’t match this forecast. Please try again.');
+                      } finally {
+                        setSaving(false);
+                      }
+                    }}
+                    style={{ marginTop: '8px', padding: '7px 10px', border: '1px solid #1d4ed8', borderRadius: '4px', background: 'white', color: '#1d4ed8', cursor: saving || !matchTransactionId ? 'not-allowed' : 'pointer' }}
+                  >
+                    Match forecast
+                  </button>
+                </div>
+
                 <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <button
                     data-testid="button-save-this-forecast"
@@ -1898,12 +1854,12 @@ const Home = () => {
                     onClick={async () => {
                       if (!editingForecast?.id || !auth.currentUser) return;
                       setSaving(true);
-                      setActionError(null);
                       try {
                         await updateForecast(editingForecast.id, {
                           date: forecastDate,
-                          amount: signedForecastAmount()
+                          amount: (forecastDirection === 'expense' ? 1 : -1) * Math.abs(parseFloat(forecastAmount))
                         });
+                        invalidateDashboardCache(auth.currentUser.uid, ['forecasts']);
                         const updatedForecasts = await getForecasts(auth.currentUser.uid);
                         setForecasts(updatedForecasts);
                         setEditingForecast(null);
@@ -1912,7 +1868,7 @@ const Home = () => {
                         setForecastAmount('');
                       } catch (error: any) {
                         console.error('Error updating forecast:', error);
-                        setActionError('We couldn’t update this forecast. Please try again.');
+                        alert('Error: ' + (error?.message || 'Unknown error'));
                       } finally {
                         setSaving(false);
                       }
@@ -1938,13 +1894,13 @@ const Home = () => {
                       onClick={async () => {
                         if (!editingForecast?.series_id || !auth.currentUser) return;
                         setSaving(true);
-                        setActionError(null);
                         try {
                           await updateSeriesForecasts(
                             editingForecast.series_id,
                             auth.currentUser.uid,
-                            { amount: signedForecastAmount() }
+                            { amount: (forecastDirection === 'expense' ? 1 : -1) * Math.abs(parseFloat(forecastAmount)) }
                           );
+                          invalidateDashboardCache(auth.currentUser.uid, ['forecasts']);
                           const updatedForecasts = await getForecasts(auth.currentUser.uid);
                           setForecasts(updatedForecasts);
                           setEditingForecast(null);
@@ -1953,7 +1909,7 @@ const Home = () => {
                           setForecastAmount('');
                         } catch (error: any) {
                           console.error('Error updating series:', error);
-                          setActionError('We couldn’t update this forecast series. Please try again.');
+                          alert('Error: ' + (error?.message || 'Unknown error'));
                         } finally {
                           setSaving(false);
                         }
@@ -1974,29 +1930,16 @@ const Home = () => {
                   )}
 
                   <div style={{ borderTop: '1px solid #eee', paddingTop: '8px', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {confirmingDelete && (
-                      <div role="alert" style={{ padding: '10px', background: '#fef2f2', color: '#991b1b', borderRadius: '6px', fontSize: '13px' }}>
-                        {confirmingDelete === 'series'
-                          ? 'This will permanently delete every forecast in this series.'
-                          : 'This will permanently delete this forecast.'}
-                        <button onClick={() => setConfirmingDelete(null)} style={{ marginLeft: '8px', background: 'transparent', border: 'none', color: '#991b1b', textDecoration: 'underline', cursor: 'pointer' }}>
-                          Cancel
-                        </button>
-                      </div>
-                    )}
                     <button
                       data-testid="button-delete-this-forecast"
                       disabled={saving}
                       onClick={async () => {
                         if (!editingForecast?.id || !auth.currentUser) return;
-                        if (confirmingDelete !== 'one') {
-                          setConfirmingDelete('one');
-                          return;
-                        }
+                        if (!confirm('Delete this forecast?')) return;
                         setSaving(true);
-                        setActionError(null);
                         try {
                           await deleteForecast(editingForecast.id);
+                          invalidateDashboardCache(auth.currentUser.uid, ['forecasts']);
                           const updatedForecasts = await getForecasts(auth.currentUser.uid);
                           setForecasts(updatedForecasts);
                           setEditingForecast(null);
@@ -2008,10 +1951,9 @@ const Home = () => {
                           setAutoExtend(false);
                         } catch (error: any) {
                           console.error('Error deleting forecast:', error);
-                          setActionError('We couldn’t delete this forecast. Please try again.');
+                          alert('Error: ' + (error?.message || 'Unknown error'));
                         } finally {
                           setSaving(false);
-                          setConfirmingDelete(null);
                         }
                       }}
                       style={{
@@ -2025,7 +1967,7 @@ const Home = () => {
                         fontWeight: 600
                       }}
                     >
-                      {saving ? 'Deleting...' : confirmingDelete === 'one' ? 'Confirm Delete This Forecast' : 'Delete This Forecast'}
+                      {saving ? 'Deleting...' : 'Delete This Forecast'}
                     </button>
 
                     {editingForecast.series_id && (
@@ -2034,14 +1976,11 @@ const Home = () => {
                         disabled={saving}
                         onClick={async () => {
                           if (!editingForecast?.series_id || !auth.currentUser) return;
-                          if (confirmingDelete !== 'series') {
-                            setConfirmingDelete('series');
-                            return;
-                          }
+                          if (!confirm('Delete all forecasts in this series?')) return;
                           setSaving(true);
-                          setActionError(null);
                           try {
                             await deleteSeriesForecasts(editingForecast.series_id, auth.currentUser.uid);
+                            invalidateDashboardCache(auth.currentUser.uid, ['forecasts']);
                             const updatedForecasts = await getForecasts(auth.currentUser.uid);
                             setForecasts(updatedForecasts);
                             setEditingForecast(null);
@@ -2053,10 +1992,9 @@ const Home = () => {
                             setAutoExtend(false);
                           } catch (error: any) {
                             console.error('Error deleting series:', error);
-                            setActionError('We couldn’t delete this forecast series. Please try again.');
+                            alert('Error: ' + (error?.message || 'Unknown error'));
                           } finally {
                             setSaving(false);
-                            setConfirmingDelete(null);
                           }
                         }}
                         style={{
@@ -2070,7 +2008,7 @@ const Home = () => {
                           fontWeight: 600
                         }}
                       >
-                        {saving ? 'Deleting...' : confirmingDelete === 'series' ? 'Confirm Delete Entire Series' : 'Delete Entire Series'}
+                        {saving ? 'Deleting...' : 'Delete Entire Series'}
                       </button>
                     )}
                   </div>
