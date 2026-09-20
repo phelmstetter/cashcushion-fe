@@ -28,7 +28,6 @@ const Home = () => {
   const [autoExtend, setAutoExtend] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState<'one' | 'series' | null>(null);
-  const [matchTransactionId, setMatchTransactionId] = useState('');
   const [editingForecast, setEditingForecast] = useState<Forecast | null>(null);
   const [addingStandaloneForecast, setAddingStandaloneForecast] = useState(false);
   const [standaloneForecastName, setStandaloneForecastName] = useState('');
@@ -67,7 +66,6 @@ const Home = () => {
     setAutoExtend(false);
     setActionError(null);
     setConfirmingDelete(null);
-    setMatchTransactionId('');
   }, []);
 
   const isModalOpen = Boolean(selectedTransaction || editingForecast || addingStandaloneForecast);
@@ -1004,13 +1002,56 @@ const Home = () => {
                 onTouchEnd={isForecast && !draggingForecast ? () => cancelLongPress() : undefined}
                 onMouseUp={isForecast && !draggingForecast ? () => cancelLongPress() : undefined}
                 onMouseLeave={isForecast && !draggingForecast ? () => cancelLongPress() : undefined}
+                draggable={isForecast}
+                onDragStart={isForecast ? (event) => {
+                  const forecast = item.data as Forecast;
+                  if (!forecast.id) {
+                    event.preventDefault();
+                    return;
+                  }
+                  cancelLongPress();
+                  event.dataTransfer.effectAllowed = 'move';
+                  event.dataTransfer.setData('text/plain', forecast.id);
+                  setDraggingForecast(forecast);
+                } : undefined}
+                onDragOver={!isForecast ? (event) => {
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = 'move';
+                  setDropTargetId((item.data as Transaction).id);
+                } : undefined}
+                onDrop={!isForecast ? async (event) => {
+                  event.preventDefault();
+                  const forecastId = event.dataTransfer.getData('text/plain');
+                  const transactionId = (item.data as Transaction).id;
+                  if (!forecastId) return;
+                  try {
+                    await reconcileForecast(forecastId, transactionId);
+                    setForecasts((current) => current.map((forecast) =>
+                      forecast.id === forecastId
+                        ? { ...forecast, matched_transaction_id: transactionId }
+                        : forecast
+                    ));
+                  } catch (error) {
+                    console.error('Error reconciling forecast:', error);
+                    setActionError('We couldn’t match that forecast. Please try again.');
+                  } finally {
+                    setDraggingForecast(null);
+                    setDragPos(null);
+                    setDropTargetId(null);
+                  }
+                } : undefined}
+                onDragEnd={isForecast ? () => {
+                  cancelLongPress();
+                  setDraggingForecast(null);
+                  setDragPos(null);
+                  setDropTargetId(null);
+                } : undefined}
                 onClick={isForecast && !draggingForecast ? () => {
                   const fc = item.data as Forecast;
                   setEditingForecast(fc);
                   setForecastDate(fc.date);
                   setForecastAmount(Math.abs(fc.amount).toString());
                   setForecastDirection(fc.amount >= 0 ? 'expense' : 'income');
-                  setMatchTransactionId('');
                   setModalView('editForecast');
                 } : undefined}
                 role={isForecast ? 'button' : undefined}
@@ -1024,7 +1065,6 @@ const Home = () => {
                     setForecastDate(fc.date);
                     setForecastAmount(Math.abs(fc.amount).toString());
                     setForecastDirection(fc.amount >= 0 ? 'expense' : 'income');
-                    setMatchTransactionId('');
                     setModalView('editForecast');
                   }
                 } : undefined}
@@ -1079,11 +1119,7 @@ const Home = () => {
                   }}>
                     {displayName}
                   </div>
-                  {isForecast && (
-                    <div style={{ fontSize: '11px', color: '#1976d2', fontWeight: 600 }}>
-                      FORECAST · {amount >= 0 ? 'EXPENSE' : 'INCOME'}
-                    </div>
-                  )}
+                  {isForecast && <div style={{ fontSize: '11px', color: '#1976d2', fontWeight: 600 }}>FORECAST</div>}
                 </div>
                 
                 <div style={{ textAlign: 'right' }}>
@@ -1188,7 +1224,9 @@ const Home = () => {
             padding: '24px',
             borderRadius: '8px',
             maxWidth: '400px',
-            width: '90%'
+            width: '90%',
+            maxHeight: '90vh',
+            overflowY: 'auto'
           }}>
             {actionError && (
               <div role="alert" style={{ marginBottom: '16px', padding: '10px 12px', borderRadius: '6px', background: '#fef2f2', color: '#b91c1c', fontSize: '14px' }}>
@@ -1809,51 +1847,6 @@ const Home = () => {
                     <span style={{ fontSize: '12px', color: '#42A5F5', marginLeft: '8px', fontWeight: 600 }}>SERIES</span>
                   )}
                 </p>
-
-                <div style={{ padding: '12px', marginBottom: '16px', borderRadius: '6px', background: '#f4f8fb' }}>
-                  <label htmlFor="match-forecast-transaction" style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: 500 }}>
-                    Match to an actual transaction
-                  </label>
-                  <select
-                    id="match-forecast-transaction"
-                    value={matchTransactionId}
-                    onChange={(event) => setMatchTransactionId(event.target.value)}
-                    style={{ width: '100%', padding: '8px', border: '1px solid #b8c7d1', borderRadius: '4px', background: 'white' }}
-                  >
-                    <option value="">Select a transaction</option>
-                    {transactions.map((transaction) => (
-                      <option key={transaction.id} value={transaction.id}>
-                        {formatDate(transaction.date)} · {transaction.merchant_name || transaction.counterparty_name}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    disabled={saving || !matchTransactionId}
-                    onClick={async () => {
-                      if (!editingForecast?.id || !matchTransactionId) return;
-                      setSaving(true);
-                      setActionError(null);
-                      try {
-                        await reconcileForecast(editingForecast.id, matchTransactionId);
-                        setForecasts((current) => current.map((forecast) =>
-                          forecast.id === editingForecast.id
-                            ? { ...forecast, matched_transaction_id: matchTransactionId }
-                            : forecast
-                        ));
-                        closeModal();
-                      } catch (error) {
-                        console.error('Error matching forecast:', error);
-                        setActionError('We couldn’t match this forecast. Please try again.');
-                      } finally {
-                        setSaving(false);
-                      }
-                    }}
-                    style={{ marginTop: '8px', padding: '7px 10px', border: 'none', borderRadius: '4px', background: '#1976d2', color: 'white', cursor: saving || !matchTransactionId ? 'not-allowed' : 'pointer', opacity: saving || !matchTransactionId ? 0.6 : 1 }}
-                  >
-                    Match forecast
-                  </button>
-                </div>
 
                 <div style={{ marginTop: '0' }}>
                   <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Date</label>
