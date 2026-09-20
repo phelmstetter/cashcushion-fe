@@ -23,6 +23,23 @@ service cloud.firestore {
              && (!data.keys().hasAny(['auto_extend']) || data.auto_extend is bool);
     }
 
+    // Existing forecasts may predate the current validation schema. Allow a
+    // user to reconcile one of those records without granting broader edits:
+    // only the match field can change, and it must point to that user's own
+    // transaction (or be cleared).
+    function isValidReconciliationUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['matched_transaction_id'])
+             && (
+               request.resource.data.matched_transaction_id == null
+               || (
+                 request.resource.data.matched_transaction_id is string
+                 && get(/databases/$(database)/documents/transactions/$(request.resource.data.matched_transaction_id))
+                      .data.user_id == request.auth.uid
+               )
+             );
+    }
+
     match /users/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
       allow create: if request.auth != null
@@ -55,7 +72,10 @@ service cloud.firestore {
       allow update: if request.auth != null
                     && resource.data.user_id == request.auth.uid
                     && request.resource.data.user_id == resource.data.user_id
-                    && isValidForecast(request.resource.data);
+                    && (
+                      isValidForecast(request.resource.data)
+                      || isValidReconciliationUpdate()
+                    );
 
       allow delete: if request.auth != null
                     && resource.data.user_id == request.auth.uid;
