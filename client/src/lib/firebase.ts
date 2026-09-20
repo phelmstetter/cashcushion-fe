@@ -113,46 +113,7 @@ export interface Account {
   plaid_item_id?: string | null;
 }
 
-type CacheEntry<T> = { value: T; expiresAt: number };
-const accountsCache = new Map<string, CacheEntry<Account[]>>();
-const forecastsCache = new Map<string, CacheEntry<Forecast[]>>();
-const transactionsCache = new Map<string, CacheEntry<TransactionsResult>>();
-const CACHE_TTL_MS = 60_000;
-const TRANSACTION_CACHE_LIMIT = 40;
-
-function readCached<T>(cache: Map<string, CacheEntry<T>>, key: string): T | null {
-  const entry = cache.get(key);
-  if (!entry) return null;
-  if (entry.expiresAt <= Date.now()) {
-    cache.delete(key);
-    return null;
-  }
-  return entry.value;
-}
-
-function cacheValue<T>(cache: Map<string, CacheEntry<T>>, key: string, value: T): T {
-  cache.set(key, { value, expiresAt: Date.now() + CACHE_TTL_MS });
-  return value;
-}
-
-/**
- * Removes locally cached dashboard reads after a mutation. The cache is
- * intentionally short-lived, but explicit invalidation keeps mutations
- * immediately truthful while avoiding refetches during normal navigation.
- */
-export function invalidateDashboardCache(userId: string, scopes: Array<'accounts' | 'forecasts' | 'transactions'> = ['accounts', 'forecasts', 'transactions']): void {
-  if (scopes.includes('accounts')) accountsCache.delete(userId);
-  if (scopes.includes('forecasts')) forecastsCache.delete(userId);
-  if (scopes.includes('transactions')) {
-    Array.from(transactionsCache.keys()).forEach((key) => {
-      if (key.startsWith(`${userId}:`)) transactionsCache.delete(key);
-    });
-  }
-}
-
 export async function getAccounts(userId: string): Promise<Account[]> {
-  const cached = readCached(accountsCache, userId);
-  if (cached) return cached;
   const accountsRef = collection(db, 'accounts');
   const q = query(accountsRef, where('user_id', '==', userId));
   const [querySnapshot, removedIds] = await Promise.all([
@@ -191,7 +152,7 @@ export async function getAccounts(userId: string): Promise<Account[]> {
     }
   });
   const accounts = Array.from(accountsById.values());
-  return cacheValue(accountsCache, userId, accounts.sort((a, b) => a.name.localeCompare(b.name)));
+  return accounts.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 async function getRemovedAccountIds(userId: string): Promise<Set<string>> {
@@ -237,30 +198,16 @@ export async function getTransactions(
   cursor?: { date: string; id: string } | null,
   pageSize: number = 20
 ): Promise<TransactionsResult> {
-  const cacheKey = `${userId}:${cursor?.date ?? 'first'}:${cursor?.id ?? 'page'}:${pageSize}`;
-  const cached = readCached(transactionsCache, cacheKey);
-  if (cached) return cached;
   const transactionsRef = collection(db, 'transactions');
   
-  let q;
-  if (cursor) {
-    q = query(
-      transactionsRef,
-      where('user_id', '==', userId),
-      orderBy('date', 'desc'),
-      orderBy('__name__', 'desc'),
-      startAfter(cursor.date, cursor.id),
-      limit(pageSize)
-    );
-  } else {
-    q = query(
-      transactionsRef,
-      where('user_id', '==', userId),
-      orderBy('date', 'desc'),
-      orderBy('__name__', 'desc'),
-      limit(pageSize)
-    );
-  }
+  const constraints = [
+    where('user_id', '==', userId),
+    orderBy('date', 'desc'),
+    orderBy('__name__', 'desc'),
+  ];
+  const q = cursor
+    ? query(transactionsRef, ...constraints, startAfter(cursor.date, cursor.id), limit(pageSize))
+    : query(transactionsRef, ...constraints, limit(pageSize));
   
   const querySnapshot = await getDocs(q);
   const transactions: Transaction[] = [];
@@ -282,18 +229,12 @@ export async function getTransactions(
   const lastTransaction = transactions[transactions.length - 1];
   const hasMore = querySnapshot.docs.length === pageSize;
   
-  const result = {
+  return { 
     transactions, 
     lastDate: lastTransaction?.date || null,
     lastId: lastTransaction?.id || null,
     hasMore 
   };
-  cacheValue(transactionsCache, cacheKey, result);
-  if (transactionsCache.size > TRANSACTION_CACHE_LIMIT) {
-    const oldestKey = transactionsCache.keys().next().value;
-    if (oldestKey) transactionsCache.delete(oldestKey);
-  }
-  return result;
 }
 
 export interface Forecast {
@@ -319,17 +260,6 @@ export async function saveForecast(forecast: Forecast): Promise<string> {
   return docRef.id;
 }
 
-async function commitInBatches(
-  writes: Array<(batch: ReturnType<typeof writeBatch>) => void>
-): Promise<void> {
-  const MAX_BATCH_WRITES = 450;
-  for (let start = 0; start < writes.length; start += MAX_BATCH_WRITES) {
-    const batch = writeBatch(db);
-    writes.slice(start, start + MAX_BATCH_WRITES).forEach((write) => write(batch));
-    await batch.commit();
-  }
-}
-
 export async function saveSeriesForecasts(
   baseForecast: Omit<Forecast, 'id' | 'date'>,
   startDate: string,
@@ -338,7 +268,7 @@ export async function saveSeriesForecasts(
   const seriesId = crypto.randomUUID ? crypto.randomUUID() : `series_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   const forecastsRef = collection(db, 'forecasts');
 
-  const writes: Array<(batch: ReturnType<typeof writeBatch>) => void> = [];
+  const forecasts: Omit<Forecast, 'id'>[] = [];
   for (let i = 0; i < monthCount; i++) {
     const d = new Date(startDate + 'T00:00:00');
     d.setMonth(d.getMonth() + i);
@@ -346,14 +276,13 @@ export async function saveSeriesForecasts(
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
 
-    const forecastRef = doc(forecastsRef);
-    writes.push((batch) => batch.set(forecastRef, {
+    forecasts.push({
       ...baseForecast,
       date: `${yyyy}-${mm}-${dd}`,
       series_id: seriesId
-    }));
+    });
   }
-  await commitInBatches(writes);
+  await writeForecastsInBatches(forecastsRef, forecasts);
 
   return seriesId;
 }
@@ -367,7 +296,7 @@ export async function saveDayIntervalForecasts(
   const seriesId = crypto.randomUUID ? crypto.randomUUID() : `series_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   const forecastsRef = collection(db, 'forecasts');
 
-  const writes: Array<(batch: ReturnType<typeof writeBatch>) => void> = [];
+  const forecasts: Omit<Forecast, 'id'>[] = [];
   for (let i = 0; i < count; i++) {
     const d = new Date(startDate + 'T00:00:00');
     d.setDate(d.getDate() + (dayInterval * i));
@@ -375,14 +304,13 @@ export async function saveDayIntervalForecasts(
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
 
-    const forecastRef = doc(forecastsRef);
-    writes.push((batch) => batch.set(forecastRef, {
+    forecasts.push({
       ...baseForecast,
       date: `${yyyy}-${mm}-${dd}`,
       series_id: seriesId
-    }));
+    });
   }
-  await commitInBatches(writes);
+  await writeForecastsInBatches(forecastsRef, forecasts);
 
   return seriesId;
 }
@@ -404,15 +332,12 @@ export async function updateSeriesForecasts(
     where('series_id', '==', seriesId)
   );
   const snapshot = await getDocs(q);
-  const writes = snapshot.docs.map((snapshotDoc) => (
-    (batch: ReturnType<typeof writeBatch>) => batch.update(snapshotDoc.ref, updates)
-  ));
-  await commitInBatches(writes);
+  await writeInBatches(snapshot.docs, (batch, forecastDoc) => {
+    batch.update(forecastDoc.ref, updates);
+  });
 }
 
 export async function getForecasts(userId: string): Promise<Forecast[]> {
-  const cached = readCached(forecastsCache, userId);
-  if (cached) return cached;
   const forecastsRef = collection(db, 'forecasts');
   const q = query(
     forecastsRef,
@@ -440,7 +365,7 @@ export async function getForecasts(userId: string): Promise<Forecast[]> {
       auto_extend: Boolean(data.auto_extend)
     });
   });
-  return cacheValue(forecastsCache, userId, forecasts);
+  return forecasts;
 }
 
 export async function deleteForecast(forecastId: string): Promise<void> {
@@ -456,24 +381,49 @@ export async function deleteSeriesForecasts(seriesId: string, userId: string): P
     where('series_id', '==', seriesId)
   );
   const snapshot = await getDocs(q);
-  const writes = snapshot.docs.map((snapshotDoc) => (
-    (batch: ReturnType<typeof writeBatch>) => batch.delete(snapshotDoc.ref)
-  ));
-  await commitInBatches(writes);
+  await writeInBatches(snapshot.docs, (batch, forecastDoc) => {
+    batch.delete(forecastDoc.ref);
+  });
 }
 
-export async function reconcileForecast(forecastId: string, transactionId: string, userId: string): Promise<void> {
+const MAX_BATCH_OPERATIONS = 400;
+
+async function writeForecastsInBatches(
+  forecastsRef: ReturnType<typeof collection>,
+  forecasts: Omit<Forecast, 'id'>[]
+): Promise<void> {
+  for (let index = 0; index < forecasts.length; index += MAX_BATCH_OPERATIONS) {
+    const batch = writeBatch(db);
+    for (const forecast of forecasts.slice(index, index + MAX_BATCH_OPERATIONS)) {
+      batch.set(doc(forecastsRef), forecast);
+    }
+    await batch.commit();
+  }
+}
+
+async function writeInBatches<T extends { ref: ReturnType<typeof doc> }>(
+  records: T[],
+  write: (batch: ReturnType<typeof writeBatch>, record: T) => void
+): Promise<void> {
+  for (let index = 0; index < records.length; index += MAX_BATCH_OPERATIONS) {
+    const batch = writeBatch(db);
+    for (const record of records.slice(index, index + MAX_BATCH_OPERATIONS)) {
+      write(batch, record);
+    }
+    await batch.commit();
+  }
+}
+
+export async function reconcileForecast(forecastId: string, transactionId: string): Promise<void> {
   const forecastRef = doc(db, 'forecasts', forecastId);
   await updateDoc(forecastRef, {
     matched_transaction_id: transactionId
   });
-  invalidateDashboardCache(userId, ['forecasts']);
 }
 
-export async function unreconcileForecast(forecastId: string, userId: string): Promise<void> {
+export async function unreconcileForecast(forecastId: string): Promise<void> {
   const forecastRef = doc(db, 'forecasts', forecastId);
   await updateDoc(forecastRef, {
     matched_transaction_id: null
   });
-  invalidateDashboardCache(userId, ['forecasts']);
 }

@@ -3,30 +3,30 @@ const { CountryCode } = require('plaid');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { logPlaidError, publicError } = require('../lib/bankingSecurity');
 
-const MAX_BATCH_OPERATIONS = 450;
-const MAX_IN_VALUES = 10;
+const MAX_BATCH_OPERATIONS = 400;
+const MAX_IN_QUERY_VALUES = 10;
 
-function chunks(values, size) {
-  const result = [];
-  for (let i = 0; i < values.length; i += size) {
-    result.push(values.slice(i, i + size));
-  }
-  return result;
-}
-
-async function commitOperations(db, operations) {
-  for (const operationChunk of chunks(operations, MAX_BATCH_OPERATIONS)) {
-    if (operationChunk.length === 0) continue;
+async function commitInBatches(db, operations) {
+  for (let index = 0; index < operations.length; index += MAX_BATCH_OPERATIONS) {
     const batch = db.batch();
-    for (const operation of operationChunk) {
-      if (operation.type === 'delete') {
-        batch.delete(operation.ref);
-      } else {
-        batch.set(operation.ref, operation.data, operation.options);
-      }
+    for (const operation of operations.slice(index, index + MAX_BATCH_OPERATIONS)) {
+      operation(batch);
     }
     await batch.commit();
   }
+}
+
+async function getRecordsForAccountIds(db, collectionName, uid, accountIds) {
+  const records = [];
+  for (let index = 0; index < accountIds.length; index += MAX_IN_QUERY_VALUES) {
+    const ids = accountIds.slice(index, index + MAX_IN_QUERY_VALUES);
+    const snapshot = await db.collection(collectionName)
+      .where('user_id', '==', uid)
+      .where('account_id', 'in', ids)
+      .get();
+    snapshot.forEach((record) => records.push(record));
+  }
+  return records;
 }
 
 /**
@@ -113,79 +113,57 @@ async function handler(uid, req, res) {
       .where('plaid_item_id', '==', itemId)
       .get();
 
-    const staleAccountIds = [];
+    const staleAccountIds = new Set();
     existingSnap.forEach((d) => {
       const aid = d.data().account_id;
       // An account is stale if Plaid no longer returns it, OR if the user has
       // tombstoned it — in either case its Firestore doc should be removed.
       if (aid && !freshAccountIds.has(aid)) {
-        staleAccountIds.push(aid);
-      }
-    });
-    const uniqueStaleAccountIds = [...new Set(staleAccountIds)];
-
-    // Gather all changes first, then commit in chunks below Firestore's 500
-    // operation limit. The 450-operation limit leaves room for future fields
-    // added to this reconciliation without risking a rejected commit.
-    const operations = [{
-      type: 'set',
-      ref: db.collection('plaid_items').doc(itemId),
-      data: { last_used_at: FieldValue.serverTimestamp() },
-      options: { merge: true },
-    }];
-
-    existingSnap.forEach((d) => {
-      if (uniqueStaleAccountIds.includes(d.data().account_id)) {
-        operations.push({ type: 'delete', ref: d.ref });
+        staleAccountIds.add(aid);
       }
     });
 
-    // Delete transactions and forecasts for removed accounts.
-    if (uniqueStaleAccountIds.length > 0) {
-      const accountIdChunks = chunks(uniqueStaleAccountIds, MAX_IN_VALUES);
-      const [staleTxSnapshots, staleForecastSnapshots] = await Promise.all([
-        Promise.all(accountIdChunks.map((accountIdChunk) => db.collection('transactions')
-          .where('user_id', '==', uid)
-          .where('account_id', 'in', accountIdChunk)
-          .get())),
-        Promise.all(accountIdChunks.map((accountIdChunk) => db.collection('forecasts')
-          .where('user_id', '==', uid)
-          .where('account_id', 'in', accountIdChunk)
-          .get())),
-      ]);
-      staleTxSnapshots.forEach((snapshot) => snapshot.forEach((d) => {
-        operations.push({ type: 'delete', ref: d.ref });
-      }));
-      staleForecastSnapshots.forEach((snapshot) => snapshot.forEach((d) => {
-        operations.push({ type: 'delete', ref: d.ref });
-      }));
-    }
+    const staleAccountIdList = Array.from(staleAccountIds);
+    const [staleTransactions, staleForecasts] = staleAccountIdList.length > 0
+      ? await Promise.all([
+          getRecordsForAccountIds(db, 'transactions', uid, staleAccountIdList),
+          getRecordsForAccountIds(db, 'forecasts', uid, staleAccountIdList),
+        ])
+      : [[], []];
 
-    // Upsert fresh (non-tombstoned) accounts.
+    const operations = [
+      (batch) => batch.set(db.collection('plaid_items').doc(itemId), {
+        last_used_at: FieldValue.serverTimestamp(),
+      }, { merge: true }),
+    ];
+
+    existingSnap.forEach((record) => {
+      if (staleAccountIds.has(record.data().account_id)) {
+        operations.push((batch) => batch.delete(record.ref));
+      }
+    });
+    staleTransactions.forEach((record) => operations.push((batch) => batch.delete(record.ref)));
+    staleForecasts.forEach((record) => operations.push((batch) => batch.delete(record.ref)));
+
     for (const acct of freshAccounts) {
       const docId = `${uid}_${itemId}_${acct.account_id}`;
-      operations.push({
-        type: 'set',
-        ref: db.collection('accounts').doc(docId),
-        data: {
-          user_id: uid,
-          account_id: acct.account_id,
-          name: acct.name,
-          official_name: acct.official_name,
-          mask: acct.mask,
-          type: acct.type,
-          subtype: acct.subtype,
-          available_balance: acct.available_balance,
-          current_balance: acct.current_balance,
-          plaid_item_id: itemId,
-          plaid_institution_id: institutionId,
-          plaid_institution_name: institutionName,
-        },
-        options: { merge: true },
-      });
+      operations.push((batch) => batch.set(db.collection('accounts').doc(docId), {
+        user_id: uid,
+        account_id: acct.account_id,
+        name: acct.name,
+        official_name: acct.official_name,
+        mask: acct.mask,
+        type: acct.type,
+        subtype: acct.subtype,
+        available_balance: acct.available_balance,
+        current_balance: acct.current_balance,
+        plaid_item_id: itemId,
+        plaid_institution_id: institutionId,
+        plaid_institution_name: institutionName,
+      }, { merge: true }));
     }
 
-    await commitOperations(db, operations);
+    await commitInBatches(db, operations);
 
     return res.status(200).json({
       ok: true,

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { usePlaidLink } from 'react-plaid-link';
-import { auth, getAccounts, invalidateDashboardCache, type Account } from '@/lib/firebase';
+import { auth, getAccounts, type Account } from '@/lib/firebase';
 import { apiFetch } from '@/lib/queryClient';
 
 // Many US banks require an OAuth login step in Plaid Link: the user gets
@@ -27,7 +27,6 @@ function isOAuthRedirect() {
 export default function LinkedAccounts() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [linkToken, setLinkToken] = useState<string | null>(null);
   const [linking, setLinking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,19 +56,15 @@ export default function LinkedAccounts() {
     setLinkToken(savedToken);
   }, []);
 
-  const loadAccounts = useCallback(async (force = false) => {
+  const loadAccounts = useCallback(async () => {
     const user = auth.currentUser;
     if (!user) return;
-    setLoading(true);
-    setLoadError(null);
-    if (force) invalidateDashboardCache(user.uid, ['accounts']);
     try {
       const accts = await getAccounts(user.uid);
       setAccounts(accts);
       setError(null);
     } catch (err) {
-      console.error('Failed to load linked accounts:', err);
-      setLoadError('We couldn’t load your linked accounts. Check your connection and try again.');
+      setError(customerError(err, 'We couldn’t load your linked accounts. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -136,14 +131,12 @@ export default function LinkedAccounts() {
         // Server handles full reconciliation: deletes stale accounts/transactions/forecasts
         // and upserts fresh accounts — just reload the local list.
         await apiFetch('POST', '/api/plaid/refresh-accounts', { itemId: updatingItemId });
-        invalidateDashboardCache(user.uid);
-        await loadAccounts(true);
+        await loadAccounts();
       } else {
         const res = await apiFetch('POST', '/api/plaid/exchange-token', { publicToken });
         const data: PlaidFlowResponse = await res.json();
         if (data.ok) {
-          invalidateDashboardCache(user.uid);
-          await loadAccounts(true);
+          await loadAccounts();
         } else {
           setError(data.error || 'We couldn’t save your bank connection. Please try again.');
         }
@@ -226,7 +219,7 @@ export default function LinkedAccounts() {
     setSyncStatus(null);
     try {
       await apiFetch('POST', '/api/plaid/sync-item', { itemId });
-      setSyncStatus({ itemId, ok: true, message: 'Sync requested. Your updated transactions will appear shortly.' });
+      setSyncStatus({ itemId, ok: true, message: 'Sync requested. Your newest transactions will appear shortly.' });
     } catch (err: any) {
       console.error('Failed to request sync:', err);
       setSyncStatus({ itemId, ok: false, message: customerError(err, 'We couldn’t request a bank sync. Please try again.') });
@@ -249,8 +242,8 @@ export default function LinkedAccounts() {
       // The server creates tombstones, revokes the item when present, and
       // removes only the current user's bank-managed records.
       await apiFetch('POST', '/api/plaid/remove-item', { itemId, accountIds: plaidAccountIds });
-      invalidateDashboardCache(user.uid);
-      await loadAccounts(true);
+      await loadAccounts();
+      setConfirmRemoveKey(null);
     } catch (err: any) {
       console.error('Failed to complete local account cleanup:', err);
       setError(customerError(err, 'We couldn’t remove this bank connection. Please try again.'));
@@ -291,8 +284,8 @@ export default function LinkedAccounts() {
       }}>
         <button
           data-testid="button-back"
-          onClick={() => navigate('/home')}
           aria-label="Back to dashboard"
+          onClick={() => navigate('/home')}
           style={{
             background: 'none',
             border: 'none',
@@ -349,21 +342,21 @@ export default function LinkedAccounts() {
             }}
           >
             {error}
+            <button
+              onClick={loadAccounts}
+              style={{ display: 'block', marginTop: '8px', padding: '5px 9px', border: '1px solid #b91c1c', borderRadius: '4px', background: 'white', color: '#b91c1c', cursor: 'pointer' }}
+            >
+              Retry
+            </button>
           </div>
         )}
         {loading ? (
-          <div role="status" aria-live="polite" style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
-            Loading accounts...
-          </div>
-        ) : loadError ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#555' }}>
-            <p style={{ marginTop: 0 }}>{loadError}</p>
-            <button type="button" onClick={() => loadAccounts(true)} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #555', background: 'white', cursor: 'pointer' }}>Retry</button>
+          <div aria-busy="true" style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
+            Loading your linked accounts…
           </div>
         ) : Object.keys(grouped).length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
-            <strong style={{ display: 'block', color: '#555', marginBottom: '6px' }}>No linked accounts yet</strong>
-            Add a bank account to see balances and transactions here.
+            No linked accounts found. Add a bank account to see balances and transactions here.
           </div>
         ) : (
           Object.entries(grouped).map(([instId, group]) => (
@@ -460,18 +453,16 @@ export default function LinkedAccounts() {
                   const isConfirming = confirmRemoveKey === removalKey;
                   if (isConfirming) {
                     return (
-                      <div role="alertdialog" aria-modal="false" aria-label={`Confirm removal of ${group.name}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <div role="alertdialog" aria-label={`Confirm removal of ${group.name}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         <span
                           data-testid={`text-confirm-remove-${instId}`}
                           style={{ fontSize: '13px', color: '#b91c1c' }}
                         >
-                          Remove {group.accounts.length} account{group.accounts.length === 1 ? '' : 's'} from {group.name}? This permanently removes their stored transactions and forecasts from CashCushion. Your bank account itself is not closed.
+                          Remove {group.accounts.length} account{group.accounts.length === 1 ? '' : 's'} from {group.name}? Bank-managed transactions and forecasts for these accounts will also be removed.
                         </span>
                         <button
                           data-testid={`button-confirm-remove-${instId}`}
-                          aria-label={`Confirm removal of ${group.name}`}
                           onClick={() => {
-                            setConfirmRemoveKey(null);
                             handleRemoveBank(group.itemId, group.accounts);
                           }}
                           disabled={isRemoving}
@@ -491,7 +482,6 @@ export default function LinkedAccounts() {
                         </button>
                         <button
                           data-testid={`button-cancel-remove-${instId}`}
-                          aria-label="Cancel account removal"
                           onClick={() => setConfirmRemoveKey(null)}
                           style={{
                             fontSize: '13px',
@@ -513,7 +503,6 @@ export default function LinkedAccounts() {
                   return (
                     <button
                       data-testid={`button-remove-bank-${instId}`}
-                      aria-label={`Remove bank connection for ${group.name}`}
                       onClick={() => {
                         if (!isRemoving) {
                           setConfirmRemoveKey(removalKey);
@@ -540,7 +529,6 @@ export default function LinkedAccounts() {
               {syncStatus && syncStatus.itemId === group.itemId && (
                 <div
                   data-testid={`text-sync-status-${instId}`}
-                  role={syncStatus.ok ? 'status' : 'alert'}
                   style={{
                     padding: '8px 16px',
                     fontSize: '13px',

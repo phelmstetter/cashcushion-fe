@@ -2,30 +2,29 @@ const { getPlaidClient } = require('../lib/plaidClient');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { logPlaidError, publicError } = require('../lib/bankingSecurity');
 
-const MAX_BATCH_OPERATIONS = 450;
-const MAX_IN_VALUES = 10;
+const MAX_BATCH_OPERATIONS = 400;
+const MAX_IN_QUERY_VALUES = 10;
 
-function chunks(values, size) {
-  const result = [];
-  for (let i = 0; i < values.length; i += size) {
-    result.push(values.slice(i, i + size));
-  }
-  return result;
-}
-
-async function commitOperations(db, operations) {
-  for (const operationChunk of chunks(operations, MAX_BATCH_OPERATIONS)) {
-    if (operationChunk.length === 0) continue;
+async function commitInBatches(db, operations) {
+  for (let index = 0; index < operations.length; index += MAX_BATCH_OPERATIONS) {
     const batch = db.batch();
-    for (const operation of operationChunk) {
-      if (operation.type === 'delete') {
-        batch.delete(operation.ref);
-      } else {
-        batch.set(operation.ref, operation.data, operation.options);
-      }
+    for (const operation of operations.slice(index, index + MAX_BATCH_OPERATIONS)) {
+      operation(batch);
     }
     await batch.commit();
   }
+}
+
+async function getForecastsForAccountIds(db, uid, accountIds) {
+  const records = [];
+  for (let index = 0; index < accountIds.length; index += MAX_IN_QUERY_VALUES) {
+    const snapshot = await db.collection('forecasts')
+      .where('user_id', '==', uid)
+      .where('account_id', 'in', accountIds.slice(index, index + MAX_IN_QUERY_VALUES))
+      .get();
+    snapshot.forEach((record) => records.push(record));
+  }
+  return records;
 }
 
 /**
@@ -42,7 +41,7 @@ async function handler(uid, req, res) {
     if ((!itemId || typeof itemId !== 'string') && (!Array.isArray(requestedAccountIds) || requestedAccountIds.length === 0)) {
       return publicError(res, 400, 'Please choose a bank connection and try again.');
     }
-    if (Array.isArray(requestedAccountIds) && requestedAccountIds.some((id) => typeof id !== 'string' || !id)) {
+    if (Array.isArray(requestedAccountIds) && (requestedAccountIds.length > 10 || requestedAccountIds.some((id) => typeof id !== 'string' || !id))) {
       return publicError(res, 400, 'Please choose a bank connection and try again.');
     }
 
@@ -74,24 +73,19 @@ async function handler(uid, req, res) {
     // Locate only records owned by the signed-in user. For a legacy account
     // group without a plaid_items document, accountIds provide the narrow,
     // user-owned set that must be removed.
-    let accountSnapshots;
+    let accountsSnap;
     if (itemId) {
-      accountSnapshots = [await db.collection('accounts')
+      accountsSnap = await db.collection('accounts')
         .where('user_id', '==', uid)
         .where('plaid_item_id', '==', itemId)
-        .get()];
+        .get();
     } else {
-      accountSnapshots = await Promise.all(
-        chunks(requestedAccountIds, MAX_IN_VALUES).map((accountIdChunk) =>
-          db.collection('accounts')
-            .where('user_id', '==', uid)
-            .where('account_id', 'in', accountIdChunk)
-            .get()
-        )
-      );
+      accountsSnap = await db.collection('accounts')
+        .where('user_id', '==', uid)
+        .where('account_id', 'in', requestedAccountIds)
+        .get();
     }
-    const accountDocs = accountSnapshots.flatMap((snapshot) => snapshot.docs);
-    if (!itemDoc?.exists && accountDocs.length === 0) {
+    if (!itemDoc?.exists && accountsSnap.empty) {
       return publicError(res, 404, 'This bank connection is no longer available. Please link it again.');
     }
 
@@ -99,54 +93,37 @@ async function handler(uid, req, res) {
     // prevents a later sync or re-link from silently recreating a removed one.
     const operations = [];
     if (itemDoc?.exists) {
-      operations.push({
-        type: 'set',
-        ref: db.collection('plaid_items').doc(itemId),
-        data: { deactivated_at: FieldValue.serverTimestamp() },
-        options: { merge: true },
-      });
+      operations.push((batch) => batch.set(db.collection('plaid_items').doc(itemId), {
+        deactivated_at: FieldValue.serverTimestamp(),
+      }, { merge: true }));
     }
 
     const accountIds = [];
-    accountDocs.forEach((doc) => {
-      operations.push({ type: 'delete', ref: doc.ref });
-      const aid = doc.data().account_id;
+    accountsSnap.forEach((accountDoc) => {
+      operations.push((batch) => batch.delete(accountDoc.ref));
+      const aid = accountDoc.data().account_id;
       if (aid) {
         accountIds.push(aid);
-        operations.push({
-          type: 'set',
-          ref: db.collection('removed_accounts').doc(`${uid}_${aid}`),
-          data: {
-            user_id: uid,
-            account_id: aid,
-            removed_at: FieldValue.serverTimestamp(),
-          },
-          options: { merge: true },
-        });
+        operations.push((batch) => batch.set(db.collection('removed_accounts').doc(`${uid}_${aid}`), {
+          user_id: uid,
+          account_id: aid,
+          removed_at: FieldValue.serverTimestamp(),
+        }, { merge: true }));
       }
     });
-    const uniqueAccountIds = [...new Set(accountIds)];
 
     // Keep all cleanup scoped to the signed-in user's records.
     const cleanupQueries = itemId
       ? [db.collection('transactions').where('user_id', '==', uid).where('item_id', '==', itemId).get()]
       : [];
-    if (uniqueAccountIds.length > 0) {
-      chunks(uniqueAccountIds, MAX_IN_VALUES).forEach((accountIdChunk) => {
-        cleanupQueries.push(
-          db.collection('forecasts')
-            .where('user_id', '==', uid)
-            .where('account_id', 'in', accountIdChunk)
-            .get()
-        );
-      });
-    }
-    const snapshots = await Promise.all(cleanupQueries);
-    snapshots.forEach((snap) => snap.forEach((doc) => {
-      operations.push({ type: 'delete', ref: doc.ref });
-    }));
+    const [snapshots, forecastRecords] = await Promise.all([
+      Promise.all(cleanupQueries),
+      accountIds.length > 0 ? getForecastsForAccountIds(db, uid, accountIds) : [],
+    ]);
+    snapshots.forEach((snap) => snap.forEach((record) => operations.push((batch) => batch.delete(record.ref))));
+    forecastRecords.forEach((record) => operations.push((batch) => batch.delete(record.ref)));
 
-    await commitOperations(db, operations);
+    await commitInBatches(db, operations);
 
     return res.status(200).json({ ok: true });
   } catch (error) {
