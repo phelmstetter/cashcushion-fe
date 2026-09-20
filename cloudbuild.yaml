@@ -18,7 +18,15 @@ steps:
     entrypoint: npm
     args: [ci]
 
-  # 2. Build the Vite frontend — output lands at dist/public on the worker.
+  # 2. Audit production dependencies. npm audit still reports lower-severity
+  #    findings for review, but exits non-zero for high or critical findings.
+  - id: production-audit
+    name: node:20
+    entrypoint: npm
+    args: [audit, --omit=dev, --audit-level=high]
+    waitFor: [install]
+
+  # 3. Build the Vite frontend — output lands at dist/public on the worker.
   #    VITE_* vars are baked into the bundle here.
   - id: vite-build
     name: node:20
@@ -34,9 +42,9 @@ steps:
       - VITE_STORAGE_BUCKET=$_VITE_STORAGE_BUCKET
       - VITE_FUNCTIONS_URL=$_VITE_FUNCTIONS_URL
       - VITE_RECAPTCHA_SITE_KEY=$_VITE_RECAPTCHA_SITE_KEY
-    waitFor: [install]
+    waitFor: [install, production-audit]
 
-  # 3a. Deploy dist/public to Firebase Hosting, and publish the current
+  # 4a. Deploy dist/public to Firebase Hosting, and publish the current
   #     Firestore security rules (firestore.rules). Rules changes committed
   #     to the repo previously had no deploy step, so the live project could
   #     silently keep running stale/mismatched rules after a rules change —
@@ -54,7 +62,7 @@ steps:
         firebase deploy --only hosting,firestore:rules --project $PROJECT_ID
     waitFor: [vite-build]
 
-  # 3b. Build the Docker image using the pre-built dist/public.
+  # 4b. Build the Docker image using the pre-built dist/public.
   #     Runs in parallel with firebase-hosting.
   - id: docker-build
     name: gcr.io/cloud-builders/docker

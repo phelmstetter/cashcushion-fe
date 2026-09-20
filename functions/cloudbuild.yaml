@@ -18,7 +18,16 @@ steps:
         npm ci
     dir: 'functions'
 
-  # 2. Deploy Gen2 gateway function to Cloud Functions
+  # 2. Audit production dependencies. npm audit still reports lower-severity
+  #    findings for review, but exits non-zero for high or critical findings.
+  - name: 'node:22'
+    id: 'Audit'
+    entrypoint: 'npm'
+    args: ['audit', '--omit=dev', '--audit-level=high']
+    dir: 'functions'
+    waitFor: ['Install']
+
+  # 3. Deploy Gen2 gateway function to Cloud Functions
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     id: 'Deploy'
     entrypoint: 'gcloud'
@@ -37,6 +46,6 @@ steps:
       - '--update-env-vars=^@^PLAID_ALLOWED_REDIRECT_URIS=$_PLAID_ALLOWED_REDIRECT_URIS'
       - '--project=cashcushion'
     dir: 'functions'
-    waitFor: ['Install']
+    waitFor: ['Audit']
 
 timeout: '1600s'
