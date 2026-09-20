@@ -1,0 +1,84 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isValidForecast(data) {
+      return data.keys().hasAll(['user_id', 'name', 'date', 'amount', 'created_at'])
+             && data.keys().hasOnly([
+               'user_id', 'name', 'merchant_entity_id', 'date', 'amount',
+               'created_at', 'matched_transaction_id', 'series_id', 'account_id',
+               'logo_url', 'forecast_type', 'forecast_interval', 'auto_extend'
+             ])
+             && data.user_id is string
+             && data.name is string
+             && data.date is string
+             && data.amount is number
+             && data.created_at is string
+             && (!data.keys().hasAny(['merchant_entity_id']) || data.merchant_entity_id is string || data.merchant_entity_id == null)
+             && (!data.keys().hasAny(['matched_transaction_id']) || data.matched_transaction_id is string || data.matched_transaction_id == null)
+             && (!data.keys().hasAny(['series_id']) || data.series_id is string || data.series_id == null)
+             && (!data.keys().hasAny(['account_id']) || data.account_id is string || data.account_id == null)
+             && (!data.keys().hasAny(['logo_url']) || data.logo_url is string || data.logo_url == null)
+             && (!data.keys().hasAny(['forecast_type']) || data.forecast_type in ['single', 'monthly', 'every_x_days'] || data.forecast_type == null)
+             && (!data.keys().hasAny(['forecast_interval']) || data.forecast_interval is int || data.forecast_interval == null)
+             && (!data.keys().hasAny(['auto_extend']) || data.auto_extend is bool);
+    }
+
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null
+                    && request.auth.uid == userId
+                    && request.resource.data.keys().hasOnly(['user_id', 'email', 'profile_pic'])
+                    && request.resource.data.user_id == request.auth.uid
+                    && request.resource.data.email is string
+                    && request.resource.data.profile_pic is string;
+      allow update: if request.auth != null
+                    && request.auth.uid == userId
+                    && request.resource.data.user_id == resource.data.user_id
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['email', 'profile_pic'])
+                    && request.resource.data.email is string
+                    && request.resource.data.profile_pic is string;
+    }
+
+    match /transactions/{transactionId} {
+      allow read: if request.auth != null
+                  && resource.data.user_id == request.auth.uid;
+    }
+
+    match /forecasts/{forecastId} {
+      allow read: if request.auth != null
+                  && resource.data.user_id == request.auth.uid;
+
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.user_id
+                    && isValidForecast(request.resource.data);
+
+      allow update: if request.auth != null
+                    && resource.data.user_id == request.auth.uid
+                    && request.resource.data.user_id == resource.data.user_id
+                    && isValidForecast(request.resource.data);
+
+      allow delete: if request.auth != null
+                    && resource.data.user_id == request.auth.uid;
+    }
+
+    match /removed_accounts/{tombstoneId} {
+      // Tombstones are created and retained only by trusted server code.
+      allow get: if request.auth != null
+                 && resource.data.user_id == request.auth.uid;
+
+      // For list queries (e.g. where('user_id','==',uid)), Firestore evaluates
+      // this rule against each potential result document; the client must issue
+      // a query constrained to the authenticated user's own records.
+      allow list: if request.auth != null
+                  && resource.data.user_id == request.auth.uid;
+
+    }
+
+    match /accounts/{accountId} {
+      allow read: if request.auth != null
+                  && resource.data.user_id == request.auth.uid;
+      // Account details, balances, owner IDs, and Plaid metadata are
+      // bank-managed. Only Firebase Admin SDK code may write them.
+    }
+  }
+}
