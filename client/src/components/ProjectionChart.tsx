@@ -57,6 +57,7 @@ export default function ProjectionChart({
 }: ProjectionChartProps) {
   const [calloutOpen, setCalloutOpen] = useState(true);
   const [calloutClosing, setCalloutClosing] = useState(false);
+  const [displayMode, setDisplayMode] = useState<'chart' | 'summary'>('chart');
   const containerHeight = `${windowHeight}svh`;
   const includedAccountIdSet = new Set(includedAccountIds);
   const visibleAccounts = accounts.filter((account) => includedAccountIdSet.has(account.account_id));
@@ -131,7 +132,50 @@ export default function ProjectionChart({
         height: containerHeight,
       }}
     >
-      {accounts.length > 0 && (
+      <div
+        role="group"
+        aria-label="Projection view"
+        style={{
+          alignItems: 'center',
+          backgroundColor: '#f5f5f5',
+          display: 'flex',
+          flexShrink: 0,
+          gap: '4px',
+          justifyContent: 'center',
+          padding: '3px 0',
+        }}
+      >
+        {(['chart', 'summary'] as const).map((mode) => {
+          const isActive = displayMode === mode;
+          const label = mode === 'chart' ? 'Chart' : 'Account summary';
+
+          return (
+            <button
+              key={mode}
+              type="button"
+              aria-pressed={isActive}
+              disabled={mode === 'summary' && accounts.length === 0}
+              onClick={() => setDisplayMode(mode)}
+              style={{
+                backgroundColor: isActive ? '#526b7c' : '#ffffff',
+                border: '1px solid #526b7c',
+                borderRadius: '5px',
+                boxSizing: 'border-box',
+                color: isActive ? '#ffffff' : '#405866',
+                cursor: mode === 'summary' && accounts.length === 0 ? 'not-allowed' : 'pointer',
+                fontSize: '11px',
+                fontWeight: 600,
+                lineHeight: 1.2,
+                opacity: mode === 'summary' && accounts.length === 0 ? 0.55 : 1,
+                padding: '4px 10px',
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+      {displayMode === 'summary' && accounts.length > 0 && (
         <div
           data-testid="account-balance-summary"
           style={{
@@ -139,11 +183,11 @@ export default function ProjectionChart({
             border: '1px solid #526b7c',
             borderBottom: '3px solid #526b7c',
             borderTop: '4px solid #526b7c',
-            borderRadius: '8px 8px 0 0',
+            borderRadius: '8px',
             boxShadow: '0 1px 3px rgba(45, 65, 78, 0.24)',
             boxSizing: 'border-box',
-            flex: '0 1 auto',
-            maxHeight: '40%',
+            flex: '1 1 0',
+            maxHeight: 'none',
             overflow: 'auto',
           }}
         >
@@ -248,15 +292,13 @@ export default function ProjectionChart({
       <div
         style={{
           boxSizing: 'border-box',
+          display: displayMode === 'chart' ? 'block' : 'none',
           flex: '1 1 0',
           minHeight: 0,
           position: 'relative',
           backgroundColor: 'white',
           border: '1px solid #eee',
-          borderTop: accounts.length > 0 ? 'none' : undefined,
-          borderRadius: accounts.length === 0
-            ? '8px'
-            : '0 0 8px 8px',
+          borderRadius: '8px',
           overflow: 'hidden',
         }}
       >
