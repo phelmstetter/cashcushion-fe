@@ -79,6 +79,7 @@ const Home = () => {
   const activityDateRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const orderedActivityDateHeadersRef = useRef<Array<{ date: string; element: HTMLDivElement }>>([]);
   const chartNavigationRequestRef = useRef(0);
+  const chartNavigationInProgressRef = useRef<number | null>(null);
   const accountSelectionInitializedRef = useRef(false);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transactionRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -305,8 +306,9 @@ const Home = () => {
   };
 
   const handleChartDateSelect = async (date: string) => {
-    setActiveChartDate(date);
     const requestId = ++chartNavigationRequestRef.current;
+    chartNavigationInProgressRef.current = requestId;
+    setActiveChartDate(date);
 
     while (
       hasMoreRef.current &&
@@ -326,6 +328,8 @@ const Home = () => {
 
     if (requestId === chartNavigationRequestRef.current) {
       setChartNavigationTarget({ date, requestId });
+    } else if (chartNavigationInProgressRef.current === requestId) {
+      chartNavigationInProgressRef.current = null;
     }
   };
 
@@ -735,6 +739,8 @@ const Home = () => {
 
     const syncChartCursorToActivity = () => {
       frame = null;
+      if (chartNavigationInProgressRef.current !== null) return;
+
       const chartContentTop = getDashboardContentPadding(fixedHeaderBottom);
       const dateHeaders = orderedActivityDateHeadersRef.current;
 
@@ -795,6 +801,9 @@ const Home = () => {
     if (!chartNavigationTarget) return;
 
     if (activityDates.length === 0) {
+      if (chartNavigationInProgressRef.current === chartNavigationTarget.requestId) {
+        chartNavigationInProgressRef.current = null;
+      }
       setChartNavigationTarget(null);
       return;
     }
@@ -809,14 +818,34 @@ const Home = () => {
     const frame = requestAnimationFrame(() => {
       const destination = activityDateRefs.current.get(`transaction:${destinationDate}`)
         ?? activityDateRefs.current.get(`forecast:${destinationDate}`);
-      if (!destination) return;
+      if (!destination) {
+        if (chartNavigationInProgressRef.current === chartNavigationTarget.requestId) {
+          chartNavigationInProgressRef.current = null;
+        }
+        setChartNavigationTarget((target) =>
+          target?.requestId === chartNavigationTarget.requestId ? null : target
+        );
+        return;
+      }
 
       const rect = destination.getBoundingClientRect();
       const scrollTarget = window.scrollY + rect.top - getDashboardContentPadding(fixedHeaderBottom);
       window.scrollTo({ top: Math.max(0, scrollTarget), behavior: 'smooth' });
-      setChartNavigationTarget((target) =>
-        target?.requestId === chartNavigationTarget.requestId ? null : target
-      );
+
+      const finishNavigation = () => {
+        if (chartNavigationInProgressRef.current !== chartNavigationTarget.requestId) return;
+        chartNavigationInProgressRef.current = null;
+        setChartNavigationTarget((target) =>
+          target?.requestId === chartNavigationTarget.requestId ? null : target
+        );
+      };
+      const fallbackTimer = window.setTimeout(finishNavigation, 1200);
+      window.addEventListener('scrollend', finishNavigation, { once: true });
+
+      return () => {
+        window.clearTimeout(fallbackTimer);
+        window.removeEventListener('scrollend', finishNavigation);
+      };
     });
 
     return () => cancelAnimationFrame(frame);
