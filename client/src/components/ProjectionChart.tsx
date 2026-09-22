@@ -132,49 +132,6 @@ export default function ProjectionChart({
         height: containerHeight,
       }}
     >
-      <div
-        role="group"
-        aria-label="Projection view"
-        style={{
-          alignItems: 'center',
-          backgroundColor: '#f5f5f5',
-          display: 'flex',
-          flexShrink: 0,
-          gap: '4px',
-          justifyContent: 'center',
-          padding: '3px 0',
-        }}
-      >
-        {(['chart', 'summary'] as const).map((mode) => {
-          const isActive = displayMode === mode;
-          const label = mode === 'chart' ? 'Chart' : 'Account summary';
-
-          return (
-            <button
-              key={mode}
-              type="button"
-              aria-pressed={isActive}
-              disabled={mode === 'summary' && accounts.length === 0}
-              onClick={() => setDisplayMode(mode)}
-              style={{
-                backgroundColor: isActive ? '#526b7c' : '#ffffff',
-                border: '1px solid #526b7c',
-                borderRadius: '5px',
-                boxSizing: 'border-box',
-                color: isActive ? '#ffffff' : '#405866',
-                cursor: mode === 'summary' && accounts.length === 0 ? 'not-allowed' : 'pointer',
-                fontSize: '11px',
-                fontWeight: 600,
-                lineHeight: 1.2,
-                opacity: mode === 'summary' && accounts.length === 0 ? 0.55 : 1,
-                padding: '4px 10px',
-              }}
-            >
-              {label}
-            </button>
-          );
-        })}
-      </div>
       {displayMode === 'summary' && accounts.length > 0 && (
         <div
           data-testid="account-balance-summary"
@@ -539,6 +496,49 @@ export default function ProjectionChart({
             <MessageCircle aria-hidden="true" size={16} strokeWidth={2.25} />
           </button>
         )}
+      </div>
+      <div
+        role="group"
+        aria-label="Projection view"
+        style={{
+          alignItems: 'center',
+          backgroundColor: '#f5f5f5',
+          display: 'flex',
+          flexShrink: 0,
+          gap: '4px',
+          justifyContent: 'center',
+          padding: '3px 0',
+        }}
+      >
+        {(['chart', 'summary'] as const).map((mode) => {
+          const isActive = displayMode === mode;
+          const label = mode === 'chart' ? 'Chart' : 'Account summary';
+
+          return (
+            <button
+              key={mode}
+              type="button"
+              aria-pressed={isActive}
+              disabled={mode === 'summary' && accounts.length === 0}
+              onClick={() => setDisplayMode(mode)}
+              style={{
+                backgroundColor: isActive ? '#526b7c' : '#ffffff',
+                border: '1px solid #526b7c',
+                borderRadius: '5px',
+                boxSizing: 'border-box',
+                color: isActive ? '#ffffff' : '#405866',
+                cursor: mode === 'summary' && accounts.length === 0 ? 'not-allowed' : 'pointer',
+                fontSize: '11px',
+                fontWeight: 600,
+                lineHeight: 1.2,
+                opacity: mode === 'summary' && accounts.length === 0 ? 0.55 : 1,
+                padding: '4px 10px',
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
