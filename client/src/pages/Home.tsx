@@ -1082,9 +1082,7 @@ const Home = () => {
                   cursor: isForecast ? 'grab' : 'default',
                   userSelect: 'none',
                   transition: 'background-color 0.15s, box-shadow 0.15s',
-                  touchAction: draggingForecast ? 'none' : 'auto',
-                  contentVisibility: 'auto',
-                  containIntrinsicSize: '64px'
+                  touchAction: draggingForecast ? 'none' : 'auto'
                 }}
               >
                 {isForecast ? (
