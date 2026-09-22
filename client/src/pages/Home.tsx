@@ -61,7 +61,7 @@ const Home = () => {
   const [standaloneForecastName, setStandaloneForecastName] = useState('');
   const [standaloneForecastAccountId, setStandaloneForecastAccountId] = useState('');
   const [companyFilter, setCompanyFilter] = useState('');
-  const [accountFilter, setAccountFilter] = useState('');
+  const [includedAccountIds, setIncludedAccountIds] = useState<string[]>([]);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [chartWindowHeight, setChartWindowHeight] = useState(CHART_WINDOW_MIN);
   const [chartNavigationTarget, setChartNavigationTarget] = useState<{ date: string; requestId: number } | null>(null);
@@ -77,6 +77,7 @@ const Home = () => {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const activityDateRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const chartNavigationRequestRef = useRef(0);
+  const accountSelectionInitializedRef = useRef(false);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transactionRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const dragStartPosRef = useRef<{ x: number; y: number } | null>(null);
@@ -197,6 +198,14 @@ const Home = () => {
   const handleSignOut = async () => {
     await signOut(auth);
     setLocation("/login");
+  };
+
+  const toggleAccountInclusion = (accountId: string) => {
+    setIncludedAccountIds((currentIds) => (
+      currentIds.includes(accountId)
+        ? currentIds.filter((id) => id !== accountId)
+        : [...currentIds, accountId]
+    ));
   };
 
   const loadInitialTransactions = async () => {
@@ -320,6 +329,13 @@ const Home = () => {
   useEffect(() => {
     loadInitialTransactions();
   }, []);
+
+  useEffect(() => {
+    if (accountSelectionInitializedRef.current || accounts.length === 0) return;
+
+    accountSelectionInitializedRef.current = true;
+    setIncludedAccountIds(accounts.map((account) => account.account_id));
+  }, [accounts]);
 
   useEffect(() => {
     if (observerRef.current) {
@@ -509,10 +525,13 @@ const Home = () => {
   const accountOptions = useMemo(() => Array.from(
     new Map(
       accounts
-        .filter(a => a.account_id)
-        .map(a => [
-          a.account_id,
-          { label: a.name ? `${a.name} ${a.mask}` : a.mask, value: a.account_id }
+        .filter((account) => account.account_id)
+        .map((account) => [
+          account.account_id,
+          {
+            label: account.name ? `${account.name} ${account.mask}` : account.mask,
+            value: account.account_id,
+          },
         ])
     ).values()
   ), [accounts]);
@@ -577,14 +596,15 @@ const Home = () => {
     ...transactions.map(t => ({ type: 'transaction' as const, data: t })),
   ].sort((a, b) => b.data.date.localeCompare(a.data.date))
   .filter(item => {
-    if (accountFilter) {
-      if (item.type === 'transaction') {
-        const tx = item.data as Transaction;
-        if (tx.account_id !== accountFilter) return false;
-      } else {
-        const fc = item.data as Forecast;
-        if (fc.account_id !== accountFilter) return false;
-      }
+    const accountId = item.type === 'transaction'
+      ? (item.data as Transaction).account_id
+      : (item.data as Forecast).account_id;
+    if (
+      accountSelectionInitializedRef.current &&
+      accountId &&
+      !includedAccountIds.includes(accountId)
+    ) {
+      return false;
     }
     if (!companyFilter) return true;
     if (item.type === 'forecast') {
@@ -592,7 +612,7 @@ const Home = () => {
     }
     const tx = item.data as Transaction;
     return (tx.merchant_name || tx.counterparty_name) === companyFilter;
-  }), [visibleForecasts, transactions, accountFilter, companyFilter]);
+  }), [visibleForecasts, transactions, includedAccountIds, companyFilter]);
 
   const activityDates = useMemo(
     () => Array.from(new Set(mergedItems.map((item) => item.data.date))),
@@ -734,28 +754,6 @@ const Home = () => {
           gap: '12px'
         }}>
           <h1 style={{ margin: 0, fontSize: '20px', whiteSpace: 'nowrap' }}>CashCushion</h1>
-          <select
-            data-testid="select-account-filter"
-            value={accountFilter}
-            onChange={(e) => setAccountFilter(e.target.value)}
-            style={{
-              flex: '0 1 auto',
-              minWidth: '0',
-              maxWidth: '140px',
-              padding: '6px 8px',
-              fontSize: '13px',
-              borderRadius: '4px',
-              border: '1px solid #ccc',
-              backgroundColor: 'white',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
-            }}
-          >
-            <option value="">All Accts</option>
-            {accountOptions.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
           <select
             data-testid="select-company-filter"
             value={companyFilter}
@@ -917,9 +915,13 @@ const Home = () => {
             <ProjectionChart
               chartData={chartData}
               accounts={accounts}
+              includedAccountIds={accountSelectionInitializedRef.current
+                ? includedAccountIds
+                : accounts.map((account) => account.account_id)}
               formatDate={formatDate}
               windowHeight={chartWindowHeight}
               onDateSelect={handleChartDateSelect}
+              onAccountToggle={toggleAccountInclusion}
             />
           </Suspense>
            <div

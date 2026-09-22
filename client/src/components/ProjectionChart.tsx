@@ -13,9 +13,11 @@ import {
 type ProjectionChartProps = {
   chartData: Array<Record<string, string | number | null>>;
   accounts: Account[];
+  includedAccountIds: string[];
   formatDate: (dateString: string) => string;
   windowHeight: number;
   onDateSelect?: (date: string) => void;
+  onAccountToggle: (accountId: string) => void;
 };
 
 const CHART_COLORS = ['#1976d2', '#e53935', '#43a047', '#fb8c00', '#8e24aa', '#00acc1', '#d81b60', '#6d4c41'];
@@ -44,12 +46,16 @@ function abbreviatedDate(dateString: string) {
 export default function ProjectionChart({
   chartData,
   accounts,
+  includedAccountIds,
   formatDate,
   windowHeight,
   onDateSelect,
+  onAccountToggle,
 }: ProjectionChartProps) {
   const containerHeight = `${windowHeight}svh`;
   const [activeDate, setActiveDate] = useState<string | null>(null);
+  const includedAccountIdSet = new Set(includedAccountIds);
+  const visibleAccounts = accounts.filter((account) => includedAccountIdSet.has(account.account_id));
   const firstChartDate = chartData.find((point) => typeof point.fullDate === 'string')?.fullDate as string | undefined;
   const detailDate = activeDate && chartData.some((point) => point.fullDate === activeDate)
     ? activeDate
@@ -75,6 +81,7 @@ export default function ProjectionChart({
     return {
       account,
       color: CHART_COLORS[index % CHART_COLORS.length],
+      isIncluded: includedAccountIdSet.has(account.account_id),
       minimumBalance,
       minimumDate,
     };
@@ -90,19 +97,107 @@ export default function ProjectionChart({
         height: containerHeight,
       }}
     >
+      {accounts.length > 0 && (
+        <div
+          data-testid="account-balance-summary"
+          style={{
+            backgroundColor: '#fafafa',
+            border: '1px solid #eee',
+            borderRadius: '8px 8px 0 0',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            boxSizing: 'border-box',
+            flex: '0 1 auto',
+            maxHeight: '40%',
+            overflow: 'auto',
+          }}
+        >
+          <table
+            aria-label="Account balance summary"
+            style={{
+              borderCollapse: 'collapse',
+              fontSize: '12px',
+              tableLayout: 'fixed',
+              width: '100%',
+              minWidth: '340px',
+            }}
+          >
+            <thead>
+              <tr style={{ color: '#666', fontSize: '11px', textAlign: 'left' }}>
+                <th scope="col" style={{ backgroundColor: '#fafafa', padding: '3px 6px 5px 10px', position: 'sticky', textAlign: 'center', top: 0, width: '12%', zIndex: 1 }}>Show</th>
+                <th scope="col" style={{ backgroundColor: '#fafafa', padding: '3px 8px 5px', position: 'sticky', top: 0, width: '34%', zIndex: 1 }}>Account</th>
+                <th scope="col" style={{ backgroundColor: '#fafafa', padding: '3px 8px 5px', position: 'sticky', top: 0, width: '25%', zIndex: 1 }}>Current balance</th>
+                <th scope="col" style={{ backgroundColor: '#fafafa', padding: '3px 10px 5px', position: 'sticky', top: 0, width: '29%', zIndex: 1 }}>Low balance (date)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {accountSummaries.map(({ account, color, isIncluded, minimumBalance, minimumDate }) => (
+                <tr key={account.account_id} style={{ borderTop: '1px solid #e7e7e7', opacity: isIncluded ? 1 : 0.55 }}>
+                  <td style={{ padding: '7px 6px 7px 10px', textAlign: 'center', verticalAlign: 'top' }}>
+                    <input
+                      type="checkbox"
+                      checked={isIncluded}
+                      onChange={() => onAccountToggle(account.account_id)}
+                      aria-label={`${isIncluded ? 'Exclude' : 'Include'} ${accountLabel(account)}`}
+                      style={{ accentColor: color, cursor: 'pointer', margin: 0 }}
+                    />
+                  </td>
+                  <th
+                    scope="row"
+                    style={{
+                      color,
+                      fontWeight: 600,
+                      overflowWrap: 'anywhere',
+                      padding: '7px 8px',
+                      textAlign: 'left',
+                      verticalAlign: 'top',
+                    }}
+                  >
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        backgroundColor: color,
+                        borderRadius: '50%',
+                        display: 'inline-block',
+                        height: '8px',
+                        marginRight: '6px',
+                        width: '8px',
+                      }}
+                    />
+                    {accountLabel(account)}
+                  </th>
+                  <td style={{ color: '#333', fontWeight: 600, overflowWrap: 'anywhere', padding: '7px 8px', verticalAlign: 'top' }}>
+                    {typeof account.available_balance === 'number' && Number.isFinite(account.available_balance)
+                      ? currencyFormatter.format(account.available_balance)
+                      : '—'}
+                  </td>
+                  <td style={{ color: '#333', padding: '7px 10px', verticalAlign: 'top', whiteSpace: 'nowrap' }}>
+                    {minimumBalance != null && minimumDate
+                      ? <><strong>{currencyFormatter.format(minimumBalance)}</strong><span style={{ color: '#666' }}> ({abbreviatedDate(minimumDate)})</span></>
+                      : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
       <div
         style={{
           boxSizing: 'border-box',
           flex: '1 1 0',
           minHeight: 0,
           backgroundColor: 'white',
-          borderRadius: accounts.length > 0 ? '8px 8px 0 0' : '8px',
-          boxShadow: accounts.length > 0 ? '0 1px 3px rgba(0,0,0,0.1)' : undefined,
           border: '1px solid #eee',
+          borderTop: accounts.length > 0 ? 'none' : undefined,
+          borderRadius: accounts.length === 0
+            ? '8px'
+            : visibleAccounts.length === 0 || !detailDate
+              ? '0 0 8px 8px'
+              : '0',
           overflow: 'hidden',
         }}
       >
-        {chartData.length > 0 ? (
+        {visibleAccounts.length > 0 && chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart
               data={chartData}
@@ -145,12 +240,12 @@ export default function ProjectionChart({
                 strokeWidth={1}
                 ifOverflow="extendDomain"
               />
-              {accounts.map((acct, i) => (
+              {accountSummaries.filter(({ isIncluded }) => isIncluded).map(({ account, color }) => (
                 <Line
-                  key={acct.account_id}
+                  key={account.account_id}
                   type="stepAfter"
-                  dataKey={acct.account_id}
-                  stroke={CHART_COLORS[i % CHART_COLORS.length]}
+                  dataKey={account.account_id}
+                  stroke={color}
                   strokeWidth={2}
                   dot={false}
                 />
@@ -159,11 +254,11 @@ export default function ProjectionChart({
           </ResponsiveContainer>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#999', fontSize: '14px' }}>
-            No account data
+            {accounts.length > 0 ? 'No accounts included' : 'No account data'}
           </div>
         )}
       </div>
-      {accounts.length > 0 && detailDate && (
+      {visibleAccounts.length > 0 && detailDate && (
         <div
           data-testid="chart-detail-strip"
           aria-label={`Projected balances on ${formatDate(detailDate)}`}
@@ -172,6 +267,8 @@ export default function ProjectionChart({
             backgroundColor: '#f6f8f9',
             border: '1px solid #e2e8ec',
             borderTop: 'none',
+            borderRadius: '0 0 8px 8px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
             boxSizing: 'border-box',
             display: 'flex',
             flex: '0 0 auto',
@@ -191,9 +288,8 @@ export default function ProjectionChart({
           >
             {formatDate(detailDate)}
           </time>
-          {accounts.map((account, index) => {
+          {accountSummaries.filter(({ isIncluded }) => isIncluded).map(({ account, color }) => {
             const balance = detailPoint?.[account.account_id];
-            const color = CHART_COLORS[index % CHART_COLORS.length];
             return (
               <div
                 key={account.account_id}
@@ -225,81 +321,6 @@ export default function ProjectionChart({
               </div>
             );
           })}
-        </div>
-      )}
-      {accounts.length > 0 && (
-        <div
-          data-testid="account-balance-summary"
-          style={{
-            backgroundColor: '#fafafa',
-            border: '1px solid #eee',
-            borderTop: 'none',
-            borderRadius: '0 0 8px 8px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            boxSizing: 'border-box',
-            flex: '0 1 auto',
-            maxHeight: '40%',
-            overflow: 'auto',
-          }}
-        >
-          <table
-            aria-label="Account balance summary"
-            style={{
-              borderCollapse: 'collapse',
-              fontSize: '12px',
-              tableLayout: 'fixed',
-              width: '100%',
-              minWidth: '320px',
-            }}
-          >
-            <thead>
-              <tr style={{ color: '#666', fontSize: '11px', textAlign: 'left' }}>
-                <th scope="col" style={{ backgroundColor: '#fafafa', padding: '3px 10px 5px', position: 'sticky', top: 0, width: '42%', zIndex: 1 }}>Account</th>
-                <th scope="col" style={{ backgroundColor: '#fafafa', padding: '3px 8px 5px', position: 'sticky', top: 0, width: '26%', zIndex: 1 }}>Current balance</th>
-                <th scope="col" style={{ backgroundColor: '#fafafa', padding: '3px 10px 5px', position: 'sticky', top: 0, width: '32%', zIndex: 1 }}>Low balance (date)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {accountSummaries.map(({ account, color, minimumBalance, minimumDate }) => (
-                <tr key={account.account_id} style={{ borderTop: '1px solid #e7e7e7' }}>
-                  <th
-                    scope="row"
-                    style={{
-                      color,
-                      fontWeight: 600,
-                      overflowWrap: 'anywhere',
-                      padding: '7px 10px',
-                      textAlign: 'left',
-                      verticalAlign: 'top',
-                    }}
-                  >
-                    <span
-                      aria-hidden="true"
-                      style={{
-                        backgroundColor: color,
-                        borderRadius: '50%',
-                        display: 'inline-block',
-                        height: '8px',
-                        marginRight: '6px',
-                        width: '8px',
-                      }}
-                    />
-                    {accountLabel(account)}
-                  </th>
-                  <td style={{ color: '#333', fontWeight: 600, overflowWrap: 'anywhere', padding: '7px 8px', verticalAlign: 'top' }}>
-                    {typeof account.available_balance === 'number' && Number.isFinite(account.available_balance)
-                      ? currencyFormatter.format(account.available_balance)
-                      : '—'}
-                  </td>
-                  <td style={{ color: '#333', padding: '7px 10px', verticalAlign: 'top', whiteSpace: 'nowrap' }}>
-                    {minimumBalance != null && minimumDate
-                      ? <><strong>{currencyFormatter.format(minimumBalance)}</strong><span style={{ color: '#666' }}> ({abbreviatedDate(minimumDate)})</span></>
-                      : '—'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       )}
     </div>
