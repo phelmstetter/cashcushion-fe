@@ -549,6 +549,30 @@ const Home = () => {
     return balanceByTransaction;
   }, [accounts, transactions]);
 
+  const forecastBalances = useMemo(() => {
+    const chartPointsByDate = new Map(
+      chartData.map((point) => [point.fullDate as string, point])
+    );
+    const balanceByForecast = new Map<string, number | null>();
+
+    for (const forecast of visibleForecasts) {
+      if (!forecast.id) continue;
+      const chartPoint = forecast.account_id
+        ? chartPointsByDate.get(forecast.date)
+        : undefined;
+      const balance = chartPoint && forecast.account_id
+        ? chartPoint[forecast.account_id]
+        : null;
+
+      balanceByForecast.set(
+        forecast.id,
+        typeof balance === 'number' && Number.isFinite(balance) ? balance : null
+      );
+    }
+
+    return balanceByForecast;
+  }, [chartData, visibleForecasts]);
+
   const scrollAnchorIndex = useMemo(() => {
     const firstTxIndex = mergedItems.findIndex(item => item.type === 'transaction');
     if (firstTxIndex <= 0) return 0;
@@ -902,6 +926,10 @@ const Home = () => {
             const transactionBalance = !isForecast
               ? transactionBalances.get((item.data as Transaction).id) ?? null
               : null;
+            const forecastId = isForecast ? (item.data as Forecast).id : undefined;
+            const forecastBalance = isForecast
+              ? (forecastId ? forecastBalances.get(forecastId) ?? null : null)
+              : null;
             const previousItem = mergedItems[idx - 1];
             const showDateHeader = (
               !previousItem ||
@@ -1033,7 +1061,7 @@ const Home = () => {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '12px',
-                  minHeight: isForecast ? '60px' : '68px',
+                  minHeight: '68px',
                   boxSizing: 'border-box',
                   padding: '8px',
                   marginBottom: '2px',
@@ -1135,7 +1163,11 @@ const Home = () => {
                     {amountDisplay}
                   </div>
                   <div style={{ fontSize: '12px', color: '#666' }}>
-                    {!isForecast && (transactionBalance != null
+                    {isForecast
+                      ? (forecastBalance != null
+                        ? <span aria-label={`Projected balance on ${formatDate(date)}: ${formatCurrency(forecastBalance)}`}>{formatCurrency(forecastBalance)}</span>
+                        : <span aria-label="Projected balance unavailable">—</span>)
+                      : (transactionBalance != null
                         ? <span aria-label={`Balance after transaction: ${formatCurrency(transactionBalance)}`}>{formatCurrency(transactionBalance)}</span>
                         : <span aria-label="Balance unavailable">—</span>)}
                   </div>
