@@ -12,7 +12,6 @@ import { useLocation } from "wouter";
 
 const LONG_PRESS_MS = 500;
 const CHART_WINDOW_MIN = 33;
-const CHART_WINDOW_MAX = 50;
 const ProjectionChart = lazy(() => import("@/components/ProjectionChart"));
 
 function ProjectionChartLoading() {
@@ -23,7 +22,7 @@ function ProjectionChartLoading() {
       aria-live="polite"
       aria-busy="true"
       style={{
-        height: '30vh',
+         height: `${CHART_WINDOW_MIN}vh`,
         backgroundColor: 'white',
         borderRadius: '8px',
         boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
@@ -69,7 +68,6 @@ const Home = () => {
   const [companyFilter, setCompanyFilter] = useState('');
   const [includedAccountIds, setIncludedAccountIds] = useState<string[]>([]);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [chartWindowHeight, setChartWindowHeight] = useState(CHART_WINDOW_MIN);
   const [activeChartDate, setActiveChartDate] = useState<string | null>(null);
   const [chartNavigationTarget, setChartNavigationTarget] = useState<{ date: string; requestId: number } | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -77,7 +75,6 @@ const Home = () => {
   const [draggingForecast, setDraggingForecast] = useState<Forecast | null>(null);
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
-  const chartResizeStartRef = useRef<{ pointerId: number; startY: number; startHeight: number } | null>(null);
   const cursorRef = useRef<{ date: string; id: string } | null>(null);
   const loadingRef = useRef(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -123,38 +120,6 @@ const Home = () => {
     setForecastType('single');
     setForecastDirection('expense');
     setModalView('forecast');
-  };
-
-  const clampChartWindowHeight = (height: number) => Math.min(
-    CHART_WINDOW_MAX,
-    Math.max(CHART_WINDOW_MIN, height)
-  );
-
-  const startChartResize = (event: React.PointerEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    event.currentTarget.setPointerCapture(event.pointerId);
-    chartResizeStartRef.current = {
-      pointerId: event.pointerId,
-      startY: event.clientY,
-      startHeight: chartWindowHeight,
-    };
-  };
-
-  const resizeChart = (event: React.PointerEvent<HTMLDivElement>) => {
-    const resizeStart = chartResizeStartRef.current;
-    if (!resizeStart || resizeStart.pointerId !== event.pointerId) return;
-
-    const viewportHeight = window.innerHeight || 1;
-    const deltaPercent = ((event.clientY - resizeStart.startY) / viewportHeight) * 100;
-    setChartWindowHeight(clampChartWindowHeight(Math.round(resizeStart.startHeight + deltaPercent)));
-  };
-
-  const finishChartResize = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (chartResizeStartRef.current?.pointerId !== event.pointerId) return;
-    chartResizeStartRef.current = null;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
   };
 
   const isModalOpen = Boolean(selectedTransaction || editingForecast || addingStandaloneForecast);
@@ -997,62 +962,14 @@ const Home = () => {
                 : accounts.map((account) => account.account_id)}
               activeDate={activeChartDate}
               formatDate={formatDate}
-              windowHeight={chartWindowHeight}
+               windowHeight={CHART_WINDOW_MIN}
               onDateHover={(date) => {
                 setActiveChartDate((currentDate) => currentDate === date ? currentDate : date);
               }}
               onDateSelect={handleChartDateSelect}
               onAccountToggle={toggleAccountInclusion}
             />
-          </Suspense>
-           <div
-             role="separator"
-             tabIndex={0}
-             aria-label="Drag to resize chart window"
-             aria-orientation="horizontal"
-             aria-valuemin={CHART_WINDOW_MIN}
-             aria-valuemax={CHART_WINDOW_MAX}
-             aria-valuenow={chartWindowHeight}
-             aria-valuetext={`${chartWindowHeight}% of screen height`}
-             data-testid="handle-chart-window-size"
-             onPointerDown={startChartResize}
-             onPointerMove={resizeChart}
-             onPointerUp={finishChartResize}
-             onPointerCancel={finishChartResize}
-             onKeyDown={(event) => {
-               if (event.key === 'ArrowUp' || event.key === 'ArrowRight') {
-                 event.preventDefault();
-                 setChartWindowHeight((height) => clampChartWindowHeight(height + 1));
-               } else if (event.key === 'ArrowDown' || event.key === 'ArrowLeft') {
-                 event.preventDefault();
-                 setChartWindowHeight((height) => clampChartWindowHeight(height - 1));
-               }
-             }}
-             style={{
-               alignItems: 'center',
-               backgroundColor: '#526b7c',
-               border: '1px solid #405866',
-               borderRadius: '0 0 6px 6px',
-               boxShadow: '0 1px 2px rgba(45, 65, 78, 0.24)',
-               cursor: 'row-resize',
-               display: 'flex',
-               height: '18px',
-               justifyContent: 'center',
-               overflow: 'hidden',
-               touchAction: 'none',
-               userSelect: 'none',
-             }}
-           >
-             <span
-               aria-hidden="true"
-               style={{
-                 backgroundColor: 'rgba(255, 255, 255, 0.72)',
-                 borderRadius: '999px',
-                 height: '3px',
-                 width: '44px',
-               }}
-             />
-          </div>
+           </Suspense>
         </div>
       </div>
 
