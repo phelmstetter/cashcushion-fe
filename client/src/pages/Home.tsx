@@ -497,6 +497,11 @@ const Home = () => {
     return Math.max(0, firstTxIndex - 3);
   }, [mergedItems]);
 
+  const forecastDividerIndex = useMemo(() => {
+    const firstTxIndex = mergedItems.findIndex(item => item.type === 'transaction');
+    return firstTxIndex > 0 ? firstTxIndex : -1;
+  }, [mergedItems]);
+
   useEffect(() => {
     if (!initialLoading && !hasAutoScrolled.current && scrollAnchorRef.current) {
       hasAutoScrolled.current = true;
@@ -992,6 +997,28 @@ const Home = () => {
             return (
               <div
                 key={itemKey}
+              >
+                {idx === forecastDividerIndex && (
+                  <div
+                    role="separator"
+                    aria-label="Forecasts begin above"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      margin: '12px 4px 6px',
+                      color: '#777',
+                      fontSize: '10px',
+                      fontWeight: 600,
+                      letterSpacing: '0.08em'
+                    }}
+                  >
+                    <span style={{ height: '1px', backgroundColor: '#ddd', flex: 1 }} />
+                    FORECASTS
+                    <span style={{ height: '1px', backgroundColor: '#ddd', flex: 1 }} />
+                  </div>
+                )}
+                <div
                 ref={(el) => {
                   if (idx === scrollAnchorIndex && el) {
                     scrollAnchorRef.current = el;
@@ -1075,6 +1102,8 @@ const Home = () => {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '12px',
+                  height: '60px',
+                  boxSizing: 'border-box',
                   padding: '8px',
                   marginBottom: '2px',
                   backgroundColor: isDropTarget ? '#bbdefb' : isForecast ? '#E3F2FD' : '#fff',
@@ -1168,7 +1197,6 @@ const Home = () => {
                   }}>
                     {displayName}
                   </div>
-                  {isForecast && <div style={{ fontSize: '11px', color: '#1976d2', fontWeight: 600 }}>FORECAST</div>}
                 </div>
                 
                 <div style={{ textAlign: 'right' }}>
@@ -1180,6 +1208,7 @@ const Home = () => {
                   </div>
                 </div>
                 
+              </div>
               </div>
             );
           })}
