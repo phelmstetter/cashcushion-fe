@@ -69,6 +69,12 @@ export default function ProjectionChart({
   const detailPoint = detailDate
     ? chartData.find((point) => point.fullDate === detailDate)
     : undefined;
+  const selectedChartIndex = selectedChartDate
+    ? chartData.findIndex((point) => point.fullDate === selectedChartDate)
+    : -1;
+  const calloutPosition = selectedChartIndex >= 0 && chartData.length > 1
+    ? 10 + (80 * selectedChartIndex) / (chartData.length - 1)
+    : 50;
 
   const accountSummaries = accounts.map((account, index) => {
     let minimumBalance: number | null = null;
@@ -194,6 +200,7 @@ export default function ProjectionChart({
           boxSizing: 'border-box',
           flex: '1 1 0',
           minHeight: 0,
+          position: 'relative',
           backgroundColor: 'white',
           border: '1px solid #eee',
           borderTop: accounts.length > 0 ? 'none' : undefined,
@@ -237,15 +244,7 @@ export default function ProjectionChart({
                 axisLine={false}
               />
               <Tooltip
-                formatter={(value: number, name: string) => {
-                  const account = accounts.find((candidate) => candidate.account_id === name);
-                  return [
-                    currencyFormatter.format(value),
-                    account ? accountLabel(account) : name,
-                  ];
-                }}
-                labelFormatter={(label: string) => formatDate(label)}
-                contentStyle={{ fontSize: '12px', borderRadius: '6px' }}
+                content={() => null}
                 cursor={false}
               />
               <ReferenceLine
@@ -296,6 +295,95 @@ export default function ProjectionChart({
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#999', fontSize: '14px' }}>
             {accounts.length > 0 ? 'No accounts included' : 'No account data'}
+          </div>
+        )}
+        {selectedChartDate && detailPoint && (
+          <div
+            data-testid="chart-balance-callout"
+            aria-label={`Projected balances on ${formatDate(selectedChartDate)}`}
+            style={{
+              backgroundColor: '#ffffff',
+              border: '1px solid #b9c8d0',
+              borderRadius: '6px',
+              boxShadow: '0 2px 7px rgba(45, 65, 78, 0.24)',
+              boxSizing: 'border-box',
+              left: `clamp(92px, ${calloutPosition}%, calc(100% - 92px))`,
+              maxHeight: '55%',
+              maxWidth: 'calc(100% - 24px)',
+              minWidth: '150px',
+              overflow: 'auto',
+              padding: '7px 9px',
+              pointerEvents: 'none',
+              position: 'absolute',
+              top: '10px',
+              transform: 'translateX(-50%)',
+              zIndex: 2,
+            }}
+          >
+            <div
+              aria-hidden="true"
+              style={{
+                backgroundColor: '#ffffff',
+                borderBottom: '1px solid #b9c8d0',
+                borderRight: '1px solid #b9c8d0',
+                bottom: '-5px',
+                height: '8px',
+                left: '50%',
+                position: 'absolute',
+                transform: 'translateX(-50%) rotate(45deg)',
+                width: '8px',
+              }}
+            />
+            <time
+              dateTime={selectedChartDate}
+              style={{
+                color: '#405866',
+                display: 'block',
+                fontSize: '12px',
+                fontWeight: 700,
+                marginBottom: '4px',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {formatDate(selectedChartDate)}
+            </time>
+            {accountSummaries.filter(({ isIncluded }) => isIncluded).map(({ account, color }) => {
+              const balance = detailPoint[account.account_id];
+              return (
+                <div
+                  key={account.account_id}
+                  style={{
+                    alignItems: 'center',
+                    color: '#333',
+                    display: 'flex',
+                    fontSize: '12px',
+                    gap: '5px',
+                    justifyContent: 'space-between',
+                    lineHeight: 1.45,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <span style={{ alignItems: 'center', display: 'flex', gap: '5px', minWidth: 0 }}>
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        backgroundColor: color,
+                        borderRadius: '50%',
+                        flexShrink: 0,
+                        height: '7px',
+                        width: '7px',
+                      }}
+                    />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{accountLabel(account)}</span>
+                  </span>
+                  <strong>
+                    {typeof balance === 'number' && Number.isFinite(balance)
+                      ? currencyFormatter.format(balance)
+                      : '—'}
+                  </strong>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
