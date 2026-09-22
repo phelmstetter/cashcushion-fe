@@ -1,4 +1,3 @@
-import { useState } from "react";
 import type { Account } from "@/lib/firebase";
 import {
   LineChart,
@@ -14,6 +13,7 @@ type ProjectionChartProps = {
   chartData: Array<Record<string, string | number | null>>;
   accounts: Account[];
   formatDate: (dateString: string) => string;
+  isExpanded: boolean;
 };
 
 const CHART_COLORS = ['#1976d2', '#e53935', '#43a047', '#fb8c00', '#8e24aa', '#00acc1', '#d81b60', '#6d4c41'];
@@ -43,8 +43,8 @@ export default function ProjectionChart({
   chartData,
   accounts,
   formatDate,
+  isExpanded,
 }: ProjectionChartProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
   const containerMaxHeight = isExpanded ? '50svh' : '33.333svh';
   const chartHeight = accounts.length > 0
     ? (isExpanded ? '30svh' : '20svh')
@@ -93,31 +93,8 @@ export default function ProjectionChart({
           boxShadow: accounts.length > 0 ? '0 1px 3px rgba(0,0,0,0.1)' : undefined,
           border: '1px solid #eee',
           overflow: 'hidden',
-          position: 'relative',
         }}
       >
-        <button
-          type="button"
-          onClick={() => setIsExpanded((expanded) => !expanded)}
-          aria-label={isExpanded ? 'Minimize chart' : 'Maximize chart'}
-          title={isExpanded ? 'Minimize chart' : 'Maximize chart'}
-          style={{
-            backgroundColor: 'rgba(255, 255, 255, 0.92)',
-            border: '1px solid #d0d0d0',
-            borderRadius: '4px',
-            color: '#555',
-            cursor: 'pointer',
-            fontSize: '10px',
-            fontWeight: 600,
-            padding: '3px 6px',
-            position: 'absolute',
-            right: '6px',
-            top: '6px',
-            zIndex: 1,
-          }}
-        >
-          {isExpanded ? 'Min' : 'Max'}
-        </button>
         {chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>

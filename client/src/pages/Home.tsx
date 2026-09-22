@@ -62,6 +62,7 @@ const Home = () => {
   const [accountFilter, setAccountFilter] = useState('');
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [chartOpen, setChartOpen] = useState(true);
+  const [chartExpanded, setChartExpanded] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [forecasts, setForecasts] = useState<Forecast[]>([]);
   const [draggingForecast, setDraggingForecast] = useState<Forecast | null>(null);
@@ -818,26 +819,80 @@ const Home = () => {
                   chartData={chartData}
                   accounts={accounts}
                   formatDate={formatDate}
+                  isExpanded={chartExpanded}
                 />
               </Suspense>
           )}
-          <div style={{ display: 'flex', alignItems: 'stretch' }}>
+           <div
+             role="toolbar"
+             aria-label="Chart controls"
+             style={{
+               alignItems: 'stretch',
+               backgroundColor: '#dce5eb',
+               border: '1px solid #bdcbd5',
+               borderRadius: '0 0 6px 6px',
+               boxShadow: '0 1px 2px rgba(45, 65, 78, 0.16)',
+               display: 'flex',
+               overflow: 'hidden',
+             }}
+           >
             <button
               data-testid="button-toggle-chart"
               onClick={() => setChartOpen(!chartOpen)}
               style={{
                 flex: 1,
-                padding: '4px',
+                 padding: '6px 4px',
                 fontSize: '12px',
-                color: '#666',
-                backgroundColor: 'transparent',
+                 fontWeight: 600,
+                 color: 'white',
+                 backgroundColor: '#526b7c',
                 border: 'none',
                 cursor: 'pointer',
-                textAlign: 'center'
+                 textAlign: 'center',
               }}
             >
               {chartOpen ? 'Hide Chart' : 'Show Chart'}
             </button>
+             <button
+               type="button"
+               data-testid="button-chart-max"
+               aria-pressed={chartExpanded}
+               disabled={!chartOpen || chartExpanded}
+               onClick={() => setChartExpanded(true)}
+               style={{
+                 backgroundColor: chartExpanded ? '#f5f7f8' : 'white',
+                 border: 'none',
+                 borderLeft: '1px solid #bdcbd5',
+                 color: chartOpen && !chartExpanded ? '#344b5b' : '#93a1aa',
+                 cursor: chartOpen && !chartExpanded ? 'pointer' : 'default',
+                 flex: 1,
+                 fontSize: '12px',
+                 fontWeight: 600,
+                 padding: '6px 4px',
+               }}
+             >
+               Max
+             </button>
+             <button
+               type="button"
+               data-testid="button-chart-min"
+               aria-pressed={!chartExpanded}
+               disabled={!chartOpen || !chartExpanded}
+               onClick={() => setChartExpanded(false)}
+               style={{
+                 backgroundColor: !chartExpanded ? '#f5f7f8' : 'white',
+                 border: 'none',
+                 borderLeft: '1px solid #bdcbd5',
+                 color: chartOpen && chartExpanded ? '#344b5b' : '#93a1aa',
+                 cursor: chartOpen && chartExpanded ? 'pointer' : 'default',
+                 flex: 1,
+                 fontSize: '12px',
+                 fontWeight: 600,
+                 padding: '6px 4px',
+               }}
+             >
+               Min
+             </button>
           </div>
         </div>
       </div>
