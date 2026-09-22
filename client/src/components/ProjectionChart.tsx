@@ -16,7 +16,12 @@ type ProjectionChartProps = {
 };
 
 const CHART_COLORS = ['#1976d2', '#e53935', '#43a047', '#fb8c00', '#8e24aa', '#00acc1', '#d81b60', '#6d4c41'];
-const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+const currencyFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
 
 function accountLabel(account: Account) {
   return [account.name || 'Unnamed account', account.mask].filter(Boolean).join(' ');
@@ -82,7 +87,7 @@ export default function ProjectionChart({
                 formatter={(value: number, name: string) => {
                   const acct = accounts.find(a => a.account_id === name);
                   const label = acct ? `${acct.name} ${acct.mask}` : name;
-                  return [new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value), label];
+                  return [currencyFormatter.format(value), label];
                 }}
                 labelFormatter={(label: string) => formatDate(label)}
                 contentStyle={{ fontSize: '12px', borderRadius: '6px' }}
