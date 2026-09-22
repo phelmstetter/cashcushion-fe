@@ -5,6 +5,8 @@ import { getDashboardContentPadding } from "@/lib/dashboardLayout";
 import { useLocation } from "wouter";
 
 const LONG_PRESS_MS = 500;
+const CHART_WINDOW_MIN = 33;
+const CHART_WINDOW_MAX = 50;
 const ProjectionChart = lazy(() => import("@/components/ProjectionChart"));
 
 function ProjectionChartLoading() {
@@ -61,12 +63,13 @@ const Home = () => {
   const [companyFilter, setCompanyFilter] = useState('');
   const [accountFilter, setAccountFilter] = useState('');
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [chartWindowHeight, setChartWindowHeight] = useState(33);
+  const [chartWindowHeight, setChartWindowHeight] = useState(CHART_WINDOW_MIN);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [forecasts, setForecasts] = useState<Forecast[]>([]);
   const [draggingForecast, setDraggingForecast] = useState<Forecast | null>(null);
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  const chartResizeStartRef = useRef<{ pointerId: number; startY: number; startHeight: number } | null>(null);
   const cursorRef = useRef<{ date: string; id: string } | null>(null);
   const loadingRef = useRef(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -107,6 +110,38 @@ const Home = () => {
     setForecastType('single');
     setForecastDirection('expense');
     setModalView('forecast');
+  };
+
+  const clampChartWindowHeight = (height: number) => Math.min(
+    CHART_WINDOW_MAX,
+    Math.max(CHART_WINDOW_MIN, height)
+  );
+
+  const startChartResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    chartResizeStartRef.current = {
+      pointerId: event.pointerId,
+      startY: event.clientY,
+      startHeight: chartWindowHeight,
+    };
+  };
+
+  const resizeChart = (event: React.PointerEvent<HTMLDivElement>) => {
+    const resizeStart = chartResizeStartRef.current;
+    if (!resizeStart || resizeStart.pointerId !== event.pointerId) return;
+
+    const viewportHeight = window.innerHeight || 1;
+    const deltaPercent = ((event.clientY - resizeStart.startY) / viewportHeight) * 100;
+    setChartWindowHeight(clampChartWindowHeight(Math.round(resizeStart.startHeight + deltaPercent)));
+  };
+
+  const finishChartResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (chartResizeStartRef.current?.pointerId !== event.pointerId) return;
+    chartResizeStartRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
   };
 
   const isModalOpen = Boolean(selectedTransaction || editingForecast || addingStandaloneForecast);
@@ -821,60 +856,52 @@ const Home = () => {
             />
           </Suspense>
            <div
-             aria-label="Chart window size"
+             role="separator"
+             tabIndex={0}
+             aria-label="Drag to resize chart window"
+             aria-orientation="horizontal"
+             aria-valuemin={CHART_WINDOW_MIN}
+             aria-valuemax={CHART_WINDOW_MAX}
+             aria-valuenow={chartWindowHeight}
+             aria-valuetext={`${chartWindowHeight}% of screen height`}
+             data-testid="handle-chart-window-size"
+             onPointerDown={startChartResize}
+             onPointerMove={resizeChart}
+             onPointerUp={finishChartResize}
+             onPointerCancel={finishChartResize}
+             onKeyDown={(event) => {
+               if (event.key === 'ArrowUp' || event.key === 'ArrowRight') {
+                 event.preventDefault();
+                 setChartWindowHeight((height) => clampChartWindowHeight(height + 1));
+               } else if (event.key === 'ArrowDown' || event.key === 'ArrowLeft') {
+                 event.preventDefault();
+                 setChartWindowHeight((height) => clampChartWindowHeight(height - 1));
+               }
+             }}
              style={{
-               alignItems: 'stretch',
+               alignItems: 'center',
                backgroundColor: '#526b7c',
                border: '1px solid #405866',
                borderRadius: '0 0 6px 6px',
                boxShadow: '0 1px 2px rgba(45, 65, 78, 0.24)',
+               cursor: 'row-resize',
                display: 'flex',
-               gap: '8px',
+               height: '18px',
+               justifyContent: 'center',
                overflow: 'hidden',
-               padding: '6px 10px',
+               touchAction: 'none',
+               userSelect: 'none',
              }}
            >
-             <label
-               htmlFor="chart-window-size"
-              style={{
-                fontSize: '12px',
-                 fontWeight: 600,
-                 color: 'white',
-                 flexShrink: 0,
-                 lineHeight: '18px',
-              }}
-            >
-               Chart size
-             </label>
-             <input
-               id="chart-window-size"
-               data-testid="input-chart-window-size"
-               type="range"
-               min="33"
-               max="50"
-               step="1"
-               value={chartWindowHeight}
-               onChange={(event) => setChartWindowHeight(Number(event.target.value))}
+             <span
+               aria-hidden="true"
                style={{
-                 accentColor: '#f4a916',
-                 cursor: 'pointer',
-                 flex: 1,
-                 margin: 0,
+                 backgroundColor: 'rgba(255, 255, 255, 0.72)',
+                 borderRadius: '999px',
+                 height: '3px',
+                 width: '44px',
                }}
              />
-             <output
-               aria-live="polite"
-               style={{
-                 color: 'white',
-                 fontSize: '12px',
-                 fontWeight: 600,
-                 lineHeight: '18px',
-                 minWidth: '30px',
-                 textAlign: 'right',
-               }}
-             >
-               {chartWindowHeight}%
-             </output>
           </div>
         </div>
       </div>
