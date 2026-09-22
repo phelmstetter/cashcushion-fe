@@ -1487,13 +1487,16 @@ const Home = () => {
                   </p>
                 ) : (
                   <div style={{ marginBottom: '16px' }}>
-                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Name</label>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>
+                      Name <span aria-hidden="true">*</span>
+                    </label>
                     <input
                       type="text"
                       placeholder="e.g. Holiday gift"
                       data-testid="input-standalone-forecast-name"
                       value={standaloneForecastName}
                       onChange={(e) => setStandaloneForecastName(e.target.value)}
+                      required
                       style={{
                         width: '100%',
                         padding: '8px',
@@ -1504,7 +1507,7 @@ const Home = () => {
                     />
                     <div style={{ marginTop: '16px' }}>
                       <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>
-                        Account
+                        Account <span aria-hidden="true">*</span>
                       </label>
                       <select
                         data-testid="select-standalone-forecast-account"
@@ -1592,13 +1595,14 @@ const Home = () => {
 
                 <div style={{ marginTop: '0' }}>
                   <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>
-                    {forecastType === 'single' ? 'Date' : 'Starting Date'}
+                    {forecastType === 'single' ? 'Date' : 'Starting Date'} <span aria-hidden="true">*</span>
                   </label>
                   <input 
                     type="date"
                     data-testid="input-forecast-date"
                     value={forecastDate}
                     onChange={(e) => setForecastDate(e.target.value)}
+                    required
                     style={{
                       width: '100%',
                       padding: '8px',
@@ -1638,7 +1642,7 @@ const Home = () => {
                     </button>
                   </div>
                   <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>
-                    Amount (enter a positive number)
+                    Amount (enter a positive number) <span aria-hidden="true">*</span>
                   </label>
                   <input 
                     type="number" 
@@ -1648,6 +1652,7 @@ const Home = () => {
                     data-testid="input-forecast-amount"
                     value={forecastAmount}
                     onChange={(e) => setForecastAmount(e.target.value)}
+                    required
                     style={{
                       width: '100%',
                       padding: '8px',
