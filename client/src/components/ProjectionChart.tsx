@@ -158,9 +158,9 @@ export default function ProjectionChart({
           >
             <colgroup>
               <col style={{ width: '12%' }} />
-              <col style={{ width: '56%' }} />
-              <col style={{ width: '16%' }} />
-              <col style={{ width: '16%' }} />
+              <col style={{ width: '38%' }} />
+              <col style={{ width: '25%' }} />
+              <col style={{ width: '25%' }} />
             </colgroup>
             <thead>
               <tr style={{ color: '#405866', fontSize: '11px', textAlign: 'left' }}>
