@@ -11,14 +11,17 @@
     "test": "node --test test/*.test.js"
   },
   "dependencies": {
-    "@google-cloud/pubsub": "5.3.1",
-    "firebase-admin": "13.10.0",
+    "@google-cloud/pubsub": "6.1.0",
+    "firebase-admin": "14.4.0",
     "firebase-functions": "7.4.0",
     "plaid": "41.4.0"
   },
   "devDependencies": {
     "eslint": "8.57.0",
     "eslint-config-google": "0.14.0"
+  },
+  "overrides": {
+    "uuid": "11.1.1"
   },
   "private": true
 }

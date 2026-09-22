@@ -11,7 +11,7 @@
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
-    "@google-cloud/pubsub": "^5.3.1",
+    "@google-cloud/pubsub": "^6.1.0",
     "@google-cloud/secret-manager": "^6.1.1",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "^1.2.4",
@@ -52,7 +52,7 @@
     "express": "^4.22.3",
     "express-session": "^1.18.1",
     "firebase": "^12.19.0",
-    "firebase-admin": "^13.10.0",
+    "firebase-admin": "^14.4.0",
     "framer-motion": "^11.13.1",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.453.0",
@@ -103,6 +103,7 @@
   "overrides": {
     "drizzle-kit": {
       "@esbuild-kit/esm-loader": "npm:tsx@^4.20.4"
-    }
+    },
+    "uuid": "11.1.1"
   }
 }
