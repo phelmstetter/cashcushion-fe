@@ -937,8 +937,8 @@ const Home = () => {
                   <div
                     aria-label={`${isForecast ? 'Forecasts' : 'Transactions'} on ${formatDate(date)}`}
                     style={{
-                      backgroundColor: isForecast ? '#E3F2FD' : '#f5f5f7',
-                      color: isForecast ? '#3176a7' : '#666',
+                      backgroundColor: '#f5f5f7',
+                      color: '#666',
                       fontSize: '12px',
                       fontWeight: 600,
                       letterSpacing: '0.02em',
