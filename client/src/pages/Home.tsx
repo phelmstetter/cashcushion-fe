@@ -903,9 +903,9 @@ const Home = () => {
               ? transactionBalances.get((item.data as Transaction).id) ?? null
               : null;
             const previousItem = mergedItems[idx - 1];
-            const showTransactionDate = !isForecast && (
+            const showDateHeader = (
               !previousItem ||
-              previousItem.type !== 'transaction' ||
+              previousItem.type !== item.type ||
               previousItem.data.date !== date
             );
 
@@ -933,16 +933,17 @@ const Home = () => {
                     <span style={{ height: '1px', backgroundColor: '#ddd', flex: 1 }} />
                   </div>
                 )}
-                {showTransactionDate && (
+                {showDateHeader && (
                   <div
-                    aria-label={`Transactions on ${formatDate(date)}`}
+                    aria-label={`${isForecast ? 'Forecasts' : 'Transactions'} on ${formatDate(date)}`}
                     style={{
-                      backgroundColor: '#f5f5f7',
-                      color: '#666',
-                      fontSize: '22px',
-                      fontWeight: 400,
-                      margin: '10px -2px 6px',
-                      padding: '10px 12px 8px',
+                      backgroundColor: isForecast ? '#E3F2FD' : '#f5f5f7',
+                      color: isForecast ? '#3176a7' : '#666',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      letterSpacing: '0.02em',
+                      margin: '8px -2px 4px',
+                      padding: '6px 10px',
                     }}
                   >
                     <time dateTime={date}>{formatDate(date)}</time>
@@ -1134,11 +1135,9 @@ const Home = () => {
                     {amountDisplay}
                   </div>
                   <div style={{ fontSize: '12px', color: '#666' }}>
-                    {isForecast
-                      ? formatDate(date)
-                      : transactionBalance != null
+                    {!isForecast && (transactionBalance != null
                         ? <span aria-label={`Balance after transaction: ${formatCurrency(transactionBalance)}`}>{formatCurrency(transactionBalance)}</span>
-                        : <span aria-label="Balance unavailable">—</span>}
+                        : <span aria-label="Balance unavailable">—</span>)}
                   </div>
                 </div>
                 
