@@ -1,4 +1,5 @@
 import type { Account } from "@/lib/firebase";
+import { useState } from "react";
 import {
   LineChart,
   Line,
@@ -56,6 +57,7 @@ export default function ProjectionChart({
   onDateSelect,
   onAccountToggle,
 }: ProjectionChartProps) {
+  const [calloutOpen, setCalloutOpen] = useState(true);
   const containerHeight = `${windowHeight}svh`;
   const includedAccountIdSet = new Set(includedAccountIds);
   const visibleAccounts = accounts.filter((account) => includedAccountIdSet.has(account.account_id));
@@ -275,10 +277,12 @@ export default function ProjectionChart({
                         key={account.account_id}
                         x={selectedChartDate}
                         y={balance}
-                        r={4}
+                        r={calloutOpen ? 4 : 7}
                         fill={color}
                         stroke="#ffffff"
                         strokeWidth={2}
+                        onClick={() => setCalloutOpen(true)}
+                        style={{ cursor: calloutOpen ? 'default' : 'pointer' }}
                       />
                     );
                   })}
@@ -291,7 +295,7 @@ export default function ProjectionChart({
             {accounts.length > 0 ? 'No accounts included' : 'No account data'}
           </div>
         )}
-        {selectedChartDate && detailPoint && (
+        {calloutOpen && selectedChartDate && detailPoint && (
           <div
             data-testid="chart-balance-callout"
             aria-label={`Projected balances on ${formatDate(selectedChartDate)}`}
@@ -307,13 +311,39 @@ export default function ProjectionChart({
               minWidth: '150px',
               overflow: 'auto',
               padding: '7px 9px',
-              pointerEvents: 'none',
+              pointerEvents: 'auto',
               position: 'absolute',
               top: '10px',
               transform: 'translateX(-50%)',
               zIndex: 2,
             }}
           >
+            <button
+              type="button"
+              aria-label="Close chart balance call-out"
+              onClick={() => setCalloutOpen(false)}
+              style={{
+                alignItems: 'center',
+                background: 'transparent',
+                border: 'none',
+                borderRadius: '50%',
+                color: '#607d8b',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                fontSize: '16px',
+                height: '22px',
+                justifyContent: 'center',
+                lineHeight: 1,
+                padding: 0,
+                position: 'absolute',
+                right: '3px',
+                top: '2px',
+                width: '22px',
+              }}
+              title="Close call-out"
+            >
+              ×
+            </button>
             <div
               aria-hidden="true"
               style={{
@@ -336,6 +366,7 @@ export default function ProjectionChart({
                 fontSize: '12px',
                 fontWeight: 700,
                 marginBottom: '4px',
+                paddingRight: '18px',
                 whiteSpace: 'nowrap',
               }}
             >
