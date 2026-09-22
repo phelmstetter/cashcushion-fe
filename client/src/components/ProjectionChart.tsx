@@ -37,17 +37,6 @@ function accountLabel(account: Account) {
   return [account.name || 'Unnamed account', account.mask].filter(Boolean).join(' ');
 }
 
-function abbreviatedDate(dateString: string) {
-  const date = /^\d{4}-\d{2}-\d{2}$/.test(dateString)
-    ? new Date(`${dateString}T00:00:00`)
-    : new Date(dateString);
-
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
-}
-
 export default function ProjectionChart({
   chartData,
   accounts,
@@ -101,7 +90,6 @@ export default function ProjectionChart({
 
   const accountSummaries = accounts.map((account, index) => {
     let minimumBalance: number | null = null;
-    let minimumDate: string | null = null;
 
     for (const point of chartData) {
       const balance = point[account.account_id];
@@ -109,7 +97,6 @@ export default function ProjectionChart({
 
       if (minimumBalance == null || balance < minimumBalance) {
         minimumBalance = balance;
-        minimumDate = typeof point.fullDate === 'string' ? point.fullDate : null;
       }
     }
 
@@ -118,7 +105,6 @@ export default function ProjectionChart({
       color: CHART_COLORS[index % CHART_COLORS.length],
       isIncluded: includedAccountIdSet.has(account.account_id),
       minimumBalance,
-      minimumDate,
     };
   });
 
@@ -163,11 +149,11 @@ export default function ProjectionChart({
                 <th scope="col" style={{ backgroundColor: '#ffffff', padding: '3px 6px 5px 10px', position: 'sticky', textAlign: 'center', top: 0, width: '12%', zIndex: 1 }}>Show</th>
                 <th scope="col" style={{ backgroundColor: '#ffffff', padding: '3px 8px 5px', position: 'sticky', top: 0, width: '34%', zIndex: 1 }}>Account</th>
                 <th scope="col" style={{ backgroundColor: '#ffffff', padding: '3px 8px 5px', position: 'sticky', top: 0, width: '25%', zIndex: 1 }}>Current balance</th>
-                <th scope="col" style={{ backgroundColor: '#ffffff', padding: '3px 10px 5px', position: 'sticky', top: 0, width: '29%', zIndex: 1 }}>Low balance (date)</th>
+                <th scope="col" style={{ backgroundColor: '#ffffff', padding: '3px 10px 5px', position: 'sticky', top: 0, width: '29%', zIndex: 1 }}>Low balance</th>
               </tr>
             </thead>
             <tbody>
-              {accountSummaries.map(({ account, color, isIncluded, minimumBalance, minimumDate }) => (
+              {accountSummaries.map(({ account, color, isIncluded, minimumBalance }) => (
                 <tr key={account.account_id} style={{ borderTop: '1px solid #dce5e9', opacity: isIncluded ? 1 : 0.55 }}>
                   <td style={{ padding: '7px 6px 7px 10px', textAlign: 'center', verticalAlign: 'top' }}>
                     <input
@@ -208,8 +194,8 @@ export default function ProjectionChart({
                       : '—'}
                   </td>
                   <td style={{ color: '#37474f', padding: '7px 10px', verticalAlign: 'top', whiteSpace: 'nowrap' }}>
-                    {minimumBalance != null && minimumDate
-                      ? <><strong>{currencyFormatter.format(minimumBalance)}</strong><span style={{ color: '#607d8b' }}> ({abbreviatedDate(minimumDate)})</span></>
+                    {minimumBalance != null
+                      ? <strong>{currencyFormatter.format(minimumBalance)}</strong>
                       : '—'}
                   </td>
                 </tr>
