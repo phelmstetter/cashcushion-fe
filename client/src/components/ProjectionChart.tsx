@@ -14,6 +14,7 @@ type ProjectionChartProps = {
   accounts: Account[];
   formatDate: (dateString: string) => string;
   windowHeight: number;
+  onDateSelect?: (date: string) => void;
 };
 
 const CHART_COLORS = ['#1976d2', '#e53935', '#43a047', '#fb8c00', '#8e24aa', '#00acc1', '#d81b60', '#6d4c41'];
@@ -44,6 +45,7 @@ export default function ProjectionChart({
   accounts,
   formatDate,
   windowHeight,
+  onDateSelect,
 }: ProjectionChartProps) {
   const containerHeight = `${windowHeight}svh`;
 
@@ -93,7 +95,15 @@ export default function ProjectionChart({
       >
         {chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+            <LineChart
+              data={chartData}
+              margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
+              onClick={(state) => {
+                if (typeof state?.activeLabel === 'string') {
+                  onDateSelect?.(state.activeLabel);
+                }
+              }}
+            >
               <XAxis
                 dataKey="fullDate"
                 tick={{ fontSize: 10 }}

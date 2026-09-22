@@ -64,6 +64,7 @@ const Home = () => {
   const [accountFilter, setAccountFilter] = useState('');
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [chartWindowHeight, setChartWindowHeight] = useState(CHART_WINDOW_MIN);
+  const [chartNavigationTarget, setChartNavigationTarget] = useState<{ date: string; requestId: number } | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [forecasts, setForecasts] = useState<Forecast[]>([]);
   const [draggingForecast, setDraggingForecast] = useState<Forecast | null>(null);
@@ -74,6 +75,8 @@ const Home = () => {
   const loadingRef = useRef(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const activityDateRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const chartNavigationRequestRef = useRef(0);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transactionRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const dragStartPosRef = useRef<{ x: number; y: number } | null>(null);
@@ -251,11 +254,11 @@ const Home = () => {
     }
   };
 
-  const loadMoreTransactions = async () => {
-    if (loadingRef.current || !hasMoreRef.current) return;
+  const loadMoreTransactions = async (): Promise<boolean> => {
+    if (loadingRef.current || !hasMoreRef.current) return false;
     
     const userId = auth.currentUser?.uid;
-    if (!userId) return;
+    if (!userId) return false;
     
     loadingRef.current = true;
     setLoading(true);
@@ -273,17 +276,44 @@ const Home = () => {
         }
         hasMoreRef.current = result.hasMore;
         setHasMore(result.hasMore);
+        return true;
       } else {
         hasMoreRef.current = false;
         setHasMore(false);
+        return false;
       }
     } catch (error) {
       console.error("Error loading more:", error);
       setPaginationError('We couldn’t load older transactions. Try again.');
+      return false;
     } finally {
       loadingRef.current = false;
       setLoading(false);
       setTimeout(() => reobserveSentinel(), 100);
+    }
+  };
+
+  const handleChartDateSelect = async (date: string) => {
+    const requestId = ++chartNavigationRequestRef.current;
+
+    while (
+      hasMoreRef.current &&
+      cursorRef.current?.date &&
+      cursorRef.current.date > date
+    ) {
+      const cursorBeforeLoad = `${cursorRef.current.date}:${cursorRef.current.id}`;
+      const loadedMore = await loadMoreTransactions();
+      if (
+        !loadedMore ||
+        requestId !== chartNavigationRequestRef.current ||
+        `${cursorRef.current?.date}:${cursorRef.current?.id}` === cursorBeforeLoad
+      ) {
+        break;
+      }
+    }
+
+    if (requestId === chartNavigationRequestRef.current) {
+      setChartNavigationTarget({ date, requestId });
     }
   };
 
@@ -564,6 +594,11 @@ const Home = () => {
     return (tx.merchant_name || tx.counterparty_name) === companyFilter;
   }), [visibleForecasts, transactions, accountFilter, companyFilter]);
 
+  const activityDates = useMemo(
+    () => Array.from(new Set(mergedItems.map((item) => item.data.date))),
+    [mergedItems]
+  );
+
   const matchedTransactionIds = useMemo(() => {
     const ids = new Set<string>();
     for (const f of forecasts) {
@@ -643,6 +678,37 @@ const Home = () => {
       });
     }
   }, [fixedHeaderBottom, initialLoading, mergedItems.length]);
+
+  useEffect(() => {
+    if (!chartNavigationTarget) return;
+
+    if (activityDates.length === 0) {
+      setChartNavigationTarget(null);
+      return;
+    }
+
+    const selectedTimestamp = new Date(`${chartNavigationTarget.date}T00:00:00`).getTime();
+    const destinationDate = activityDates.reduce((closestDate, candidateDate) => {
+      const closestDistance = Math.abs(new Date(`${closestDate}T00:00:00`).getTime() - selectedTimestamp);
+      const candidateDistance = Math.abs(new Date(`${candidateDate}T00:00:00`).getTime() - selectedTimestamp);
+      return candidateDistance < closestDistance ? candidateDate : closestDate;
+    });
+
+    const frame = requestAnimationFrame(() => {
+      const destination = activityDateRefs.current.get(`transaction:${destinationDate}`)
+        ?? activityDateRefs.current.get(`forecast:${destinationDate}`);
+      if (!destination) return;
+
+      const rect = destination.getBoundingClientRect();
+      const scrollTarget = window.scrollY + rect.top - getDashboardContentPadding(fixedHeaderBottom);
+      window.scrollTo({ top: Math.max(0, scrollTarget), behavior: 'smooth' });
+      setChartNavigationTarget((target) =>
+        target?.requestId === chartNavigationTarget.requestId ? null : target
+      );
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [activityDates, chartNavigationTarget, fixedHeaderBottom]);
 
   const currentUser = auth.currentUser;
 
@@ -853,6 +919,7 @@ const Home = () => {
               accounts={accounts}
               formatDate={formatDate}
               windowHeight={chartWindowHeight}
+              onDateSelect={handleChartDateSelect}
             />
           </Suspense>
            <div
@@ -1014,6 +1081,14 @@ const Home = () => {
                 {showDateHeader && (
                   <div
                     aria-label={`${isForecast ? 'Forecasts' : 'Transactions'} on ${formatDate(date)}`}
+                    ref={(element) => {
+                      const key = `${isForecast ? 'forecast' : 'transaction'}:${date}`;
+                      if (element) {
+                        activityDateRefs.current.set(key, element);
+                      } else {
+                        activityDateRefs.current.delete(key);
+                      }
+                    }}
                     style={{
                       backgroundColor: '#f5f5f7',
                       color: '#666',
