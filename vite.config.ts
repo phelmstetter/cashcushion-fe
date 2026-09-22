@@ -55,7 +55,6 @@ export default defineConfig({
         manualChunks: {
           "react-vendor": ["react", "react-dom", "@tanstack/react-query", "wouter"],
           "firebase-vendor": ["firebase/app", "firebase/auth", "firebase/app-check", "firebase/firestore"],
-          charts: ["recharts"],
         },
       },
     },
