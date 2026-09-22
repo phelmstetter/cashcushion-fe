@@ -148,7 +148,7 @@ export default function ProjectionChart({
               <tr style={{ color: '#405866', fontSize: '11px', textAlign: 'left' }}>
                 <th scope="col" style={{ backgroundColor: '#ffffff', padding: '3px 6px 5px 10px', position: 'sticky', textAlign: 'center', top: 0, width: '12%', zIndex: 1 }}>Show</th>
                 <th scope="col" style={{ backgroundColor: '#ffffff', padding: '3px 8px 5px', position: 'sticky', top: 0, width: '34%', zIndex: 1 }}>Account</th>
-                <th scope="col" style={{ backgroundColor: '#ffffff', padding: '3px 8px 5px', position: 'sticky', top: 0, width: '25%', zIndex: 1 }}>Current balance</th>
+                <th scope="col" style={{ backgroundColor: '#ffffff', padding: '3px 8px 5px', position: 'sticky', top: 0, whiteSpace: 'nowrap', width: '25%', zIndex: 1 }}>Current balance</th>
                 <th scope="col" style={{ backgroundColor: '#ffffff', padding: '3px 10px 5px', position: 'sticky', top: 0, width: '29%', zIndex: 1 }}>Low balance</th>
               </tr>
             </thead>
