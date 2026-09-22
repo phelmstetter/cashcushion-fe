@@ -154,14 +154,13 @@ export default function ProjectionChart({
               fontSize: '12px',
               tableLayout: 'fixed',
               width: '100%',
-              minWidth: '360px',
             }}
           >
             <colgroup>
-              <col style={{ width: '40px' }} />
-              <col />
-              <col style={{ width: '98px' }} />
-              <col style={{ width: '82px' }} />
+              <col style={{ width: '12%' }} />
+              <col style={{ width: '56%' }} />
+              <col style={{ width: '16%' }} />
+              <col style={{ width: '16%' }} />
             </colgroup>
             <thead>
               <tr style={{ color: '#405866', fontSize: '11px', textAlign: 'left' }}>
