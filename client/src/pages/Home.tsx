@@ -64,6 +64,7 @@ const Home = () => {
   const [includedAccountIds, setIncludedAccountIds] = useState<string[]>([]);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [chartWindowHeight, setChartWindowHeight] = useState(CHART_WINDOW_MIN);
+  const [activeChartDate, setActiveChartDate] = useState<string | null>(null);
   const [chartNavigationTarget, setChartNavigationTarget] = useState<{ date: string; requestId: number } | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [forecasts, setForecasts] = useState<Forecast[]>([]);
@@ -76,6 +77,7 @@ const Home = () => {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const activityDateRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const orderedActivityDateHeadersRef = useRef<Array<{ date: string; element: HTMLDivElement }>>([]);
   const chartNavigationRequestRef = useRef(0);
   const accountSelectionInitializedRef = useRef(false);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -303,6 +305,7 @@ const Home = () => {
   };
 
   const handleChartDateSelect = async (date: string) => {
+    setActiveChartDate(date);
     const requestId = ++chartNavigationRequestRef.current;
 
     while (
@@ -587,6 +590,11 @@ const Home = () => {
     return data;
   }, [accounts, visibleForecasts]);
 
+  const chartDateSet = useMemo(
+    () => new Set(chartData.map((point) => point.fullDate).filter((date): date is string => typeof date === 'string')),
+    [chartData]
+  );
+
   type MergedItem = 
     | { type: 'transaction'; data: Transaction }
     | { type: 'forecast'; data: Forecast };
@@ -618,6 +626,22 @@ const Home = () => {
     () => Array.from(new Set(mergedItems.map((item) => item.data.date))),
     [mergedItems]
   );
+
+  useLayoutEffect(() => {
+    const headers = Array.from(activityDateRefs.current.entries()).map(([key, element]) => ({
+      date: key.slice(key.indexOf(':') + 1),
+      element,
+    }));
+
+    headers.sort((first, second) => {
+      if (first.element === second.element) return 0;
+      return first.element.compareDocumentPosition(second.element) & Node.DOCUMENT_POSITION_FOLLOWING
+        ? -1
+        : 1;
+    });
+
+    orderedActivityDateHeadersRef.current = headers;
+  }, [activityDates]);
 
   const matchedTransactionIds = useMemo(() => {
     const ids = new Set<string>();
@@ -686,6 +710,55 @@ const Home = () => {
     const firstTxIndex = mergedItems.findIndex(item => item.type === 'transaction');
     return firstTxIndex > 0 ? firstTxIndex : -1;
   }, [mergedItems]);
+
+  useEffect(() => {
+    let frame: number | null = null;
+
+    const syncChartCursorToActivity = () => {
+      frame = null;
+      const chartContentTop = getDashboardContentPadding(fixedHeaderBottom);
+      const dateHeaders = orderedActivityDateHeadersRef.current;
+
+      if (dateHeaders.length === 0) {
+        setActiveChartDate((currentDate) => currentDate === null ? currentDate : null);
+        return;
+      }
+
+      let lowerBound = 0;
+      let upperBound = dateHeaders.length - 1;
+      let lastHeaderBeforeContent = -1;
+
+      while (lowerBound <= upperBound) {
+        const midpoint = Math.floor((lowerBound + upperBound) / 2);
+        const headerTop = dateHeaders[midpoint].element.getBoundingClientRect().top;
+
+        if (headerTop <= chartContentTop) {
+          lastHeaderBeforeContent = midpoint;
+          lowerBound = midpoint + 1;
+        } else {
+          upperBound = midpoint - 1;
+        }
+      }
+
+      const activeHeader = dateHeaders[Math.max(0, lastHeaderBeforeContent)];
+      const nextDate = chartDateSet.has(activeHeader.date) ? activeHeader.date : null;
+
+      setActiveChartDate((currentDate) => currentDate === nextDate ? currentDate : nextDate);
+    };
+
+    const scheduleSync = () => {
+      if (frame != null) return;
+      frame = requestAnimationFrame(syncChartCursorToActivity);
+    };
+
+    scheduleSync();
+    window.addEventListener('scroll', scheduleSync, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', scheduleSync);
+      if (frame != null) cancelAnimationFrame(frame);
+    };
+  }, [activityDates, chartDateSet, fixedHeaderBottom]);
 
   useEffect(() => {
     if (!initialLoading && !hasAutoScrolled.current && scrollAnchorRef.current && fixedHeaderBottom > 0) {
@@ -918,8 +991,12 @@ const Home = () => {
               includedAccountIds={accountSelectionInitializedRef.current
                 ? includedAccountIds
                 : accounts.map((account) => account.account_id)}
+              activeDate={activeChartDate}
               formatDate={formatDate}
               windowHeight={chartWindowHeight}
+              onDateHover={(date) => {
+                setActiveChartDate((currentDate) => currentDate === date ? currentDate : date);
+              }}
               onDateSelect={handleChartDateSelect}
               onAccountToggle={toggleAccountInclusion}
             />

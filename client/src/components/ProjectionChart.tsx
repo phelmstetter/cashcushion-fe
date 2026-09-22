@@ -1,5 +1,4 @@
 import type { Account } from "@/lib/firebase";
-import { useState } from "react";
 import {
   LineChart,
   Line,
@@ -14,8 +13,10 @@ type ProjectionChartProps = {
   chartData: Array<Record<string, string | number | null>>;
   accounts: Account[];
   includedAccountIds: string[];
+  activeDate: string | null;
   formatDate: (dateString: string) => string;
   windowHeight: number;
+  onDateHover?: (date: string) => void;
   onDateSelect?: (date: string) => void;
   onAccountToggle: (accountId: string) => void;
 };
@@ -47,18 +48,22 @@ export default function ProjectionChart({
   chartData,
   accounts,
   includedAccountIds,
+  activeDate,
   formatDate,
   windowHeight,
+  onDateHover,
   onDateSelect,
   onAccountToggle,
 }: ProjectionChartProps) {
   const containerHeight = `${windowHeight}svh`;
-  const [activeDate, setActiveDate] = useState<string | null>(null);
   const includedAccountIdSet = new Set(includedAccountIds);
   const visibleAccounts = accounts.filter((account) => includedAccountIdSet.has(account.account_id));
   const firstChartDate = chartData.find((point) => typeof point.fullDate === 'string')?.fullDate as string | undefined;
-  const detailDate = activeDate && chartData.some((point) => point.fullDate === activeDate)
+  const selectedChartDate = activeDate && chartData.some((point) => point.fullDate === activeDate)
     ? activeDate
+    : null;
+  const detailDate = selectedChartDate
+    ? selectedChartDate
     : firstChartDate ?? null;
   const detailPoint = detailDate
     ? chartData.find((point) => point.fullDate === detailDate)
@@ -207,12 +212,11 @@ export default function ProjectionChart({
               onMouseMove={(state) => {
                 const nextDate = state?.activeLabel;
                 if (typeof nextDate === 'string') {
-                  setActiveDate((currentDate) => currentDate === nextDate ? currentDate : nextDate);
+                  onDateHover?.(nextDate);
                 }
               }}
               onClick={(state) => {
                 if (typeof state?.activeLabel === 'string') {
-                  setActiveDate(state.activeLabel);
                   onDateSelect?.(state.activeLabel);
                 }
               }}
@@ -233,7 +237,7 @@ export default function ProjectionChart({
               />
               <Tooltip
                 content={() => null}
-                cursor={{ stroke: '#78909c', strokeWidth: 1 }}
+                cursor={false}
               />
               <ReferenceLine
                 y={0}
@@ -252,6 +256,13 @@ export default function ProjectionChart({
                   dot={false}
                 />
               ))}
+              {selectedChartDate && (
+                <ReferenceLine
+                  x={selectedChartDate}
+                  stroke="#78909c"
+                  strokeWidth={1}
+                />
+              )}
             </LineChart>
           </ResponsiveContainer>
         ) : (
