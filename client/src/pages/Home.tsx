@@ -599,28 +599,29 @@ const Home = () => {
     | { type: 'transaction'; data: Transaction }
     | { type: 'forecast'; data: Forecast };
 
-  const mergedItems = useMemo<MergedItem[]>(() => [
+  const allActivityItems = useMemo<MergedItem[]>(() => [
     ...visibleForecasts.map(f => ({ type: 'forecast' as const, data: f })),
     ...transactions.map(t => ({ type: 'transaction' as const, data: t })),
-  ].sort((a, b) => b.data.date.localeCompare(a.data.date))
-  .filter(item => {
-    const accountId = item.type === 'transaction'
-      ? (item.data as Transaction).account_id
-      : (item.data as Forecast).account_id;
-    if (
-      accountSelectionInitializedRef.current &&
-      accountId &&
-      !includedAccountIds.includes(accountId)
-    ) {
-      return false;
-    }
-    if (!companyFilter) return true;
-    if (item.type === 'forecast') {
-      return (item.data as Forecast).name === companyFilter;
-    }
-    const tx = item.data as Transaction;
-    return (tx.merchant_name || tx.counterparty_name) === companyFilter;
-  }), [visibleForecasts, transactions, includedAccountIds, companyFilter]);
+  ].sort((a, b) => b.data.date.localeCompare(a.data.date)), [visibleForecasts, transactions]);
+
+  const mergedItems = useMemo(
+    () => allActivityItems.filter((item) => {
+      const accountId = item.data.account_id;
+      if (
+        accountSelectionInitializedRef.current &&
+        accountId &&
+        !includedAccountIds.includes(accountId)
+      ) {
+        return false;
+      }
+      if (!companyFilter) return true;
+      if (item.type === 'forecast') {
+        return item.data.name === companyFilter;
+      }
+      return (item.data.merchant_name || item.data.counterparty_name) === companyFilter;
+    }),
+    [allActivityItems, includedAccountIds, companyFilter]
+  );
 
   const activityDates = useMemo(
     () => Array.from(new Set(mergedItems.map((item) => item.data.date))),
@@ -663,7 +664,10 @@ const Home = () => {
       );
     }
 
-    for (const transaction of transactions) {
+    for (const item of allActivityItems) {
+      if (item.type !== 'transaction') continue;
+
+      const transaction = item.data;
       const accountId = transaction.account_id;
       const balance = accountId ? balanceByAccount.get(accountId) ?? null : null;
       balanceByTransaction.set(transaction.id, balance);
@@ -674,31 +678,46 @@ const Home = () => {
     }
 
     return balanceByTransaction;
-  }, [accounts, transactions]);
+  }, [accounts, allActivityItems]);
 
   const forecastBalances = useMemo(() => {
     const chartPointsByDate = new Map(
       chartData.map((point) => [point.fullDate as string, point])
     );
     const balanceByForecast = new Map<string, number | null>();
+    const balanceByAccountDate = new Map<string, number | null>();
 
-    for (const forecast of visibleForecasts) {
-      if (!forecast.id) continue;
+    for (const item of allActivityItems) {
+      if (item.type !== 'forecast') continue;
+
+      const forecast = item.data;
+      if (!forecast.id || !forecast.account_id) continue;
+
       const chartPoint = forecast.account_id
         ? chartPointsByDate.get(forecast.date)
         : undefined;
-      const balance = chartPoint && forecast.account_id
+      const endingBalance = chartPoint
         ? chartPoint[forecast.account_id]
         : null;
+      const balanceKey = `${forecast.account_id}:${forecast.date}`;
+      const balance = balanceByAccountDate.has(balanceKey)
+        ? balanceByAccountDate.get(balanceKey) ?? null
+        : (typeof endingBalance === 'number' && Number.isFinite(endingBalance)
+          ? endingBalance
+          : null);
 
       balanceByForecast.set(
         forecast.id,
         typeof balance === 'number' && Number.isFinite(balance) ? balance : null
       );
+
+      if (balance != null && Number.isFinite(forecast.amount)) {
+        balanceByAccountDate.set(balanceKey, balance + forecast.amount);
+      }
     }
 
     return balanceByForecast;
-  }, [chartData, visibleForecasts]);
+  }, [chartData, allActivityItems]);
 
   const scrollAnchorIndex = useMemo(() => {
     const firstTxIndex = mergedItems.findIndex(item => item.type === 'transaction');
