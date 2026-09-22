@@ -3,6 +3,7 @@ import { signOut } from "firebase/auth";
 import { auth, getTransactions, Transaction, saveForecast, saveSeriesForecasts, saveDayIntervalForecasts, updateForecast, updateSeriesForecasts, deleteForecast, deleteSeriesForecasts, getForecasts, Forecast, reconcileForecast, unreconcileForecast, getAccounts, Account } from "@/lib/firebase";
 import { useLocation } from "wouter";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, ReferenceLine, ReferenceDot } from 'recharts';
+import { Menu } from "lucide-react";
 
 const LONG_PRESS_MS = 500;
 
@@ -1135,22 +1136,26 @@ const Home = () => {
                   <button 
                     data-testid={`button-details-${(item.data as Transaction).id}`}
                     aria-label={`View details for ${displayName}`}
+                    title="View transaction details"
                     style={{
-                      padding: '6px 10px',
-                      fontSize: '18px',
+                      width: '36px',
+                      height: '36px',
+                      padding: 0,
                       backgroundColor: 'transparent',
                       color: '#666',
                       border: '1px solid #ddd',
-                      borderRadius: '4px',
+                      borderRadius: '6px',
                       cursor: 'pointer',
-                      lineHeight: 1
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
                     }}
                     onClick={() => {
                       setSelectedTransaction(transactionForModal);
                       setModalView('details');
                     }}
                   >
-                    Details
+                    <Menu size={20} aria-hidden="true" />
                   </button>
                 )}
               </div>
