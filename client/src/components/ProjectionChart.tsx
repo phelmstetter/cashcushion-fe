@@ -135,9 +135,6 @@ export default function ProjectionChart({
               minWidth: '320px',
             }}
           >
-            <caption style={{ captionSide: 'top', padding: '7px 10px 3px', color: '#555', fontWeight: 600, textAlign: 'left' }}>
-              Account balance summary
-            </caption>
             <thead>
               <tr style={{ color: '#666', fontSize: '11px', textAlign: 'left' }}>
                 <th scope="col" style={{ backgroundColor: '#fafafa', padding: '3px 10px 5px', position: 'sticky', top: 0, width: '42%', zIndex: 1 }}>Account</th>
