@@ -3,7 +3,6 @@ import { signOut } from "firebase/auth";
 import { auth, getTransactions, Transaction, saveForecast, saveSeriesForecasts, saveDayIntervalForecasts, updateForecast, updateSeriesForecasts, deleteForecast, deleteSeriesForecasts, getForecasts, Forecast, reconcileForecast, unreconcileForecast, getAccounts, Account } from "@/lib/firebase";
 import { useLocation } from "wouter";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, ReferenceLine, ReferenceDot } from 'recharts';
-import { Menu } from "lucide-react";
 
 const LONG_PRESS_MS = 500;
 
@@ -1088,26 +1087,73 @@ const Home = () => {
                   containIntrinsicSize: '64px'
                 }}
               >
-                {logoUrl ? (
-                  <img 
-                    src={logoUrl} 
-                    alt={displayName}
-                    style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }}
-                  />
-                ) : (
-                  <div style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '50%',
-                    backgroundColor: '#e0e0e0',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '14px',
-                    fontWeight: 'bold'
-                  }}>
-                    {getInitials(displayName)}
-                  </div>
+                {isForecast ? (
+                  logoUrl ? (
+                    <img
+                      src={logoUrl}
+                      alt={displayName}
+                      style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      backgroundColor: '#e0e0e0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '14px',
+                      fontWeight: 'bold'
+                    }}>
+                      {getInitials(displayName)}
+                    </div>
+                  )
+                ) : transactionForModal && (
+                  <button
+                    data-testid={`button-details-${(item.data as Transaction).id}`}
+                    aria-label={`View details for ${displayName}`}
+                    title="View transaction details"
+                    onClick={() => {
+                      setSelectedTransaction(transactionForModal);
+                      setModalView('details');
+                    }}
+                    style={{
+                      width: '44px',
+                      height: '44px',
+                      padding: '2px',
+                      border: '1px solid #d7d7d7',
+                      borderRadius: '50%',
+                      backgroundColor: '#fff',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}
+                  >
+                    {logoUrl ? (
+                      <img
+                        src={logoUrl}
+                        alt=""
+                        style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <span style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '50%',
+                        backgroundColor: '#e0e0e0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '14px',
+                        fontWeight: 'bold'
+                      }}>
+                        {getInitials(displayName)}
+                      </span>
+                    )}
+                  </button>
                 )}
                 
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -1132,32 +1178,6 @@ const Home = () => {
                   </div>
                 </div>
                 
-                {!isForecast && transactionForModal && (
-                  <button 
-                    data-testid={`button-details-${(item.data as Transaction).id}`}
-                    aria-label={`View details for ${displayName}`}
-                    title="View transaction details"
-                    style={{
-                      width: '36px',
-                      height: '36px',
-                      padding: 0,
-                      backgroundColor: 'transparent',
-                      color: '#9a9a9a',
-                      border: 'none',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                    onClick={() => {
-                      setSelectedTransaction(transactionForModal);
-                      setModalView('details');
-                    }}
-                  >
-                    <Menu size={20} aria-hidden="true" />
-                  </button>
-                )}
               </div>
             );
           })}
