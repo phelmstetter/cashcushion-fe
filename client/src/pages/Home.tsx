@@ -388,6 +388,11 @@ const Home = () => {
     };
   };
 
+  const formatCurrency = (amount: number) => new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD'
+  }).format(amount);
+
   const formatDate = (dateString: string) => {
     const date = /^\d{4}-\d{2}-\d{2}$/.test(dateString)
       ? new Date(`${dateString}T00:00:00`)
@@ -518,6 +523,31 @@ const Home = () => {
     }
     return ids;
   }, [forecasts]);
+
+  const transactionBalances = useMemo(() => {
+    const balanceByAccount = new Map<string, number | null>();
+    const balanceByTransaction = new Map<string, number | null>();
+
+    for (const account of accounts) {
+      const balance = account.available_balance ?? account.current_balance ?? null;
+      balanceByAccount.set(
+        account.account_id,
+        typeof balance === 'number' && Number.isFinite(balance) ? balance : null
+      );
+    }
+
+    for (const transaction of transactions) {
+      const accountId = transaction.account_id;
+      const balance = accountId ? balanceByAccount.get(accountId) ?? null : null;
+      balanceByTransaction.set(transaction.id, balance);
+
+      if (accountId && balance != null && Number.isFinite(transaction.amount)) {
+        balanceByAccount.set(accountId, balance + transaction.amount);
+      }
+    }
+
+    return balanceByTransaction;
+  }, [accounts, transactions]);
 
   const scrollAnchorIndex = useMemo(() => {
     const firstTxIndex = mergedItems.findIndex(item => item.type === 'transaction');
@@ -869,6 +899,15 @@ const Home = () => {
             const itemKey = isForecast ? `forecast-${(item.data as Forecast).id}` : `tx-${(item.data as Transaction).id}`;
             const isDropTarget = !isForecast && dropTargetId === (item.data as Transaction).id;
             const isDragging = isForecast && draggingForecast?.id === (item.data as Forecast).id;
+            const transactionBalance = !isForecast
+              ? transactionBalances.get((item.data as Transaction).id) ?? null
+              : null;
+            const previousItem = mergedItems[idx - 1];
+            const showTransactionDate = !isForecast && (
+              !previousItem ||
+              previousItem.type !== 'transaction' ||
+              previousItem.data.date !== date
+            );
 
             return (
               <div
@@ -892,6 +931,21 @@ const Home = () => {
                     <span style={{ height: '1px', backgroundColor: '#ddd', flex: 1 }} />
                     ↑ ↑ FORECAST ↑ ↑
                     <span style={{ height: '1px', backgroundColor: '#ddd', flex: 1 }} />
+                  </div>
+                )}
+                {showTransactionDate && (
+                  <div
+                    aria-label={`Transactions on ${formatDate(date)}`}
+                    style={{
+                      backgroundColor: '#f5f5f7',
+                      color: '#666',
+                      fontSize: '22px',
+                      fontWeight: 400,
+                      margin: '10px -2px 6px',
+                      padding: '10px 12px 8px',
+                    }}
+                  >
+                    <time dateTime={date}>{formatDate(date)}</time>
                   </div>
                 )}
                 <div
@@ -978,7 +1032,7 @@ const Home = () => {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '12px',
-                  height: '60px',
+                  minHeight: isForecast ? '60px' : '68px',
                   boxSizing: 'border-box',
                   padding: '8px',
                   marginBottom: '2px',
@@ -1080,7 +1134,11 @@ const Home = () => {
                     {amountDisplay}
                   </div>
                   <div style={{ fontSize: '12px', color: '#666' }}>
-                    {formatDate(date)}
+                    {isForecast
+                      ? formatDate(date)
+                      : transactionBalance != null
+                        ? <span aria-label={`Balance after transaction: ${formatCurrency(transactionBalance)}`}>{formatCurrency(transactionBalance)}</span>
+                        : <span aria-label="Balance unavailable">—</span>}
                   </div>
                 </div>
                 
