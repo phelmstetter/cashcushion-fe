@@ -59,15 +59,11 @@ export default function ProjectionChart({
   const containerHeight = `${windowHeight}svh`;
   const includedAccountIdSet = new Set(includedAccountIds);
   const visibleAccounts = accounts.filter((account) => includedAccountIdSet.has(account.account_id));
-  const firstChartDate = chartData.find((point) => typeof point.fullDate === 'string')?.fullDate as string | undefined;
   const selectedChartDate = activeDate && chartData.some((point) => point.fullDate === activeDate)
     ? activeDate
     : null;
-  const detailDate = selectedChartDate
-    ? selectedChartDate
-    : firstChartDate ?? null;
-  const detailPoint = detailDate
-    ? chartData.find((point) => point.fullDate === detailDate)
+  const detailPoint = selectedChartDate
+    ? chartData.find((point) => point.fullDate === selectedChartDate)
     : undefined;
   const selectedChartIndex = selectedChartDate
     ? chartData.findIndex((point) => point.fullDate === selectedChartDate)
@@ -206,9 +202,7 @@ export default function ProjectionChart({
           borderTop: accounts.length > 0 ? 'none' : undefined,
           borderRadius: accounts.length === 0
             ? '8px'
-            : visibleAccounts.length === 0 || !detailDate
-              ? '0 0 8px 8px'
-              : '0',
+            : '0 0 8px 8px',
           overflow: 'hidden',
         }}
       >
@@ -387,71 +381,6 @@ export default function ProjectionChart({
           </div>
         )}
       </div>
-      {visibleAccounts.length > 0 && detailDate && (
-        <div
-          data-testid="chart-detail-strip"
-          aria-label={`Projected balances on ${formatDate(detailDate)}`}
-          style={{
-            alignItems: 'center',
-            backgroundColor: '#f6f8f9',
-            border: '1px solid #e2e8ec',
-            borderTop: 'none',
-            borderRadius: '0 0 8px 8px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            boxSizing: 'border-box',
-            display: 'flex',
-            flex: '0 0 auto',
-            gap: '12px',
-            overflowX: 'auto',
-            padding: '6px 10px',
-          }}
-        >
-          <time
-            dateTime={detailDate}
-            style={{
-              color: '#405866',
-              flexShrink: 0,
-              fontSize: '12px',
-              fontWeight: 700,
-            }}
-          >
-            {formatDate(detailDate)}
-          </time>
-          {accountSummaries.filter(({ isIncluded }) => isIncluded).map(({ account, color }) => {
-            const balance = detailPoint?.[account.account_id];
-            return (
-              <div
-                key={account.account_id}
-                style={{
-                  alignItems: 'center',
-                  color: '#333',
-                  display: 'flex',
-                  flexShrink: 0,
-                  fontSize: '12px',
-                  gap: '5px',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                <span
-                  aria-hidden="true"
-                  style={{
-                    backgroundColor: color,
-                    borderRadius: '50%',
-                    height: '8px',
-                    width: '8px',
-                  }}
-                />
-                <span>{accountLabel(account)}</span>
-                <strong>
-                  {typeof balance === 'number' && Number.isFinite(balance)
-                    ? currencyFormatter.format(balance)
-                    : '—'}
-                </strong>
-              </div>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }
