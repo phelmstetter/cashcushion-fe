@@ -1241,25 +1241,85 @@ const Home = () => {
 
             {modalView === 'details' && selectedTransaction && (
               <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <h2 id="forecast-dialog-title" style={{ margin: 0 }}>Transaction Details</h2>
-                  <button
-                    data-testid="button-close-modal"
-                    aria-label="Close transaction details"
-                    onClick={() => {
-                      setSelectedTransaction(null);
-                      setModalView('details');
-                    }}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      fontSize: '20px',
-                      cursor: 'pointer',
-                      color: '#666',
-                      padding: '4px 8px'
-                    }}
-                  >×</button>
-                </div>
+                {(() => {
+                  const transactionName = selectedTransaction.merchant_name || selectedTransaction.counterparty_name;
+                  const { display: transactionAmount, isPositive } = formatAmount(selectedTransaction.amount);
+                  return (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      paddingBottom: '16px',
+                      marginBottom: '16px',
+                      borderBottom: '1px solid #eee'
+                    }}>
+                      {selectedTransaction.logo_url ? (
+                        <img
+                          src={selectedTransaction.logo_url}
+                          alt={transactionName}
+                          style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <div style={{
+                          width: '48px',
+                          height: '48px',
+                          borderRadius: '50%',
+                          backgroundColor: '#e0e0e0',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '16px',
+                          fontWeight: 'bold',
+                          flexShrink: 0
+                        }}>
+                          {getInitials(transactionName)}
+                        </div>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <h2 id="forecast-dialog-title" style={{
+                          margin: 0,
+                          fontSize: '16px',
+                          fontWeight: 600,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {transactionName}
+                        </h2>
+                        {selectedTransaction.merchant_name && selectedTransaction.counterparty_name && selectedTransaction.merchant_name !== selectedTransaction.counterparty_name && (
+                          <div style={{ fontSize: '13px', color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {selectedTransaction.counterparty_name}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <div style={{ fontWeight: 600, color: isPositive ? 'green' : 'inherit' }}>
+                          {transactionAmount}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#666' }}>
+                          {formatDate(selectedTransaction.date)}
+                        </div>
+                      </div>
+                      <button
+                        data-testid="button-close-modal"
+                        aria-label="Close transaction details"
+                        onClick={() => {
+                          setSelectedTransaction(null);
+                          setModalView('details');
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          fontSize: '20px',
+                          cursor: 'pointer',
+                          color: '#666',
+                          padding: '4px',
+                          lineHeight: 1
+                        }}
+                      >×</button>
+                    </div>
+                  );
+                })()}
 
                 <button
                   data-testid="button-add-forecast"
@@ -1292,52 +1352,7 @@ const Home = () => {
                   + Add Forecast
                 </button>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                  {selectedTransaction.logo_url ? (
-                    <img
-                      src={selectedTransaction.logo_url}
-                      alt={selectedTransaction.merchant_name || selectedTransaction.counterparty_name}
-                      style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover' }}
-                    />
-                  ) : (
-                    <div style={{
-                      width: '48px',
-                      height: '48px',
-                      borderRadius: '50%',
-                      backgroundColor: '#e0e0e0',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '16px',
-                      fontWeight: 'bold'
-                    }}>
-                      {getInitials(selectedTransaction.merchant_name || selectedTransaction.counterparty_name)}
-                    </div>
-                  )}
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: '16px' }}>
-                      {selectedTransaction.merchant_name || selectedTransaction.counterparty_name}
-                    </div>
-                    {selectedTransaction.merchant_name && selectedTransaction.counterparty_name && selectedTransaction.merchant_name !== selectedTransaction.counterparty_name && (
-                      <div style={{ fontSize: '13px', color: '#666' }}>{selectedTransaction.counterparty_name}</div>
-                    )}
-                  </div>
-                </div>
-
-                <div style={{ borderTop: '1px solid #eee', paddingTop: '12px' }}>
-                  {(() => {
-                    const { display, isPositive } = formatAmount(selectedTransaction.amount);
-                    return (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
-                        <span style={{ color: '#666' }}>Amount</span>
-                        <span style={{ fontWeight: 600, color: isPositive ? 'green' : 'inherit' }}>{display}</span>
-                      </div>
-                    );
-                  })()}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
-                    <span style={{ color: '#666' }}>Date</span>
-                    <span style={{ fontWeight: 500 }}>{formatDate(selectedTransaction.date)}</span>
-                  </div>
+                <div>
                   {(() => {
                     const acct = accounts.find(a => a.account_id === selectedTransaction.account_id);
                     if (acct) {
