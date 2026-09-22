@@ -237,7 +237,15 @@ export default function ProjectionChart({
                 axisLine={false}
               />
               <Tooltip
-                content={() => null}
+                formatter={(value: number, name: string) => {
+                  const account = accounts.find((candidate) => candidate.account_id === name);
+                  return [
+                    currencyFormatter.format(value),
+                    account ? accountLabel(account) : name,
+                  ];
+                }}
+                labelFormatter={(label: string) => formatDate(label)}
+                contentStyle={{ fontSize: '12px', borderRadius: '6px' }}
                 cursor={false}
               />
               <ReferenceLine
