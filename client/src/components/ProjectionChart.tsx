@@ -7,6 +7,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
+  ReferenceDot,
 } from "recharts";
 
 type ProjectionChartProps = {
@@ -254,14 +255,33 @@ export default function ProjectionChart({
                   stroke={color}
                   strokeWidth={2}
                   dot={false}
+                  activeDot={false}
                 />
               ))}
               {selectedChartDate && (
-                <ReferenceLine
-                  x={selectedChartDate}
-                  stroke="#78909c"
-                  strokeWidth={1}
-                />
+                <>
+                  <ReferenceLine
+                    x={selectedChartDate}
+                    stroke="#78909c"
+                    strokeWidth={1}
+                  />
+                  {accountSummaries.filter(({ isIncluded }) => isIncluded).map(({ account, color }) => {
+                    const balance = detailPoint?.[account.account_id];
+                    if (typeof balance !== 'number' || !Number.isFinite(balance)) return null;
+
+                    return (
+                      <ReferenceDot
+                        key={account.account_id}
+                        x={selectedChartDate}
+                        y={balance}
+                        r={4}
+                        fill={color}
+                        stroke="#ffffff"
+                        strokeWidth={2}
+                      />
+                    );
+                  })}
+                </>
               )}
             </LineChart>
           </ResponsiveContainer>
