@@ -76,6 +76,7 @@ export default function ProjectionChart({
   const calloutPosition = selectedChartIndex >= 0 && chartData.length > 1
     ? 10 + (80 * selectedChartIndex) / (chartData.length - 1)
     : 50;
+  const calloutLeft = `clamp(92px, ${calloutPosition}%, calc(100% - 92px))`;
 
   useEffect(() => {
     if (!calloutClosing) return;
@@ -329,7 +330,7 @@ export default function ProjectionChart({
               borderRadius: '6px',
               boxShadow: '0 2px 7px rgba(45, 65, 78, 0.24)',
               boxSizing: 'border-box',
-              left: `clamp(92px, ${calloutPosition}%, calc(100% - 92px))`,
+              left: calloutLeft,
               maxHeight: '55%',
               maxWidth: 'calc(100% - 24px)',
               minWidth: '150px',
@@ -456,7 +457,7 @@ export default function ProjectionChart({
               display: 'inline-flex',
               height: '30px',
               justifyContent: 'center',
-              left: `clamp(28px, ${calloutPosition}%, calc(100% - 28px))`,
+              left: calloutLeft,
               padding: 0,
               position: 'absolute',
               top: '10px',
