@@ -72,14 +72,14 @@ export default function ProjectionChart({
         boxSizing: 'border-box',
         display: 'flex',
         flexDirection: 'column',
-        maxHeight: '33.333dvh',
+        maxHeight: '33.333svh',
       }}
     >
       <div
         style={{
           boxSizing: 'border-box',
           flexShrink: 0,
-          height: accounts.length > 0 ? '20dvh' : '33.333dvh',
+          height: accounts.length > 0 ? '20svh' : '33.333svh',
           backgroundColor: 'white',
           borderRadius: accounts.length > 0 ? '8px 8px 0 0' : '8px',
           boxShadow: accounts.length > 0 ? '0 1px 3px rgba(0,0,0,0.1)' : undefined,
@@ -148,7 +148,7 @@ export default function ProjectionChart({
             borderRadius: '0 0 8px 8px',
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
             boxSizing: 'border-box',
-            maxHeight: '13.333dvh',
+            maxHeight: '13.333svh',
             overflow: 'auto',
           }}
         >
