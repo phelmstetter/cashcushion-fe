@@ -815,6 +815,8 @@ const Home = () => {
       return candidateDistance < closestDistance ? candidateDate : closestDate;
     });
 
+    let fallbackTimer: number | null = null;
+    let finishNavigation: (() => void) | null = null;
     const frame = requestAnimationFrame(() => {
       const destination = activityDateRefs.current.get(`transaction:${destinationDate}`)
         ?? activityDateRefs.current.get(`forecast:${destinationDate}`);
@@ -832,24 +834,24 @@ const Home = () => {
       const scrollTarget = window.scrollY + rect.top - getDashboardContentPadding(fixedHeaderBottom);
       window.scrollTo({ top: Math.max(0, scrollTarget), behavior: 'smooth' });
 
-      const finishNavigation = () => {
+      finishNavigation = () => {
         if (chartNavigationInProgressRef.current !== chartNavigationTarget.requestId) return;
         chartNavigationInProgressRef.current = null;
+        setActiveChartDate(chartDateSet.has(destinationDate) ? destinationDate : null);
         setChartNavigationTarget((target) =>
           target?.requestId === chartNavigationTarget.requestId ? null : target
         );
       };
-      const fallbackTimer = window.setTimeout(finishNavigation, 1200);
+      fallbackTimer = window.setTimeout(finishNavigation, 1200);
       window.addEventListener('scrollend', finishNavigation, { once: true });
-
-      return () => {
-        window.clearTimeout(fallbackTimer);
-        window.removeEventListener('scrollend', finishNavigation);
-      };
     });
 
-    return () => cancelAnimationFrame(frame);
-  }, [activityDates, chartNavigationTarget, fixedHeaderBottom]);
+    return () => {
+      cancelAnimationFrame(frame);
+      if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
+      if (finishNavigation) window.removeEventListener('scrollend', finishNavigation);
+    };
+  }, [activityDates, chartDateSet, chartNavigationTarget, fixedHeaderBottom]);
 
   const currentUser = auth.currentUser;
 
