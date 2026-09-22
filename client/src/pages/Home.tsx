@@ -98,6 +98,17 @@ const Home = () => {
     setConfirmingDelete(null);
   }, []);
 
+  const openStandaloneForecast = (date = '') => {
+    setAddingStandaloneForecast(true);
+    setStandaloneForecastName('');
+    setStandaloneForecastAccountId('');
+    setForecastDate(date);
+    setForecastAmount('');
+    setForecastType('single');
+    setForecastDirection('expense');
+    setModalView('forecast');
+  };
+
   const isModalOpen = Boolean(selectedTransaction || editingForecast || addingStandaloneForecast);
 
   useEffect(() => {
@@ -825,33 +836,6 @@ const Home = () => {
             >
               {chartOpen ? 'Hide Chart' : 'Show Chart'}
             </button>
-            <button
-              data-testid="button-add-expense"
-              onClick={() => {
-                setAddingStandaloneForecast(true);
-                setStandaloneForecastName('');
-                setStandaloneForecastAccountId('');
-                setForecastDate('');
-                setForecastAmount('');
-                setForecastType('single');
-                setForecastDirection('expense');
-                setModalView('forecast');
-              }}
-              style={{
-                flex: 1,
-                padding: '4px',
-                fontSize: '12px',
-                color: '#42A5F5',
-                fontWeight: 600,
-                backgroundColor: 'transparent',
-                border: 'none',
-                borderLeft: '1px solid #eee',
-                cursor: 'pointer',
-                textAlign: 'center'
-              }}
-            >
-              + Add forecast
-            </button>
           </div>
         </div>
       </div>
@@ -967,14 +951,33 @@ const Home = () => {
                     style={{
                       backgroundColor: '#f5f5f7',
                       color: '#666',
+                      display: 'flex',
                       fontSize: '12px',
                       fontWeight: 600,
+                      justifyContent: 'space-between',
                       letterSpacing: '0.02em',
                       margin: '8px -2px 4px',
                       padding: '6px 10px',
                     }}
                   >
                     <time dateTime={date}>{formatDate(date)}</time>
+                    {isForecast && (
+                      <button
+                        data-testid={`button-add-forecast-${date}`}
+                        onClick={() => openStandaloneForecast(date)}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#42A5F5',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          padding: 0,
+                        }}
+                      >
+                        + Forecast
+                      </button>
+                    )}
                   </div>
                 )}
                 <div
