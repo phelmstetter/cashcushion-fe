@@ -1,6 +1,12 @@
 import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, lazy, Suspense } from "react";
 import { signOut } from "firebase/auth";
 import { auth, getTransactions, Transaction, saveForecast, saveSeriesForecasts, saveDayIntervalForecasts, updateForecast, updateSeriesForecasts, deleteForecast, deleteSeriesForecasts, getForecasts, Forecast, reconcileForecast, unreconcileForecast, getAccounts, Account } from "@/lib/firebase";
+import {
+  getForecastBalances,
+  getTransactionBalances,
+  sortActivityItems,
+  type ActivityItem,
+} from "@/lib/activityBalances";
 import { getDashboardContentPadding } from "@/lib/dashboardLayout";
 import { useLocation } from "wouter";
 
@@ -599,14 +605,10 @@ const Home = () => {
     [chartData]
   );
 
-  type MergedItem = 
-    | { type: 'transaction'; data: Transaction }
-    | { type: 'forecast'; data: Forecast };
-
-  const allActivityItems = useMemo<MergedItem[]>(() => [
+  const allActivityItems = useMemo<ActivityItem[]>(() => sortActivityItems([
     ...visibleForecasts.map(f => ({ type: 'forecast' as const, data: f })),
     ...transactions.map(t => ({ type: 'transaction' as const, data: t })),
-  ].sort((a, b) => b.data.date.localeCompare(a.data.date)), [visibleForecasts, transactions]);
+  ]), [visibleForecasts, transactions]);
 
   const mergedItems = useMemo(
     () => allActivityItems.filter((item) => {
@@ -656,71 +658,23 @@ const Home = () => {
     return ids;
   }, [forecasts]);
 
-  const transactionBalances = useMemo(() => {
-    const balanceByAccount = new Map<string, number | null>();
-    const balanceByTransaction = new Map<string, number | null>();
-
-    for (const account of accounts) {
-      const balance = account.available_balance ?? account.current_balance ?? null;
-      balanceByAccount.set(
-        account.account_id,
-        typeof balance === 'number' && Number.isFinite(balance) ? balance : null
-      );
-    }
-
-    for (const item of allActivityItems) {
-      if (item.type !== 'transaction') continue;
-
-      const transaction = item.data;
-      const accountId = transaction.account_id;
-      const balance = accountId ? balanceByAccount.get(accountId) ?? null : null;
-      balanceByTransaction.set(transaction.id, balance);
-
-      if (accountId && balance != null && Number.isFinite(transaction.amount)) {
-        balanceByAccount.set(accountId, balance + transaction.amount);
-      }
-    }
-
-    return balanceByTransaction;
-  }, [accounts, allActivityItems]);
+  const transactionBalances = useMemo(
+    () => getTransactionBalances(accounts, allActivityItems),
+    [accounts, allActivityItems]
+  );
 
   const forecastBalances = useMemo(() => {
     const chartPointsByDate = new Map(
       chartData.map((point) => [point.fullDate as string, point])
     );
-    const balanceByForecast = new Map<string, number | null>();
-    const balanceByAccountDate = new Map<string, number | null>();
-
-    for (const item of allActivityItems) {
-      if (item.type !== 'forecast') continue;
-
-      const forecast = item.data;
-      if (!forecast.id || !forecast.account_id) continue;
-
-      const chartPoint = forecast.account_id
-        ? chartPointsByDate.get(forecast.date)
-        : undefined;
-      const endingBalance = chartPoint
-        ? chartPoint[forecast.account_id]
+    return getForecastBalances(allActivityItems, (forecast) => {
+      if (!forecast.account_id) return null;
+      const chartPoint = chartPointsByDate.get(forecast.date);
+      const endingBalance = chartPoint?.[forecast.account_id];
+      return typeof endingBalance === 'number' && Number.isFinite(endingBalance)
+        ? endingBalance
         : null;
-      const balanceKey = `${forecast.account_id}:${forecast.date}`;
-      const balance = balanceByAccountDate.has(balanceKey)
-        ? balanceByAccountDate.get(balanceKey) ?? null
-        : (typeof endingBalance === 'number' && Number.isFinite(endingBalance)
-          ? endingBalance
-          : null);
-
-      balanceByForecast.set(
-        forecast.id,
-        typeof balance === 'number' && Number.isFinite(balance) ? balance : null
-      );
-
-      if (balance != null && Number.isFinite(forecast.amount)) {
-        balanceByAccountDate.set(balanceKey, balance + forecast.amount);
-      }
-    }
-
-    return balanceByForecast;
+    });
   }, [chartData, allActivityItems]);
 
   const scrollAnchorIndex = useMemo(() => {

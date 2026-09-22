@@ -342,7 +342,8 @@ export async function getForecasts(userId: string): Promise<Forecast[]> {
   const q = query(
     forecastsRef,
     where('user_id', '==', userId),
-    orderBy('date', 'desc')
+    orderBy('date', 'desc'),
+    orderBy('__name__', 'desc')
   );
   const querySnapshot = await getDocs(q);
   const forecasts: Forecast[] = [];
