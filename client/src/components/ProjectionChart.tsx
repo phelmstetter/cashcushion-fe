@@ -1,4 +1,5 @@
 import type { Account } from "@/lib/firebase";
+import { useState } from "react";
 import {
   LineChart,
   Line,
@@ -48,6 +49,14 @@ export default function ProjectionChart({
   onDateSelect,
 }: ProjectionChartProps) {
   const containerHeight = `${windowHeight}svh`;
+  const [activeDate, setActiveDate] = useState<string | null>(null);
+  const firstChartDate = chartData.find((point) => typeof point.fullDate === 'string')?.fullDate as string | undefined;
+  const detailDate = activeDate && chartData.some((point) => point.fullDate === activeDate)
+    ? activeDate
+    : firstChartDate ?? null;
+  const detailPoint = detailDate
+    ? chartData.find((point) => point.fullDate === detailDate)
+    : undefined;
 
   const accountSummaries = accounts.map((account, index) => {
     let minimumBalance: number | null = null;
@@ -98,8 +107,15 @@ export default function ProjectionChart({
             <LineChart
               data={chartData}
               margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
+              onMouseMove={(state) => {
+                const nextDate = state?.activeLabel;
+                if (typeof nextDate === 'string') {
+                  setActiveDate((currentDate) => currentDate === nextDate ? currentDate : nextDate);
+                }
+              }}
               onClick={(state) => {
                 if (typeof state?.activeLabel === 'string') {
+                  setActiveDate(state.activeLabel);
                   onDateSelect?.(state.activeLabel);
                 }
               }}
@@ -119,13 +135,8 @@ export default function ProjectionChart({
                 axisLine={false}
               />
               <Tooltip
-                formatter={(value: number, name: string) => {
-                  const acct = accounts.find(a => a.account_id === name);
-                  const label = acct ? `${acct.name} ${acct.mask}` : name;
-                  return [currencyFormatter.format(value), label];
-                }}
-                labelFormatter={(label: string) => formatDate(label)}
-                contentStyle={{ fontSize: '12px', borderRadius: '6px' }}
+                content={() => null}
+                cursor={{ stroke: '#78909c', strokeWidth: 1 }}
               />
               <ReferenceLine
                 y={0}
@@ -152,6 +163,70 @@ export default function ProjectionChart({
           </div>
         )}
       </div>
+      {accounts.length > 0 && detailDate && (
+        <div
+          data-testid="chart-detail-strip"
+          aria-label={`Projected balances on ${formatDate(detailDate)}`}
+          style={{
+            alignItems: 'center',
+            backgroundColor: '#f6f8f9',
+            border: '1px solid #e2e8ec',
+            borderTop: 'none',
+            boxSizing: 'border-box',
+            display: 'flex',
+            flex: '0 0 auto',
+            gap: '12px',
+            overflowX: 'auto',
+            padding: '6px 10px',
+          }}
+        >
+          <time
+            dateTime={detailDate}
+            style={{
+              color: '#405866',
+              flexShrink: 0,
+              fontSize: '12px',
+              fontWeight: 700,
+            }}
+          >
+            {formatDate(detailDate)}
+          </time>
+          {accounts.map((account, index) => {
+            const balance = detailPoint?.[account.account_id];
+            const color = CHART_COLORS[index % CHART_COLORS.length];
+            return (
+              <div
+                key={account.account_id}
+                style={{
+                  alignItems: 'center',
+                  color: '#333',
+                  display: 'flex',
+                  flexShrink: 0,
+                  fontSize: '12px',
+                  gap: '5px',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <span
+                  aria-hidden="true"
+                  style={{
+                    backgroundColor: color,
+                    borderRadius: '50%',
+                    height: '8px',
+                    width: '8px',
+                  }}
+                />
+                <span>{accountLabel(account)}</span>
+                <strong>
+                  {typeof balance === 'number' && Number.isFinite(balance)
+                    ? currencyFormatter.format(balance)
+                    : '—'}
+                </strong>
+              </div>
+            );
+          })}
+        </div>
+      )}
       {accounts.length > 0 && (
         <div
           data-testid="account-balance-summary"
