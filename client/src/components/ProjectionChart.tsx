@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Account } from "@/lib/firebase";
 import {
   LineChart,
@@ -43,6 +44,13 @@ export default function ProjectionChart({
   accounts,
   formatDate,
 }: ProjectionChartProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const containerMaxHeight = isExpanded ? '50svh' : '33.333svh';
+  const chartHeight = accounts.length > 0
+    ? (isExpanded ? '30svh' : '20svh')
+    : containerMaxHeight;
+  const summaryMaxHeight = isExpanded ? '20svh' : '13.333svh';
+
   const accountSummaries = accounts.map((account, index) => {
     let minimumBalance: number | null = null;
     let minimumDate: string | null = null;
@@ -72,21 +80,44 @@ export default function ProjectionChart({
         boxSizing: 'border-box',
         display: 'flex',
         flexDirection: 'column',
-        maxHeight: '33.333svh',
+        maxHeight: containerMaxHeight,
       }}
     >
       <div
         style={{
           boxSizing: 'border-box',
           flexShrink: 0,
-          height: accounts.length > 0 ? '20svh' : '33.333svh',
+          height: chartHeight,
           backgroundColor: 'white',
           borderRadius: accounts.length > 0 ? '8px 8px 0 0' : '8px',
           boxShadow: accounts.length > 0 ? '0 1px 3px rgba(0,0,0,0.1)' : undefined,
           border: '1px solid #eee',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          position: 'relative',
         }}
       >
+        <button
+          type="button"
+          onClick={() => setIsExpanded((expanded) => !expanded)}
+          aria-label={isExpanded ? 'Minimize chart' : 'Maximize chart'}
+          title={isExpanded ? 'Minimize chart' : 'Maximize chart'}
+          style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.92)',
+            border: '1px solid #d0d0d0',
+            borderRadius: '4px',
+            color: '#555',
+            cursor: 'pointer',
+            fontSize: '10px',
+            fontWeight: 600,
+            padding: '3px 6px',
+            position: 'absolute',
+            right: '6px',
+            top: '6px',
+            zIndex: 1,
+          }}
+        >
+          {isExpanded ? 'Min' : 'Max'}
+        </button>
         {chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
@@ -148,7 +179,7 @@ export default function ProjectionChart({
             borderRadius: '0 0 8px 8px',
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
             boxSizing: 'border-box',
-            maxHeight: '13.333svh',
+            maxHeight: summaryMaxHeight,
             overflow: 'auto',
           }}
         >
