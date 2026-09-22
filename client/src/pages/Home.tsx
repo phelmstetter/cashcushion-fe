@@ -1014,7 +1014,7 @@ const Home = () => {
                     }}
                   >
                     <span style={{ height: '1px', backgroundColor: '#ddd', flex: 1 }} />
-                    FORECASTS
+                    ↑ ↑ FORECASTS ↑ ↑
                     <span style={{ height: '1px', backgroundColor: '#ddd', flex: 1 }} />
                   </div>
                 )}
