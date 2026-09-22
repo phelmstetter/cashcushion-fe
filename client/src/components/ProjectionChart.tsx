@@ -27,6 +27,17 @@ function accountLabel(account: Account) {
   return [account.name || 'Unnamed account', account.mask].filter(Boolean).join(' ');
 }
 
+function abbreviatedDate(dateString: string) {
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(dateString)
+    ? new Date(`${dateString}T00:00:00`)
+    : new Date(dateString);
+
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
 export default function ProjectionChart({
   chartData,
   accounts,
@@ -179,9 +190,9 @@ export default function ProjectionChart({
                       ? currencyFormatter.format(account.available_balance)
                       : '—'}
                   </td>
-                  <td style={{ color: '#333', overflowWrap: 'anywhere', padding: '7px 10px', verticalAlign: 'top' }}>
+                  <td style={{ color: '#333', padding: '7px 10px', verticalAlign: 'top', whiteSpace: 'nowrap' }}>
                     {minimumBalance != null && minimumDate
-                      ? <><strong>{currencyFormatter.format(minimumBalance)}</strong><br /><span style={{ color: '#666' }}>{formatDate(minimumDate)}</span></>
+                      ? <><strong>{currencyFormatter.format(minimumBalance)}</strong><span style={{ color: '#666' }}> ({abbreviatedDate(minimumDate)})</span></>
                       : '—'}
                   </td>
                 </tr>
