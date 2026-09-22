@@ -61,8 +61,7 @@ const Home = () => {
   const [companyFilter, setCompanyFilter] = useState('');
   const [accountFilter, setAccountFilter] = useState('');
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [chartOpen, setChartOpen] = useState(true);
-  const [chartExpanded, setChartExpanded] = useState(false);
+  const [chartWindowHeight, setChartWindowHeight] = useState(33);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [forecasts, setForecasts] = useState<Forecast[]>([]);
   const [draggingForecast, setDraggingForecast] = useState<Forecast | null>(null);
@@ -155,7 +154,7 @@ const Home = () => {
       window.removeEventListener('resize', updateHeaderOffset);
       resizeObserver?.disconnect();
     };
-  }, [chartOpen]);
+  }, []);
 
   const handleSignOut = async () => {
     await signOut(auth);
@@ -613,7 +612,7 @@ const Home = () => {
   const currentUser = auth.currentUser;
 
   return (
-    <div style={{ maxWidth: '600px', margin: '0 auto', paddingTop: fixedHeaderBottom > 0 ? `${getDashboardContentPadding(fixedHeaderBottom)}px` : chartOpen ? 'calc(56px + 30vh + 6px)' : 'calc(56px + 30px)', paddingLeft: '2px', paddingRight: '2px', paddingBottom: '2px' }}>
+    <div style={{ maxWidth: '600px', margin: '0 auto', paddingTop: fixedHeaderBottom > 0 ? `${getDashboardContentPadding(fixedHeaderBottom)}px` : 'calc(56px + 33svh + 6px)', paddingLeft: '2px', paddingRight: '2px', paddingBottom: '2px' }}>
       <div style={{
         position: 'fixed',
         top: 0,
@@ -813,86 +812,69 @@ const Home = () => {
         backgroundColor: '#f5f5f5'
       }}>
         <div style={{ maxWidth: '600px', margin: '0 auto', padding: '2px 2px 0 2px' }}>
-          {chartOpen && (
-              <Suspense fallback={<ProjectionChartLoading />}>
-                <ProjectionChart
-                  chartData={chartData}
-                  accounts={accounts}
-                  formatDate={formatDate}
-                  isExpanded={chartExpanded}
-                />
-              </Suspense>
-          )}
+          <Suspense fallback={<ProjectionChartLoading />}>
+            <ProjectionChart
+              chartData={chartData}
+              accounts={accounts}
+              formatDate={formatDate}
+              windowHeight={chartWindowHeight}
+            />
+          </Suspense>
            <div
-             role="toolbar"
-             aria-label="Chart controls"
+             aria-label="Chart window size"
              style={{
                alignItems: 'stretch',
-               backgroundColor: '#dce5eb',
-               border: '1px solid #bdcbd5',
+               backgroundColor: '#526b7c',
+               border: '1px solid #405866',
                borderRadius: '0 0 6px 6px',
-               boxShadow: '0 1px 2px rgba(45, 65, 78, 0.16)',
+               boxShadow: '0 1px 2px rgba(45, 65, 78, 0.24)',
                display: 'flex',
+               gap: '8px',
                overflow: 'hidden',
+               padding: '6px 10px',
              }}
            >
-            <button
-              data-testid="button-toggle-chart"
-              onClick={() => setChartOpen(!chartOpen)}
+             <label
+               htmlFor="chart-window-size"
               style={{
-                flex: 1,
-                 padding: '6px 4px',
                 fontSize: '12px',
                  fontWeight: 600,
                  color: 'white',
-                 backgroundColor: '#526b7c',
-                border: 'none',
-                cursor: 'pointer',
-                 textAlign: 'center',
+                 flexShrink: 0,
+                 lineHeight: '18px',
               }}
             >
-              {chartOpen ? 'Hide Chart' : 'Show Chart'}
-            </button>
-             <button
-               type="button"
-               data-testid="button-chart-max"
-               aria-pressed={chartExpanded}
-               disabled={!chartOpen || chartExpanded}
-               onClick={() => setChartExpanded(true)}
+               Chart size
+             </label>
+             <input
+               id="chart-window-size"
+               data-testid="input-chart-window-size"
+               type="range"
+               min="33"
+               max="50"
+               step="1"
+               value={chartWindowHeight}
+               onChange={(event) => setChartWindowHeight(Number(event.target.value))}
                style={{
-                 backgroundColor: chartExpanded ? '#f5f7f8' : 'white',
-                 border: 'none',
-                 borderLeft: '1px solid #bdcbd5',
-                 color: chartOpen && !chartExpanded ? '#344b5b' : '#93a1aa',
-                 cursor: chartOpen && !chartExpanded ? 'pointer' : 'default',
+                 accentColor: '#f4a916',
+                 cursor: 'pointer',
                  flex: 1,
+                 margin: 0,
+               }}
+             />
+             <output
+               aria-live="polite"
+               style={{
+                 color: 'white',
                  fontSize: '12px',
                  fontWeight: 600,
-                 padding: '6px 4px',
+                 lineHeight: '18px',
+                 minWidth: '30px',
+                 textAlign: 'right',
                }}
              >
-               Max
-             </button>
-             <button
-               type="button"
-               data-testid="button-chart-min"
-               aria-pressed={!chartExpanded}
-               disabled={!chartOpen || !chartExpanded}
-               onClick={() => setChartExpanded(false)}
-               style={{
-                 backgroundColor: !chartExpanded ? '#f5f7f8' : 'white',
-                 border: 'none',
-                 borderLeft: '1px solid #bdcbd5',
-                 color: chartOpen && chartExpanded ? '#344b5b' : '#93a1aa',
-                 cursor: chartOpen && chartExpanded ? 'pointer' : 'default',
-                 flex: 1,
-                 fontSize: '12px',
-                 fontWeight: 600,
-                 padding: '6px 4px',
-               }}
-             >
-               Min
-             </button>
+               {chartWindowHeight}%
+             </output>
           </div>
         </div>
       </div>

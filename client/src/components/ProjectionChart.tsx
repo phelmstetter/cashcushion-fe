@@ -13,7 +13,7 @@ type ProjectionChartProps = {
   chartData: Array<Record<string, string | number | null>>;
   accounts: Account[];
   formatDate: (dateString: string) => string;
-  isExpanded: boolean;
+  windowHeight: number;
 };
 
 const CHART_COLORS = ['#1976d2', '#e53935', '#43a047', '#fb8c00', '#8e24aa', '#00acc1', '#d81b60', '#6d4c41'];
@@ -43,13 +43,9 @@ export default function ProjectionChart({
   chartData,
   accounts,
   formatDate,
-  isExpanded,
+  windowHeight,
 }: ProjectionChartProps) {
-  const containerMaxHeight = isExpanded ? '50svh' : '33.333svh';
-  const chartHeight = accounts.length > 0
-    ? (isExpanded ? '30svh' : '20svh')
-    : containerMaxHeight;
-  const summaryMaxHeight = isExpanded ? '20svh' : '13.333svh';
+  const containerHeight = `${windowHeight}svh`;
 
   const accountSummaries = accounts.map((account, index) => {
     let minimumBalance: number | null = null;
@@ -80,14 +76,14 @@ export default function ProjectionChart({
         boxSizing: 'border-box',
         display: 'flex',
         flexDirection: 'column',
-        maxHeight: containerMaxHeight,
+        height: containerHeight,
       }}
     >
       <div
         style={{
           boxSizing: 'border-box',
-          flexShrink: 0,
-          height: chartHeight,
+          flex: '1 1 0',
+          minHeight: 0,
           backgroundColor: 'white',
           borderRadius: accounts.length > 0 ? '8px 8px 0 0' : '8px',
           boxShadow: accounts.length > 0 ? '0 1px 3px rgba(0,0,0,0.1)' : undefined,
@@ -156,7 +152,8 @@ export default function ProjectionChart({
             borderRadius: '0 0 8px 8px',
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
             boxSizing: 'border-box',
-            maxHeight: summaryMaxHeight,
+            flex: '0 1 auto',
+            maxHeight: '40%',
             overflow: 'auto',
           }}
         >
