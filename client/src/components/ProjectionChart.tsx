@@ -1,5 +1,6 @@
 import type { Account } from "@/lib/firebase";
-import { useState } from "react";
+import { MessageCircle } from "lucide-react";
+import { useEffect, useState } from "react";
 import {
   LineChart,
   Line,
@@ -24,6 +25,7 @@ type ProjectionChartProps = {
 };
 
 const CHART_COLORS = ['#1976d2', '#e53935', '#43a047', '#fb8c00', '#8e24aa', '#00acc1', '#d81b60', '#6d4c41'];
+const CALLOUT_TRANSITION_MS = 220;
 const currencyFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
   currency: 'USD',
@@ -58,6 +60,7 @@ export default function ProjectionChart({
   onAccountToggle,
 }: ProjectionChartProps) {
   const [calloutOpen, setCalloutOpen] = useState(true);
+  const [calloutClosing, setCalloutClosing] = useState(false);
   const containerHeight = `${windowHeight}svh`;
   const includedAccountIdSet = new Set(includedAccountIds);
   const visibleAccounts = accounts.filter((account) => includedAccountIdSet.has(account.account_id));
@@ -73,6 +76,27 @@ export default function ProjectionChart({
   const calloutPosition = selectedChartIndex >= 0 && chartData.length > 1
     ? 10 + (80 * selectedChartIndex) / (chartData.length - 1)
     : 50;
+
+  useEffect(() => {
+    if (!calloutClosing) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setCalloutClosing(false);
+      setCalloutOpen(false);
+    }, CALLOUT_TRANSITION_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [calloutClosing]);
+
+  const closeCallout = () => {
+    if (calloutClosing) return;
+    setCalloutClosing(true);
+  };
+
+  const openCallout = () => {
+    setCalloutClosing(false);
+    setCalloutOpen(true);
+  };
 
   const accountSummaries = accounts.map((account, index) => {
     let minimumBalance: number | null = null;
@@ -281,7 +305,7 @@ export default function ProjectionChart({
                         fill={color}
                         stroke="#ffffff"
                         strokeWidth={2}
-                        onClick={() => setCalloutOpen(true)}
+                        onClick={openCallout}
                         style={{ cursor: calloutOpen ? 'default' : 'pointer' }}
                       />
                     );
@@ -295,7 +319,7 @@ export default function ProjectionChart({
             {accounts.length > 0 ? 'No accounts included' : 'No account data'}
           </div>
         )}
-        {calloutOpen && selectedChartDate && detailPoint && (
+        {(calloutOpen || calloutClosing) && selectedChartDate && detailPoint && (
           <div
             data-testid="chart-balance-callout"
             aria-label={`Projected balances on ${formatDate(selectedChartDate)}`}
@@ -311,17 +335,20 @@ export default function ProjectionChart({
               minWidth: '150px',
               overflow: 'auto',
               padding: '7px 9px',
-              pointerEvents: 'auto',
+              opacity: calloutClosing ? 0 : 1,
+              pointerEvents: calloutClosing ? 'none' : 'auto',
               position: 'absolute',
               top: '10px',
-              transform: 'translateX(-50%)',
+              transform: `translateX(-50%) scale(${calloutClosing ? 0.14 : 1})`,
+              transformOrigin: 'center center',
+              transition: `opacity ${CALLOUT_TRANSITION_MS}ms ease, transform ${CALLOUT_TRANSITION_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`,
               zIndex: 2,
             }}
           >
             <button
               type="button"
               aria-label="Close chart balance call-out"
-              onClick={() => setCalloutOpen(false)}
+              onClick={closeCallout}
               style={{
                 alignItems: 'center',
                 background: 'transparent',
@@ -410,6 +437,37 @@ export default function ProjectionChart({
               );
             })}
           </div>
+        )}
+        {(!calloutOpen || calloutClosing) && selectedChartDate && detailPoint && (
+          <button
+            type="button"
+            data-testid="chart-balance-callout-reopen"
+            aria-label="Reopen chart balance call-out"
+            onClick={openCallout}
+            title="Reopen call-out"
+            style={{
+              alignItems: 'center',
+              backgroundColor: '#f4f8fa',
+              border: '1px solid #78909c',
+              borderRadius: '50%',
+              boxShadow: '0 2px 6px rgba(45, 65, 78, 0.22)',
+              color: '#526b7c',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              height: '30px',
+              justifyContent: 'center',
+              left: `clamp(28px, ${calloutPosition}%, calc(100% - 28px))`,
+              padding: 0,
+              position: 'absolute',
+              top: '10px',
+              transform: `translateX(-50%) scale(${calloutClosing ? 0.82 : 1})`,
+              transition: `opacity ${CALLOUT_TRANSITION_MS}ms ease, transform ${CALLOUT_TRANSITION_MS}ms ease`,
+              width: '30px',
+              zIndex: calloutClosing ? 1 : 2,
+            }}
+          >
+            <MessageCircle aria-hidden="true" size={16} strokeWidth={2.25} />
+          </button>
         )}
       </div>
     </div>
