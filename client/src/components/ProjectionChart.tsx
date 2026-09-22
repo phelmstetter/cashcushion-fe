@@ -302,7 +302,7 @@ export default function ProjectionChart({
                         key={account.account_id}
                         x={selectedChartDate}
                         y={balance}
-                        r={calloutOpen ? 4 : 7}
+                        r={4}
                         fill={color}
                         stroke="#ffffff"
                         strokeWidth={2}
