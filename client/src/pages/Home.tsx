@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { signOut } from "firebase/auth";
 import { auth, getTransactions, Transaction, saveForecast, saveSeriesForecasts, saveDayIntervalForecasts, updateForecast, updateSeriesForecasts, deleteForecast, deleteSeriesForecasts, getForecasts, Forecast, reconcileForecast, unreconcileForecast, getAccounts, Account } from "@/lib/firebase";
 import { useLocation } from "wouter";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, ReferenceLine, ReferenceDot } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
 
 const LONG_PRESS_MS = 500;
 
@@ -394,15 +394,8 @@ const Home = () => {
     endDate.setMonth(endDate.getMonth() + 12);
 
     const forecastsByAccount: Record<string, Record<string, number>> = {};
-    // Forecasts not tied to any account (e.g. a one-time expense) still
-    // affect the overall projected cushion, just not any single account's line.
-    const unassignedForecastsByDate: Record<string, number> = {};
     for (const f of visibleForecasts) {
-      if (!f.account_id) {
-        const dateStr = f.date;
-        unassignedForecastsByDate[dateStr] = (unassignedForecastsByDate[dateStr] || 0) - f.amount;
-        continue;
-      }
+      if (!f.account_id) continue;
       if (!forecastsByAccount[f.account_id]) forecastsByAccount[f.account_id] = {};
       const dateStr = f.date;
       if (!forecastsByAccount[f.account_id][dateStr]) forecastsByAccount[f.account_id][dateStr] = 0;
@@ -414,7 +407,6 @@ const Home = () => {
     for (const acct of accounts) {
       currentBalances[acct.account_id] = acct.available_balance ?? 0;
     }
-    let unassignedAdjustment = 0;
 
     const d = new Date(today);
     while (d <= endDate) {
@@ -427,19 +419,12 @@ const Home = () => {
           currentBalances[acct.account_id] += dayForecast;
         }
       }
-      const dayUnassigned = unassignedForecastsByDate[dateStr] || 0;
-      if (dayUnassigned !== 0) {
-        unassignedAdjustment += dayUnassigned;
-      }
 
       const point: Record<string, any> = { date: displayDate, fullDate: dateStr };
-      let total = unassignedAdjustment;
       for (const acct of accounts) {
         const rounded = Math.round(currentBalances[acct.account_id] * 100) / 100;
         point[acct.account_id] = rounded;
-        total += currentBalances[acct.account_id];
       }
-      point.__total__ = Math.round(total * 100) / 100;
       data.push(point);
 
       d.setDate(d.getDate() + 1);
@@ -447,15 +432,6 @@ const Home = () => {
 
     return data;
   }, [accounts, visibleForecasts]);
-
-  const minBalancePoint = useMemo(() => {
-    if (chartData.length === 0) return null;
-    let min = chartData[0];
-    for (const point of chartData) {
-      if (point.__total__ < min.__total__) min = point;
-    }
-    return min;
-  }, [chartData]);
 
   type MergedItem = 
     | { type: 'transaction'; data: Transaction }
@@ -752,9 +728,6 @@ const Home = () => {
                       />
                       <Tooltip
                         formatter={(value: number, name: string) => {
-                          if (name === '__total__') {
-                            return [new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value), 'Total Cushion'];
-                          }
                           const acct = accounts.find(a => a.account_id === name);
                           const label = acct ? `${acct.name} ${acct.mask}` : name;
                           return [new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value), label];
@@ -764,7 +737,6 @@ const Home = () => {
                       />
                       <Legend
                         formatter={(value: string) => {
-                          if (value === '__total__') return 'Total Cushion';
                           const acct = accounts.find(a => a.account_id === value);
                           return acct ? `${acct.name} ${acct.mask}` : value;
                         }}
@@ -776,54 +748,6 @@ const Home = () => {
                         strokeDasharray="3 3"
                         strokeWidth={1}
                         ifOverflow="extendDomain"
-                      />
-                      {minBalancePoint && (
-                        <>
-                          {/* Vertical guide line pinpointing the date of the minimum */}
-                          <ReferenceLine
-                            x={minBalancePoint.fullDate}
-                            stroke="#90a4ae"
-                            strokeDasharray="3 3"
-                            strokeWidth={1}
-                            ifOverflow="extendDomain"
-                          />
-                          {/* Horizontal guide line at the minimum balance level, carrying
-                              the callout. Anchored to a fixed corner (not the exact data
-                              point) via Recharts' own supported label positions, so it can
-                              never be miscomputed or clipped regardless of screen size or
-                              where the minimum falls on the timeline. */}
-                          <ReferenceLine
-                            y={minBalancePoint.__total__}
-                            stroke="#90a4ae"
-                            strokeDasharray="4 4"
-                            strokeWidth={1.5}
-                            ifOverflow="extendDomain"
-                            label={{
-                              value: `Min: ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(minBalancePoint.__total__)} (${minBalancePoint.date})`,
-                              position: 'insideTopRight',
-                              fontSize: 10,
-                              fill: '#546e7a',
-                            }}
-                          />
-                          <ReferenceDot
-                            x={minBalancePoint.fullDate}
-                            y={minBalancePoint.__total__}
-                            r={4}
-                            fill="#546e7a"
-                            stroke="white"
-                            ifOverflow="extendDomain"
-                            isFront
-                          />
-                        </>
-                      )}
-                      <Line
-                        key="__total__"
-                        type="stepAfter"
-                        dataKey="__total__"
-                        stroke="#212121"
-                        strokeWidth={2}
-                        strokeDasharray="4 2"
-                        dot={false}
                       />
                       {accounts.map((acct, i) => (
                         <Line
