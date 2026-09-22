@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, lazy, Suspense } from "react";
 import { signOut } from "firebase/auth";
 import { auth, getTransactions, Transaction, saveForecast, saveSeriesForecasts, saveDayIntervalForecasts, updateForecast, updateSeriesForecasts, deleteForecast, deleteSeriesForecasts, getForecasts, Forecast, reconcileForecast, unreconcileForecast, getAccounts, Account } from "@/lib/firebase";
+import { getDashboardContentPadding } from "@/lib/dashboardLayout";
 import { useLocation } from "wouter";
 
 const LONG_PRESS_MS = 500;
@@ -75,8 +76,10 @@ const Home = () => {
   const dragStartPosRef = useRef<{ x: number; y: number } | null>(null);
   const scrollAnchorRef = useRef<HTMLDivElement | null>(null);
   const hasAutoScrolled = useRef(false);
+  const chartHeaderRef = useRef<HTMLDivElement | null>(null);
   const profileMenuButtonRef = useRef<HTMLButtonElement | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
+  const [fixedHeaderBottom, setFixedHeaderBottom] = useState(0);
 
   const closeModal = useCallback(() => {
     setSelectedTransaction(null);
@@ -118,6 +121,29 @@ const Home = () => {
       dialogRef.current?.focus();
     }
   }, [isModalOpen, modalView]);
+
+  useLayoutEffect(() => {
+    const header = chartHeaderRef.current;
+    if (!header) return;
+
+    const updateHeaderOffset = () => {
+      const nextBottom = Math.ceil(header.getBoundingClientRect().bottom);
+      setFixedHeaderBottom((currentBottom) => currentBottom === nextBottom ? currentBottom : nextBottom);
+    };
+
+    updateHeaderOffset();
+    window.addEventListener('resize', updateHeaderOffset);
+
+    const resizeObserver = typeof ResizeObserver === 'undefined'
+      ? null
+      : new ResizeObserver(updateHeaderOffset);
+    resizeObserver?.observe(header);
+
+    return () => {
+      window.removeEventListener('resize', updateHeaderOffset);
+      resizeObserver?.disconnect();
+    };
+  }, [chartOpen]);
 
   const handleSignOut = async () => {
     await signOut(auth);
@@ -425,10 +451,10 @@ const Home = () => {
       forecastsByAccount[f.account_id][dateStr] -= f.amount;
     }
 
-    const data: Record<string, any>[] = [];
-    const currentBalances: Record<string, number> = {};
+    const data: Record<string, string | number | null>[] = [];
+    const currentBalances: Record<string, number | null> = {};
     for (const acct of accounts) {
-      currentBalances[acct.account_id] = acct.available_balance ?? 0;
+      currentBalances[acct.account_id] = acct.available_balance ?? null;
     }
 
     const d = new Date(today);
@@ -438,15 +464,18 @@ const Home = () => {
 
       for (const acct of accounts) {
         const dayForecast = forecastsByAccount[acct.account_id]?.[dateStr] || 0;
-        if (dayForecast !== 0) {
-          currentBalances[acct.account_id] += dayForecast;
+        const currentBalance = currentBalances[acct.account_id];
+        if (currentBalance != null && dayForecast !== 0) {
+          currentBalances[acct.account_id] = currentBalance + dayForecast;
         }
       }
 
-      const point: Record<string, any> = { date: displayDate, fullDate: dateStr };
+      const point: Record<string, string | number | null> = { date: displayDate, fullDate: dateStr };
       for (const acct of accounts) {
-        const rounded = Math.round(currentBalances[acct.account_id] * 100) / 100;
-        point[acct.account_id] = rounded;
+        const balance = currentBalances[acct.account_id];
+        point[acct.account_id] = balance == null
+          ? null
+          : Math.round(balance * 100) / 100;
       }
       data.push(point);
 
@@ -502,22 +531,21 @@ const Home = () => {
   }, [mergedItems]);
 
   useEffect(() => {
-    if (!initialLoading && !hasAutoScrolled.current && scrollAnchorRef.current) {
+    if (!initialLoading && !hasAutoScrolled.current && scrollAnchorRef.current && fixedHeaderBottom > 0) {
       hasAutoScrolled.current = true;
       requestAnimationFrame(() => {
         if (!scrollAnchorRef.current) return;
         const rect = scrollAnchorRef.current.getBoundingClientRect();
-        const fixedHeaderHeight = chartOpen ? 56 + window.innerHeight * 0.3 + 6 : 56 + 30;
-        const scrollTarget = window.scrollY + rect.top - fixedHeaderHeight;
+        const scrollTarget = window.scrollY + rect.top - getDashboardContentPadding(fixedHeaderBottom);
         window.scrollTo({ top: Math.max(0, scrollTarget), behavior: 'auto' });
       });
     }
-  }, [initialLoading, mergedItems.length]);
+  }, [fixedHeaderBottom, initialLoading, mergedItems.length]);
 
   const currentUser = auth.currentUser;
 
   return (
-    <div style={{ maxWidth: '600px', margin: '0 auto', paddingTop: chartOpen ? 'calc(56px + 30vh + 6px)' : 'calc(56px + 30px)', paddingLeft: '2px', paddingRight: '2px', paddingBottom: '2px' }}>
+    <div style={{ maxWidth: '600px', margin: '0 auto', paddingTop: fixedHeaderBottom > 0 ? `${getDashboardContentPadding(fixedHeaderBottom)}px` : chartOpen ? 'calc(56px + 30vh + 6px)' : 'calc(56px + 30px)', paddingLeft: '2px', paddingRight: '2px', paddingBottom: '2px' }}>
       <div style={{
         position: 'fixed',
         top: 0,
@@ -708,7 +736,7 @@ const Home = () => {
         </div>
       </div>
 
-      <div style={{
+      <div ref={chartHeaderRef} style={{
         position: 'fixed',
         top: '44px',
         left: 0,
