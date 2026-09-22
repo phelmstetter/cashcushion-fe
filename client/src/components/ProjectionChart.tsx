@@ -66,10 +66,20 @@ export default function ProjectionChart({
   });
 
   return (
-    <div data-testid="chart-container">
+    <div
+      data-testid="chart-container"
+      style={{
+        boxSizing: 'border-box',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '33.333dvh',
+      }}
+    >
       <div
         style={{
-          height: '30vh',
+          boxSizing: 'border-box',
+          flexShrink: 0,
+          height: accounts.length > 0 ? '60%' : '100%',
           backgroundColor: 'white',
           borderRadius: accounts.length > 0 ? '8px 8px 0 0' : '8px',
           boxShadow: accounts.length > 0 ? '0 1px 3px rgba(0,0,0,0.1)' : undefined,
@@ -137,7 +147,9 @@ export default function ProjectionChart({
             borderTop: 'none',
             borderRadius: '0 0 8px 8px',
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            maxHeight: '35vh',
+            boxSizing: 'border-box',
+            flex: '0 0 40%',
+            height: '40%',
             overflow: 'auto',
           }}
         >
