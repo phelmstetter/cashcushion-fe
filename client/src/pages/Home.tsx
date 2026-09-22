@@ -31,6 +31,7 @@ const Home = () => {
   const [editingForecast, setEditingForecast] = useState<Forecast | null>(null);
   const [addingStandaloneForecast, setAddingStandaloneForecast] = useState(false);
   const [standaloneForecastName, setStandaloneForecastName] = useState('');
+  const [standaloneForecastAccountId, setStandaloneForecastAccountId] = useState('');
   const [companyFilter, setCompanyFilter] = useState('');
   const [accountFilter, setAccountFilter] = useState('');
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -57,6 +58,7 @@ const Home = () => {
     setEditingForecast(null);
     setAddingStandaloneForecast(false);
     setStandaloneForecastName('');
+    setStandaloneForecastAccountId('');
     setModalView('details');
     setForecastDate('');
     setForecastAmount('');
@@ -893,6 +895,7 @@ const Home = () => {
               onClick={() => {
                 setAddingStandaloneForecast(true);
                 setStandaloneForecastName('');
+                setStandaloneForecastAccountId('');
                 setForecastDate('');
                 setForecastAmount('');
                 setForecastType('single');
@@ -912,7 +915,7 @@ const Home = () => {
                 textAlign: 'center'
               }}
             >
-              + Add Expense
+              + Add forecast
             </button>
           </div>
         </div>
@@ -1499,9 +1502,32 @@ const Home = () => {
                         boxSizing: 'border-box'
                       }}
                     />
-                    <span style={{ fontSize: '12px', color: '#888', marginTop: '4px', display: 'block' }}>
-                      Not tied to any account — only affects your Total Cushion projection.
-                    </span>
+                    <div style={{ marginTop: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>
+                        Account
+                      </label>
+                      <select
+                        data-testid="select-standalone-forecast-account"
+                        value={standaloneForecastAccountId}
+                        onChange={(e) => setStandaloneForecastAccountId(e.target.value)}
+                        required
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          borderRadius: '4px',
+                          border: '1px solid #ccc',
+                          boxSizing: 'border-box',
+                          backgroundColor: 'white'
+                        }}
+                      >
+                        <option value="" disabled>Select an account</option>
+                        {accountOptions.map((account) => (
+                          <option key={account.value} value={account.value}>
+                            {account.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 )}
 
@@ -1755,6 +1781,7 @@ const Home = () => {
                     onClick={() => {
                       setAddingStandaloneForecast(false);
                       setStandaloneForecastName('');
+                      setStandaloneForecastAccountId('');
                       setModalView('details');
                       setForecastDate('');
                       setForecastAmount('');
@@ -1775,10 +1802,11 @@ const Home = () => {
                   </button>
                   <button
                     data-testid="button-save-forecast"
-                    disabled={saving || !forecastDate || !forecastAmount || (addingStandaloneForecast && !standaloneForecastName.trim())}
+                    disabled={saving || !forecastDate || !forecastAmount || (addingStandaloneForecast && (!standaloneForecastName.trim() || !standaloneForecastAccountId))}
                     onClick={async () => {
                       if (!auth.currentUser) return;
                       if (!selectedTransaction && !addingStandaloneForecast) return;
+                      if (addingStandaloneForecast && !standaloneForecastAccountId) return;
                       setSaving(true);
                       setActionError(null);
                       try {
@@ -1800,7 +1828,7 @@ const Home = () => {
                           merchant_entity_id: null,
                           amount,
                           created_at: new Date().toISOString(),
-                          account_id: null,
+                          account_id: standaloneForecastAccountId,
                           logo_url: null,
                           forecast_type: forecastType,
                           forecast_interval: forecastType === 'every_x_days' ? forecastDayInterval : forecastType === 'monthly' ? 1 : null,
@@ -1824,6 +1852,7 @@ const Home = () => {
                         setSelectedTransaction(null);
                         setAddingStandaloneForecast(false);
                         setStandaloneForecastName('');
+                        setStandaloneForecastAccountId('');
                         setModalView('details');
                         setForecastDate('');
                         setForecastAmount('');
