@@ -1,5 +1,5 @@
 import type { Account } from "@/lib/firebase";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, SquareArrowOutUpRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   LineChart,
@@ -97,6 +97,11 @@ export default function ProjectionChart({
   const openCallout = () => {
     setCalloutClosing(false);
     setCalloutOpen(true);
+  };
+
+  const jumpToLowBalance = (date: string) => {
+    setDisplayMode('chart');
+    onDateSelect?.(date);
   };
 
   const accountSummaries = accounts.map((account, index) => {
@@ -224,7 +229,31 @@ export default function ProjectionChart({
                   <td style={{ boxSizing: 'border-box', color: '#37474f', padding: '10px 6px', verticalAlign: 'top', whiteSpace: 'nowrap' }}>
                     {minimumBalance != null && minimumDate ? (
                       <>
-                        <strong style={{ display: 'block', fontSize: '16px', lineHeight: 1.25 }}>{currencyFormatter.format(minimumBalance)}</strong>
+                        <div style={{ alignItems: 'center', display: 'flex', gap: '4px' }}>
+                          <strong style={{ display: 'block', fontSize: '16px', lineHeight: 1.25 }}>{currencyFormatter.format(minimumBalance)}</strong>
+                          <button
+                            type="button"
+                            aria-label={`Show the chart and transactions for the projected low balance on ${formatDate(minimumDate)}`}
+                            title={`Show chart and transactions for ${formatDate(minimumDate)}`}
+                            onClick={() => jumpToLowBalance(minimumDate)}
+                            style={{
+                              alignItems: 'center',
+                              backgroundColor: '#edf4f7',
+                              border: '1px solid #b8ccd6',
+                              borderRadius: '4px',
+                              color: '#405f70',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              flexShrink: 0,
+                              height: '22px',
+                              justifyContent: 'center',
+                              padding: 0,
+                              width: '22px',
+                            }}
+                          >
+                            <SquareArrowOutUpRight aria-hidden="true" size={14} strokeWidth={2.25} />
+                          </button>
+                        </div>
                         <time
                           dateTime={minimumDate}
                           aria-label={`Projected low balance date: ${formatDate(minimumDate)}`}
