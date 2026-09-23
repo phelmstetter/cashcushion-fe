@@ -2037,7 +2037,78 @@ const Home = () => {
 
             {modalView === 'editForecast' && editingForecast && (
               <>
-                <div style={{ alignItems: 'center', backgroundColor: '#eef5f7', border: '1px solid #d1e0e6', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', marginBottom: '14px', padding: '12px 14px' }}>
+                {(() => {
+                  const { display: forecastAmountDisplay } = formatAmount(editingForecast.amount);
+                  const projectedBalance = editingForecast.id
+                    ? forecastBalances.get(editingForecast.id) ?? null
+                    : null;
+
+                  return (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        minHeight: '68px',
+                        boxSizing: 'border-box',
+                        padding: '8px',
+                        marginBottom: '14px',
+                        backgroundColor: '#E3F2FD',
+                        borderRadius: '8px',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                        cursor: 'default',
+                        userSelect: 'none'
+                      }}
+                    >
+                      {editingForecast.logo_url ? (
+                        <img
+                          src={editingForecast.logo_url}
+                          alt={editingForecast.name}
+                          style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <div style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '50%',
+                          backgroundColor: '#e0e0e0',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '14px',
+                          fontWeight: 'bold'
+                        }}>
+                          {getInitials(editingForecast.name)}
+                        </div>
+                      )}
+
+                      <div style={{
+                        flex: 1,
+                        minWidth: 0,
+                        fontWeight: 500,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden'
+                      }}>
+                        {editingForecast.name}
+                      </div>
+
+                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <div style={{ fontWeight: 600, color: '#42A5F5' }}>
+                          {forecastAmountDisplay}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#666' }}>
+                          {projectedBalance != null
+                            ? <span aria-label={`Projected balance on ${formatDate(editingForecast.date)}: ${formatCurrency(projectedBalance)}`}>{formatCurrency(projectedBalance)}</span>
+                            : <span aria-label="Projected balance unavailable">—</span>}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                <div style={{ alignItems: 'center', display: 'flex', justifyContent: 'space-between', margin: '0 0 14px', padding: '0 2px' }}>
                   <h2 id="forecast-dialog-title" style={{ color: '#263238', fontSize: '18px', margin: 0 }}>Edit Forecast</h2>
                   <button
                     data-testid="button-close-edit-forecast"
@@ -2061,13 +2132,6 @@ const Home = () => {
                     }}
                   >×</button>
                 </div>
-
-                <p style={{ backgroundColor: '#f8fbfc', border: '1px solid #e0eaee', borderRadius: '8px', margin: '0 0 14px', padding: '10px 12px' }}>
-                  <strong>{editingForecast.name}</strong>
-                  {editingForecast.series_id && (
-                    <span style={{ fontSize: '12px', color: '#42A5F5', marginLeft: '8px', fontWeight: 600 }}>SERIES</span>
-                  )}
-                </p>
 
                 <div style={{ marginTop: '0' }}>
                   <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Date</label>
