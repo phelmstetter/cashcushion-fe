@@ -2092,56 +2092,6 @@ const Home = () => {
                   </div>
                 )}
 
-                {forecastType !== 'single' && (
-                  <div style={{ alignItems: 'center', display: 'flex', gap: '10px', marginTop: '10px' }}>
-                    <label
-                      data-testid="toggle-auto-extend"
-                      style={{
-                        position: 'relative',
-                        display: 'inline-block',
-                        width: '44px',
-                        height: '24px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={autoExtend}
-                        onChange={(e) => setAutoExtend(e.target.checked)}
-                        style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
-                      />
-                      <span style={{
-                        position: 'absolute',
-                        top: 0, left: 0, right: 0, bottom: 0,
-                        backgroundColor: autoExtend ? '#42A5F5' : '#ccc',
-                        borderRadius: '12px',
-                        transition: 'background-color 0.2s'
-                      }} />
-                      <span style={{
-                        position: 'absolute',
-                        top: '2px',
-                        left: autoExtend ? '22px' : '2px',
-                        width: '20px',
-                        height: '20px',
-                        backgroundColor: 'white',
-                        borderRadius: '50%',
-                        transition: 'left 0.2s',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                      }} />
-                    </label>
-                    <span style={{ alignItems: 'center', color: '#52636b', display: 'inline-flex', fontSize: '14px', gap: '5px' }}>
-                      Auto extend
-                      <InfoHint
-                        active={activeInfoTip === 'autoExtend'}
-                        label="Explain auto extend"
-                        onToggle={() => setActiveInfoTip(activeInfoTip === 'autoExtend' ? null : 'autoExtend')}
-                        testId="info-auto-extend"
-                        text="Keeps recurring forecasts extending into future months."
-                      />
-                    </span>
-                  </div>
-                )}
-
                 <div style={{ alignItems: 'center', display: 'grid', gap: '12px', gridTemplateColumns: '96px minmax(0, 280px)', marginTop: '14px', minWidth: 0 }}>
                   <label htmlFor="input-forecast-date" style={{ color: '#607d8b', fontSize: '15px', fontWeight: 600 }}>
                     {forecastType === 'single' ? 'Date' : 'Starting Date'}
@@ -2284,6 +2234,56 @@ const Home = () => {
                     />
                   </div>
                 </div>
+
+                {forecastType !== 'single' && (
+                  <div style={{ alignItems: 'center', display: 'flex', gap: '10px', marginTop: '10px' }}>
+                    <label
+                      data-testid="toggle-auto-extend"
+                      style={{
+                        position: 'relative',
+                        display: 'inline-block',
+                        width: '44px',
+                        height: '24px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={autoExtend}
+                        onChange={(e) => setAutoExtend(e.target.checked)}
+                        style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
+                      />
+                      <span style={{
+                        position: 'absolute',
+                        top: 0, left: 0, right: 0, bottom: 0,
+                        backgroundColor: autoExtend ? '#42A5F5' : '#ccc',
+                        borderRadius: '12px',
+                        transition: 'background-color 0.2s'
+                      }} />
+                      <span style={{
+                        position: 'absolute',
+                        top: '2px',
+                        left: autoExtend ? '22px' : '2px',
+                        width: '20px',
+                        height: '20px',
+                        backgroundColor: 'white',
+                        borderRadius: '50%',
+                        transition: 'left 0.2s',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                      }} />
+                    </label>
+                    <span style={{ alignItems: 'center', color: '#52636b', display: 'inline-flex', fontSize: '14px', gap: '5px' }}>
+                      Auto extend
+                      <InfoHint
+                        active={activeInfoTip === 'autoExtend'}
+                        label="Explain auto extend"
+                        onToggle={() => setActiveInfoTip(activeInfoTip === 'autoExtend' ? null : 'autoExtend')}
+                        testId="info-auto-extend"
+                        text="Keeps recurring forecasts extending into future months."
+                      />
+                    </span>
+                  </div>
+                )}
 
                 <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <div style={{ display: 'flex', gap: '10px' }}>
