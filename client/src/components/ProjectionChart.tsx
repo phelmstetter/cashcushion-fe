@@ -2,7 +2,6 @@ import type { Account } from "@/lib/firebase";
 import { sharedStyles, ui } from "@/lib/uiTheme";
 import {
   CircleDollarSign,
-  Eye,
   Landmark,
   MessageCircle,
   SquareArrowOutUpRight,
@@ -491,10 +490,9 @@ export default function ProjectionChart({
               }}
             >
               <colgroup>
-                <col style={{ width: '20px' }} />
-                <col style={{ width: 'calc((100% - 20px) / 3)' }} />
-                <col style={{ width: 'calc((100% - 20px) / 3)' }} />
-                <col style={{ width: 'calc((100% - 20px) / 3)' }} />
+                <col style={{ width: '33.3333%' }} />
+                <col style={{ width: '33.3333%' }} />
+                <col style={{ width: '33.3333%' }} />
               </colgroup>
               <thead>
                 <tr style={{ color: ui.color.textMuted, fontSize: '13px', fontWeight: 700, lineHeight: '18px', textAlign: 'left' }}>
@@ -503,22 +501,6 @@ export default function ProjectionChart({
                     style={{
                       backgroundColor: ui.color.surfaceSubtle,
                       borderBottom: `1px solid ${ui.color.border}`,
-                      boxSizing: 'border-box',
-                      padding: '9px 4px',
-                      position: 'sticky',
-                      textAlign: 'center',
-                      top: 0,
-                      zIndex: 1,
-                    }}
-                  >
-                    <Eye aria-hidden="true" size={14} strokeWidth={2} />
-                  </th>
-                  <th
-                    scope="col"
-                    style={{
-                      backgroundColor: ui.color.surfaceSubtle,
-                      borderBottom: `1px solid ${ui.color.border}`,
-                      borderLeft: `1px solid ${ui.color.border}`,
                       boxSizing: 'border-box',
                       padding: '9px 10px',
                       position: 'sticky',
@@ -586,29 +568,6 @@ export default function ProjectionChart({
                         : ui.color.surfaceSubtle;
                     }}
                   >
-                    <td
-                      style={{
-                        borderBottom: `1px solid ${ui.color.border}`,
-                        boxSizing: 'border-box',
-                        padding: '12px 4px',
-                        textAlign: 'center',
-                        verticalAlign: 'middle',
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isIncluded}
-                        onChange={() => onAccountToggle(account.account_id)}
-                        aria-label={`${isIncluded ? 'Exclude' : 'Include'} ${accountLabel(account)}`}
-                        style={{
-                          accentColor: color,
-                          cursor: 'pointer',
-                          height: '16px',
-                          margin: 0,
-                          width: '16px',
-                        }}
-                      />
-                    </td>
                     <th
                       scope="row"
                       style={{
@@ -621,6 +580,20 @@ export default function ProjectionChart({
                       }}
                     >
                       <span style={{ alignItems: 'center', display: 'flex', gap: '8px', minWidth: 0 }}>
+                        <input
+                          type="checkbox"
+                          checked={isIncluded}
+                          onChange={() => onAccountToggle(account.account_id)}
+                          aria-label={`${isIncluded ? 'Exclude' : 'Include'} ${accountLabel(account)}`}
+                          style={{
+                            accentColor: color,
+                            cursor: 'pointer',
+                            flex: '0 0 auto',
+                            height: '16px',
+                            margin: 0,
+                            width: '16px',
+                          }}
+                        />
                         <span
                           aria-hidden="true"
                           style={{
