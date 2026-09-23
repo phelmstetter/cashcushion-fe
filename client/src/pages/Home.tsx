@@ -2235,27 +2235,41 @@ const Home = () => {
 
                 <div style={{ alignItems: 'center', display: 'grid', gap: '12px', gridTemplateColumns: '96px minmax(0, 280px)', marginTop: '0', minWidth: 0 }}>
                   <label htmlFor="input-edit-forecast-date" style={{ color: '#607d8b', fontSize: '15px', fontWeight: 600 }}>Date</label>
-                  <input 
-                    id="input-edit-forecast-date"
-                    type="date"
-                    data-testid="input-edit-forecast-date"
-                    value={forecastDate}
-                    onChange={(e) => setForecastDate(e.target.value)}
+                  <div
                     style={{
                       width: '100%',
                       minWidth: 0,
                       maxWidth: '100%',
                       height: '38px',
-                      padding: '8px 10px',
+                      padding: '8px 10px 8px 26px',
                       borderRadius: '8px',
                       border: '1px solid #cbd9df',
                       backgroundColor: '#f8fbfc',
                       boxSizing: 'border-box',
-                      color: '#263238',
-                      fontFamily: 'inherit',
-                      fontSize: '16px'
+                      display: 'flex',
+                      alignItems: 'center'
                     }}
-                  />
+                  >
+                    <input
+                      id="input-edit-forecast-date"
+                      type="date"
+                      data-testid="input-edit-forecast-date"
+                      value={forecastDate}
+                      onChange={(e) => setForecastDate(e.target.value)}
+                      style={{
+                        width: '100%',
+                        minWidth: 0,
+                        height: '20px',
+                        padding: 0,
+                        border: 'none',
+                        backgroundColor: 'transparent',
+                        boxSizing: 'border-box',
+                        color: '#263238',
+                        fontFamily: 'inherit',
+                        fontSize: '16px'
+                      }}
+                    />
+                  </div>
                 </div>
                 
                 <div style={{ alignItems: 'center', display: 'grid', gap: '12px', gridTemplateColumns: '96px minmax(0, 280px)', marginTop: '14px', minWidth: 0 }}>
