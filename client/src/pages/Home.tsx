@@ -2014,40 +2014,17 @@ const Home = () => {
                 {forecastType === 'every_x_days' && (
                   <div style={{ alignItems: 'center', color: '#607d8b', display: 'flex', flexWrap: 'wrap', fontSize: '15px', fontWeight: 600, gap: '6px', marginTop: '10px' }}>
                     <span>Every</span>
-                    <input
-                      type="number"
-                      min="1"
-                      data-testid="input-forecast-day-interval"
-                      value={forecastDayInterval}
-                      onChange={(e) => setForecastDayInterval(Math.max(1, parseInt(e.target.value) || 1))}
-                      style={{
-                        width: '52px',
-                        height: '38px',
-                        padding: '6px 2px',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd9df',
-                        backgroundColor: '#f8fbfc',
-                        boxSizing: 'border-box',
-                        color: '#263238',
-                        fontFamily: 'inherit',
-                        fontSize: '16px',
-                        textAlign: 'center'
-                      }}
-                    />
-                    <span>days</span>
-                    <span style={{ alignItems: 'center', display: 'inline-flex', gap: '6px', whiteSpace: 'nowrap' }}>
-                      <span>for</span>
+                    <span style={{ display: 'inline-flex', flex: '0 0 calc(2ch + 16px)', maxWidth: 'calc(2ch + 16px)', minWidth: 'calc(2ch + 16px)' }}>
                       <input
                         type="number"
                         min="1"
-                        max="52"
-                        data-testid="input-forecast-day-count"
-                        value={forecastDayCount}
-                        onChange={(e) => setForecastDayCount(Math.max(1, Math.min(52, parseInt(e.target.value) || 1)))}
+                        data-testid="input-forecast-day-interval"
+                        value={forecastDayInterval}
+                        onChange={(e) => setForecastDayInterval(Math.max(1, parseInt(e.target.value) || 1))}
                         style={{
-                          width: '62px',
+                          width: '100%',
                           height: '38px',
-                          padding: '6px 2px',
+                          padding: '6px 4px',
                           borderRadius: '8px',
                           border: '1px solid #cbd9df',
                           backgroundColor: '#f8fbfc',
@@ -2058,6 +2035,33 @@ const Home = () => {
                           textAlign: 'center'
                         }}
                       />
+                    </span>
+                    <span>days</span>
+                    <span style={{ alignItems: 'center', display: 'inline-flex', gap: '6px', whiteSpace: 'nowrap' }}>
+                      <span>for</span>
+                      <span style={{ display: 'inline-flex', flex: '0 0 calc(2ch + 16px)', maxWidth: 'calc(2ch + 16px)', minWidth: 'calc(2ch + 16px)' }}>
+                        <input
+                          type="number"
+                          min="1"
+                          max="52"
+                          data-testid="input-forecast-day-count"
+                          value={forecastDayCount}
+                          onChange={(e) => setForecastDayCount(Math.max(1, Math.min(52, parseInt(e.target.value) || 1)))}
+                          style={{
+                            width: '100%',
+                            height: '38px',
+                            padding: '6px 4px',
+                            borderRadius: '8px',
+                            border: '1px solid #cbd9df',
+                            backgroundColor: '#f8fbfc',
+                            boxSizing: 'border-box',
+                            color: '#263238',
+                            fontFamily: 'inherit',
+                            fontSize: '16px',
+                            textAlign: 'center'
+                          }}
+                        />
+                      </span>
                       <span>occurrences.</span>
                     </span>
                   </div>
