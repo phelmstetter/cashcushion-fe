@@ -16,8 +16,15 @@ const LONG_PRESS_MS = 500;
 const CHART_WINDOW_MIN = 33;
 const forecastFieldLabelStyle = {
   color: ui.color.textMuted,
+  fontFamily: 'inherit',
   fontSize: '15px',
   fontWeight: 600,
+  lineHeight: '20px',
+} as const;
+const forecastControlTextStyle = {
+  fontFamily: 'inherit',
+  fontSize: '15px',
+  lineHeight: '20px',
 } as const;
 const ProjectionChart = lazy(() => import("@/components/ProjectionChart"));
 
@@ -1892,11 +1899,12 @@ const Home = () => {
                         padding: '8px',
                         ...sharedStyles.input,
                         borderRadius: ui.radius.control,
-                        boxSizing: 'border-box'
+                        boxSizing: 'border-box',
+                        ...forecastControlTextStyle
                       }}
                     />
                     <div style={{ marginTop: '16px' }}>
-                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>
+                      <label style={{ ...forecastFieldLabelStyle, display: 'block', marginBottom: '6px' }}>
                         Account <span aria-hidden="true">*</span>
                       </label>
                       <select
@@ -1910,7 +1918,8 @@ const Home = () => {
                           ...sharedStyles.input,
                           borderRadius: ui.radius.control,
                           boxSizing: 'border-box',
-                          backgroundColor: ui.color.surface
+                          backgroundColor: ui.color.surface,
+                          ...forecastControlTextStyle
                         }}
                       >
                         <option value="" disabled>Select an account</option>
@@ -1946,6 +1955,7 @@ const Home = () => {
                       data-testid="button-forecast-single"
                       onClick={() => setForecastType('single')}
                       style={{
+                        ...forecastControlTextStyle,
                         alignItems: 'center',
                         backgroundColor: forecastType === 'single' ? ui.color.primary : 'transparent',
                         border: 'none',
@@ -1957,8 +1967,6 @@ const Home = () => {
                         height: '30px',
                         justifyContent: 'center',
                         fontWeight: forecastType === 'single' ? 600 : 400,
-                        fontSize: '14px',
-                        lineHeight: '20px',
                         padding: '0 10px'
                       }}
                     >
@@ -1969,6 +1977,7 @@ const Home = () => {
                       data-testid="button-forecast-monthly"
                       onClick={() => setForecastType('monthly')}
                       style={{
+                        ...forecastControlTextStyle,
                         alignItems: 'center',
                         backgroundColor: forecastType === 'monthly' ? ui.color.primary : 'transparent',
                         border: 'none',
@@ -1980,8 +1989,6 @@ const Home = () => {
                         height: '30px',
                         justifyContent: 'center',
                         fontWeight: forecastType === 'monthly' ? 600 : 400,
-                        fontSize: '14px',
-                        lineHeight: '20px',
                         padding: '0 10px'
                       }}
                     >
@@ -1992,6 +1999,7 @@ const Home = () => {
                       data-testid="button-forecast-every-x-days"
                       onClick={() => setForecastType('every_x_days')}
                       style={{
+                        ...forecastControlTextStyle,
                         alignItems: 'center',
                         backgroundColor: forecastType === 'every_x_days' ? ui.color.primary : 'transparent',
                         border: 'none',
@@ -2003,8 +2011,6 @@ const Home = () => {
                         height: '30px',
                         justifyContent: 'center',
                         fontWeight: forecastType === 'every_x_days' ? 600 : 400,
-                        fontSize: '14px',
-                        lineHeight: '20px',
                         padding: '0 10px'
                       }}
                     >
@@ -2029,8 +2035,7 @@ const Home = () => {
                           padding: '6px 4px',
                           ...sharedStyles.input,
                           boxSizing: 'border-box',
-                          fontFamily: 'inherit',
-                          fontSize: '16px',
+                          ...forecastControlTextStyle,
                           textAlign: 'center'
                         }}
                       />
@@ -2052,8 +2057,7 @@ const Home = () => {
                             padding: '6px 4px',
                             ...sharedStyles.input,
                             boxSizing: 'border-box',
-                            fontFamily: 'inherit',
-                            fontSize: '16px',
+                            ...forecastControlTextStyle,
                             textAlign: 'center'
                           }}
                         />
@@ -2078,8 +2082,7 @@ const Home = () => {
                         padding: '8px 10px',
                         ...sharedStyles.input,
                         boxSizing: 'border-box',
-                        fontFamily: 'inherit',
-                        fontSize: '16px'
+                        ...forecastControlTextStyle
                       }}
                     >
                       {Array.from({ length: 12 }, (_, i) => i + 1).map(n => (
@@ -2116,8 +2119,7 @@ const Home = () => {
                         backgroundColor: 'transparent',
                         boxSizing: 'border-box',
                         color: ui.color.text,
-                        fontFamily: 'inherit',
-                        fontSize: '16px'
+                        ...forecastControlTextStyle
                       }}
                     />
                   </div>
@@ -2154,6 +2156,7 @@ const Home = () => {
                       onClick={() => setForecastDirection('expense')}
                       aria-pressed={forecastDirection === 'expense'}
                       style={{
+                        ...forecastControlTextStyle,
                         alignItems: 'center',
                         backgroundColor: forecastDirection === 'expense' ? ui.color.danger : 'transparent',
                         border: 'none',
@@ -2162,7 +2165,6 @@ const Home = () => {
                         cursor: 'pointer',
                         display: 'flex',
                         flex: 1,
-                        fontSize: '15px',
                         fontWeight: 600,
                         height: '30px',
                         justifyContent: 'center',
@@ -2177,6 +2179,7 @@ const Home = () => {
                       onClick={() => setForecastDirection('income')}
                       aria-pressed={forecastDirection === 'income'}
                       style={{
+                        ...forecastControlTextStyle,
                         alignItems: 'center',
                         backgroundColor: forecastDirection === 'income' ? ui.color.success : 'transparent',
                         border: 'none',
@@ -2185,7 +2188,6 @@ const Home = () => {
                         cursor: 'pointer',
                         display: 'flex',
                         flex: 1,
-                        fontSize: '15px',
                         fontWeight: 600,
                         height: '30px',
                         justifyContent: 'center',
@@ -2219,8 +2221,7 @@ const Home = () => {
                         padding: '8px 10px',
                         ...sharedStyles.input,
                         boxSizing: 'border-box',
-                        fontFamily: 'inherit',
-                        fontSize: '16px',
+                        ...forecastControlTextStyle,
                         textAlign: 'center'
                       }}
                     />
