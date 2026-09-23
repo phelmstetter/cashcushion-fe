@@ -467,3 +467,238 @@ button {
     padding-left: 4px;
   }
 }
+
+.simple-summary__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.simple-summary__title {
+  display: block;
+  color: #172554;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.simple-summary__subtitle {
+  display: block;
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.simple-summary__count {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  color: #64748b;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.simple-summary__notice {
+  margin: 8px 12px 0;
+  padding: 6px 8px;
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.simple-summary .summary-table {
+  display: table;
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.simple-summary .summary-table colgroup {
+  display: table-column-group;
+}
+
+.simple-summary .summary-table thead {
+  display: table-header-group;
+}
+
+.simple-summary .summary-table tbody {
+  display: table-row-group;
+}
+
+.simple-summary .summary-table tr {
+  display: table-row;
+}
+
+.simple-summary .summary-table th,
+.simple-summary .summary-table td {
+  display: table-cell;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  overflow: hidden;
+  padding: 9px 7px;
+  vertical-align: middle;
+}
+
+.simple-summary .summary-table thead th {
+  padding-top: 7px;
+  padding-bottom: 7px;
+  color: #64748b;
+  background: #f8fafc;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-transform: none;
+}
+
+.simple-summary .summary-table tbody th,
+.simple-summary .summary-table tbody td {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.simple-summary .summary-table tbody tr:last-child th,
+.simple-summary .summary-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.simple-summary .summary-table__track {
+  width: 20px;
+  padding-right: 0;
+  padding-left: 0;
+  text-align: center;
+}
+
+.simple-summary__account {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 7px;
+}
+
+.simple-summary__dot {
+  flex: 0 0 auto;
+  width: 4px;
+  height: 26px;
+  border-radius: 999px;
+}
+
+.simple-summary__account-name {
+  display: block;
+  overflow: hidden;
+  color: #172554;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.simple-summary__money {
+  display: block;
+  color: #172554;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.simple-summary__money--warning {
+  color: #b45309;
+}
+
+.simple-summary__money--danger {
+  color: #b91c1c;
+}
+
+.simple-summary__date {
+  display: inline-block;
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 10px;
+  line-height: 1.2;
+  white-space: normal;
+}
+
+.simple-summary__date--warning {
+  color: #b45309;
+}
+
+.simple-summary__date--danger {
+  color: #b91c1c;
+}
+
+.simple-summary__low {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.simple-summary__jump {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 21px;
+  height: 21px;
+  padding: 0;
+  color: #64748b;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.simple-summary__jump:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.35);
+  outline-offset: 2px;
+}
+
+@media (max-width: 560px) {
+  .summary-preview--compact .simple-summary .summary-table {
+    display: table;
+    table-layout: fixed;
+  }
+
+  .summary-preview--compact .simple-summary .summary-table colgroup {
+    display: table-column-group;
+  }
+
+  .summary-preview--compact .simple-summary .summary-table thead {
+    display: table-header-group;
+  }
+
+  .summary-preview--compact .simple-summary .summary-table tbody {
+    display: table-row-group;
+  }
+
+  .summary-preview--compact .simple-summary .summary-table tr {
+    display: table-row;
+    grid-template-columns: none;
+  }
+
+  .summary-preview--compact .simple-summary .summary-table th,
+  .summary-preview--compact .simple-summary .summary-table td {
+    display: table-cell;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    overflow: hidden;
+    padding-right: 4px;
+    padding-left: 4px;
+  }
+
+  .summary-preview--compact .simple-summary .summary-table__track {
+    width: 20px;
+    padding-right: 0;
+    padding-left: 0;
+  }
+}

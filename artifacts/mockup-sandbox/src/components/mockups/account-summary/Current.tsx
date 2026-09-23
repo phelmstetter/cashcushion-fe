@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowUpRight, CircleDollarSign, Eye, Landmark, TrendingDown } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 
 const accounts = [
   { id: 'everyday', name: 'Everyday Checking ·· 4821', current: 4280, low: 1240, lowDate: 'Jan 06', color: '#2563eb' },
@@ -25,81 +25,86 @@ export function Current() {
   return (
     <main className="summary-preview summary-preview--compact">
       <div className="summary-preview__viewport">
-        <section className="summary-panel" aria-label="Current account outlook">
-        <header className="summary-panel__topline">
-          <div className="summary-panel__identity">
-            <span className="summary-panel__icon" aria-hidden="true"><Landmark size={18} /></span>
+        <section className="summary-panel simple-summary" aria-label="Current account outlook">
+          <header className="simple-summary__header">
             <div>
-              <p className="summary-panel__eyebrow">Current version</p>
-              <h1 className="summary-panel__title">Account outlook</h1>
-              <p className="summary-panel__meta">Current balances and projected lows</p>
+              <strong className="simple-summary__title">Account outlook</strong>
+              <span className="simple-summary__subtitle">Current balances and projected lows</span>
             </div>
-          </div>
-          <span className="summary-panel__count">{trackedCount}/{accounts.length} tracked</span>
-        </header>
+            <span className="simple-summary__count">{trackedCount}/{accounts.length} tracked</span>
+          </header>
 
-        {focusedLow && <div className="summary-panel__notice">Chart jump ready for the projected low on {focusedLow}.</div>}
+          {focusedLow && (
+            <div className="simple-summary__notice" role="status">
+              Chart focus: projected low on {focusedLow}.
+            </div>
+          )}
 
-        <div className="summary-table-wrap">
-          <table className="summary-table">
-            <colgroup>
-              <col style={{ width: '20px' }} />
-              <col style={{ width: 'calc((100% - 20px) / 3)' }} />
-              <col style={{ width: 'calc((100% - 20px) / 3)' }} />
-              <col style={{ width: 'calc((100% - 20px) / 3)' }} />
-            </colgroup>
-            <thead>
-              <tr>
-                <th className="summary-table__track" scope="col"><Eye size={14} aria-hidden="true" /></th>
-                <th scope="col">Account</th>
-                <th scope="col"><span className="summary-table__heading"><CircleDollarSign size={14} aria-hidden="true" /> Current balance</span></th>
-                <th scope="col"><span className="summary-table__heading"><TrendingDown size={14} aria-hidden="true" /> Low balance</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              {accounts.map((account) => {
-                const isTracked = Boolean(tracked[account.id]);
-                const lowTone = account.low < 0 ? 'danger' : 'warning';
-                return (
-                  <tr key={account.id}>
-                    <td className="summary-table__track">
-                      <input
-                        type="checkbox"
-                        checked={isTracked}
-                        onChange={() => setTracked((value) => ({ ...value, [account.id]: !value[account.id] }))}
-                        aria-label={`${isTracked ? 'Exclude' : 'Include'} ${account.name}`}
-                      />
-                    </td>
-                    <th scope="row">
-                      <span className="summary-table__account">
-                        <span className="summary-table__rail" style={{ backgroundColor: account.color, opacity: isTracked ? 1 : 0.4 }} aria-hidden="true" />
-                        <span style={{ minWidth: 0 }}>
-                          <span className="summary-table__account-name">{account.name}</span>
-                          <span className="summary-table__status" style={{ color: isTracked ? '#2563eb' : '#94a3b8' }}>
-                            {isTracked ? 'Included in projection' : 'Hidden from projection'}
-                          </span>
+          <div className="summary-table-wrap">
+            <table className="summary-table simple-summary__table">
+              <colgroup>
+                <col style={{ width: '20px' }} />
+                <col style={{ width: 'calc((100% - 20px) / 3)' }} />
+                <col style={{ width: 'calc((100% - 20px) / 3)' }} />
+                <col style={{ width: 'calc((100% - 20px) / 3)' }} />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th className="summary-table__track" scope="col" aria-label="Include in projection" />
+                  <th scope="col">Account</th>
+                  <th scope="col">Current balance</th>
+                  <th scope="col">Low balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {accounts.map((account) => {
+                  const isTracked = Boolean(tracked[account.id]);
+                  const lowTone = account.low < 0 ? 'danger' : 'warning';
+                  return (
+                    <tr key={account.id}>
+                      <td className="summary-table__track">
+                        <input
+                          type="checkbox"
+                          checked={isTracked}
+                          onChange={() => setTracked((value) => ({ ...value, [account.id]: !value[account.id] }))}
+                          aria-label={`${isTracked ? 'Exclude' : 'Include'} ${account.name}`}
+                        />
+                      </td>
+                      <th scope="row">
+                        <span className="simple-summary__account">
+                          <span className="simple-summary__dot" style={{ backgroundColor: account.color, opacity: isTracked ? 1 : 0.4 }} aria-hidden="true" />
+                          <span className="simple-summary__account-name">{account.name}</span>
                         </span>
-                      </span>
-                    </th>
-                    <td>
-                      <strong className={`summary-table__money${account.current < 0 ? ' summary-table__money--danger' : ''}`}>{money.format(account.current)}</strong>
-                      <span className="summary-table__date">As of Jan 02</span>
-                    </td>
-                    <td>
-                      <div className="summary-table__low">
-                        <strong className={`summary-table__money summary-table__money--${lowTone}`}>{money.format(account.low)}</strong>
-                        <button className="summary-table__jump" type="button" onClick={() => setFocusedLow(account.lowDate)} aria-label={`Show chart for ${account.lowDate}`} title={`Show chart for ${account.lowDate}`}>
-                          <ArrowUpRight size={14} aria-hidden="true" />
-                        </button>
-                      </div>
-                      <span className={`summary-table__date summary-table__date--${lowTone}`}>Low on {account.lowDate}</span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                      </th>
+                      <td>
+                        <strong className={`simple-summary__money${account.current < 0 ? ' simple-summary__money--danger' : ''}`}>
+                          {money.format(account.current)}
+                        </strong>
+                        <span className="simple-summary__date">As of Jan 02</span>
+                      </td>
+                      <td>
+                        <span className="simple-summary__low">
+                          <strong className={`simple-summary__money simple-summary__money--${lowTone}`}>
+                            {money.format(account.low)}
+                          </strong>
+                          <button
+                            className="simple-summary__jump"
+                            type="button"
+                            onClick={() => setFocusedLow(account.lowDate)}
+                            aria-label={`Show chart for ${account.lowDate}`}
+                            title={`Show chart for ${account.lowDate}`}
+                          >
+                            <ArrowUpRight size={13} aria-hidden="true" />
+                          </button>
+                        </span>
+                        <span className={`simple-summary__date simple-summary__date--${lowTone}`}>Low on {account.lowDate}</span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </section>
       </div>
     </main>
