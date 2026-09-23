@@ -2164,7 +2164,7 @@ const Home = () => {
                       background: 'none',
                       border: 'none',
                       display: 'inline-flex',
-                      fontSize: '28px',
+                      fontSize: '25px',
                       height: '40px',
                       justifyContent: 'center',
                       lineHeight: 1,
