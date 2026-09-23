@@ -59,7 +59,7 @@ const Home = () => {
   const [forecastMonths, setForecastMonths] = useState(12);
   const [forecastDayInterval, setForecastDayInterval] = useState(14);
   const [forecastDayCount, setForecastDayCount] = useState(12);
-  const [autoExtend, setAutoExtend] = useState(false);
+  const [autoExtend, setAutoExtend] = useState(true);
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState<'one' | 'series' | null>(null);
   const [seriesActionPrompt, setSeriesActionPrompt] = useState<'save' | 'delete' | null>(null);
@@ -108,7 +108,7 @@ const Home = () => {
     setForecastType('single');
     setForecastDirection('expense');
     setForecastMonths(12);
-    setAutoExtend(false);
+    setAutoExtend(true);
     setActionError(null);
     setConfirmingDelete(null);
     setSeriesActionPrompt(null);
@@ -122,6 +122,7 @@ const Home = () => {
     setForecastAmount('');
     setForecastType('single');
     setForecastDirection('expense');
+    setAutoExtend(true);
     setModalView('forecast');
   };
 
@@ -508,7 +509,7 @@ const Home = () => {
     setForecastAmount('');
     setForecastType('single');
     setForecastMonths(12);
-    setAutoExtend(false);
+    setAutoExtend(true);
     setConfirmingDelete(null);
     setSeriesActionPrompt(null);
   };
@@ -1617,6 +1618,7 @@ const Home = () => {
                       setForecastAmount(Math.abs(selectedTransaction.amount).toString());
                       setForecastDirection(selectedTransaction.amount >= 0 ? 'expense' : 'income');
                     }
+                    setAutoExtend(true);
                     setModalView('forecast');
                   }}
                   style={{
@@ -2272,7 +2274,7 @@ const Home = () => {
                         setForecastAmount('');
                         setForecastType('single');
                         setForecastMonths(12);
-                        setAutoExtend(false);
+                        setAutoExtend(true);
                       } catch (error: any) {
                         console.error('Error saving forecast:', error?.code, error?.message, error);
                         setActionError('We couldn’t save this forecast. Please check the details and try again.');
