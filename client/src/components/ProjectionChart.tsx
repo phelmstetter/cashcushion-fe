@@ -699,7 +699,14 @@ export default function ProjectionChart({
                             width: '100%',
                           }}
                         >
-                          <span style={{ alignItems: 'center', display: 'inline-flex', gap: '6px' }}>
+                          <span
+                            style={{
+                              alignItems: 'center',
+                              color: minimumBalance < 0 ? ui.color.danger : ui.color.warning,
+                              display: 'inline-flex',
+                              gap: '6px',
+                            }}
+                          >
                             <strong
                               style={{
                                 color: minimumBalance < 0 ? ui.color.danger : ui.color.warning,
