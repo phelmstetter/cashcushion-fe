@@ -137,11 +137,7 @@ export default function ProjectionChart({
           data-testid="account-balance-summary"
           style={{
             backgroundColor: '#ffffff',
-            border: '1px solid #526b7c',
-            borderBottom: '3px solid #526b7c',
-            borderTop: '4px solid #526b7c',
             borderRadius: '8px',
-            boxShadow: '0 1px 3px rgba(45, 65, 78, 0.24)',
             boxSizing: 'border-box',
             flex: '1 1 0',
             maxHeight: 'none',
@@ -152,7 +148,7 @@ export default function ProjectionChart({
             aria-label="Account balance summary"
             style={{
               borderCollapse: 'collapse',
-              fontSize: '12px',
+              fontSize: '14px',
               tableLayout: 'fixed',
               width: '100%',
             }}
@@ -164,17 +160,17 @@ export default function ProjectionChart({
               <col style={{ width: '29%' }} />
             </colgroup>
             <thead>
-              <tr style={{ color: '#405866', fontSize: '11px', textAlign: 'left' }}>
-                <th scope="col" style={{ backgroundColor: '#ffffff', boxSizing: 'border-box', padding: '3px 4px 5px', position: 'sticky', textAlign: 'center', top: 0, zIndex: 1 }}>Show</th>
-                <th scope="col" style={{ backgroundColor: '#ffffff', boxSizing: 'border-box', padding: '3px 6px 5px', position: 'sticky', top: 0, zIndex: 1 }}>Account</th>
-                <th scope="col" style={{ backgroundColor: '#ffffff', boxSizing: 'border-box', padding: '3px 6px 5px', position: 'sticky', top: 0, whiteSpace: 'nowrap', zIndex: 1 }}>Current balance</th>
-                <th scope="col" style={{ backgroundColor: '#ffffff', boxSizing: 'border-box', padding: '3px 5px 5px', position: 'sticky', top: 0, whiteSpace: 'nowrap', zIndex: 1 }}>Low balance</th>
+              <tr style={{ color: '#405866', fontSize: '12px', textAlign: 'left' }}>
+                <th scope="col" style={{ backgroundColor: '#ffffff', boxSizing: 'border-box', padding: '8px 4px 7px', position: 'sticky', textAlign: 'center', top: 0, zIndex: 1 }}>Show</th>
+                <th scope="col" style={{ backgroundColor: '#ffffff', boxSizing: 'border-box', padding: '8px 7px 7px', position: 'sticky', top: 0, zIndex: 1 }}>Account</th>
+                <th scope="col" style={{ backgroundColor: '#ffffff', boxSizing: 'border-box', padding: '8px 7px 7px', position: 'sticky', top: 0, whiteSpace: 'nowrap', zIndex: 1 }}>Current balance</th>
+                <th scope="col" style={{ backgroundColor: '#ffffff', boxSizing: 'border-box', padding: '8px 6px 7px', position: 'sticky', top: 0, whiteSpace: 'nowrap', zIndex: 1 }}>Low balance</th>
               </tr>
             </thead>
             <tbody>
               {accountSummaries.map(({ account, color, isIncluded, minimumBalance, minimumDate }) => (
                 <tr key={account.account_id} style={{ borderTop: '1px solid #dce5e9', opacity: isIncluded ? 1 : 0.55 }}>
-                  <td style={{ boxSizing: 'border-box', padding: '7px 4px', textAlign: 'center', verticalAlign: 'top' }}>
+                  <td style={{ boxSizing: 'border-box', padding: '10px 4px', textAlign: 'center', verticalAlign: 'top' }}>
                     <input
                       type="checkbox"
                       checked={isIncluded}
@@ -190,7 +186,7 @@ export default function ProjectionChart({
                       boxSizing: 'border-box',
                       fontWeight: 600,
                       overflowWrap: 'anywhere',
-                      padding: '7px 6px',
+                      padding: '10px 7px',
                       textAlign: 'left',
                       verticalAlign: 'top',
                     }}
@@ -208,16 +204,16 @@ export default function ProjectionChart({
                     />
                     {accountLabel(account)}
                   </th>
-                  <td style={{ boxSizing: 'border-box', color: '#263238', padding: '7px 6px', verticalAlign: 'top', whiteSpace: 'nowrap' }}>
+                  <td style={{ boxSizing: 'border-box', color: '#263238', padding: '10px 7px', verticalAlign: 'top', whiteSpace: 'nowrap' }}>
                     {typeof account.available_balance === 'number' && Number.isFinite(account.available_balance) ? (
                       <>
-                        <strong style={{ display: 'block', lineHeight: 1.25 }}>{currencyFormatter.format(account.available_balance)}</strong>
+                        <strong style={{ display: 'block', fontSize: '16px', lineHeight: 1.25 }}>{currencyFormatter.format(account.available_balance)}</strong>
                         {currentBalanceDate && (
                           <time
                             dateTime={currentBalanceDate}
                             aria-label={`Current balance date: ${formatDate(currentBalanceDate)}`}
                             title={formatDate(currentBalanceDate)}
-                            style={{ color: '#607d8b', display: 'block', fontSize: '10px', lineHeight: 1.2 }}
+                            style={{ color: '#607d8b', display: 'block', fontSize: '11px', lineHeight: 1.3, marginTop: '2px' }}
                           >
                             {compactDate(currentBalanceDate)}
                           </time>
@@ -225,15 +221,15 @@ export default function ProjectionChart({
                       </>
                     ) : '—'}
                   </td>
-                  <td style={{ boxSizing: 'border-box', color: '#37474f', padding: '7px 5px', verticalAlign: 'top', whiteSpace: 'nowrap' }}>
+                  <td style={{ boxSizing: 'border-box', color: '#37474f', padding: '10px 6px', verticalAlign: 'top', whiteSpace: 'nowrap' }}>
                     {minimumBalance != null && minimumDate ? (
                       <>
-                        <strong style={{ display: 'block', lineHeight: 1.25 }}>{currencyFormatter.format(minimumBalance)}</strong>
+                        <strong style={{ display: 'block', fontSize: '16px', lineHeight: 1.25 }}>{currencyFormatter.format(minimumBalance)}</strong>
                         <time
                           dateTime={minimumDate}
                           aria-label={`Projected low balance date: ${formatDate(minimumDate)}`}
                           title={formatDate(minimumDate)}
-                          style={{ color: '#607d8b', display: 'block', fontSize: '10px', lineHeight: 1.2 }}
+                          style={{ color: '#607d8b', display: 'block', fontSize: '11px', lineHeight: 1.3, marginTop: '2px' }}
                         >
                           {compactDate(minimumDate)}
                         </time>
@@ -498,47 +494,62 @@ export default function ProjectionChart({
         )}
       </div>
       <div
-        role="group"
-        aria-label="Projection view"
         style={{
           alignItems: 'center',
-          backgroundColor: '#f5f5f5',
+          background: 'linear-gradient(180deg, #f8fbfc 0%, #edf3f6 100%)',
+          borderTop: '1px solid #c8d6dd',
+          boxShadow: '0 7px 12px -10px rgba(45, 65, 78, 0.72)',
           display: 'flex',
           flexShrink: 0,
-          gap: '4px',
           justifyContent: 'center',
-          padding: '3px 0',
+          marginTop: '8px',
+          padding: '8px 0 10px',
         }}
       >
-        {(['chart', 'summary'] as const).map((mode) => {
-          const isActive = displayMode === mode;
-          const label = mode === 'chart' ? 'Chart' : 'Account summary';
+        <div
+          role="group"
+          aria-label="Projection view"
+          style={{
+            backgroundColor: '#dbe7ec',
+            border: '1px solid #bdcdd5',
+            borderRadius: '999px',
+            boxShadow: 'inset 0 1px 2px rgba(45, 65, 78, 0.16)',
+            display: 'flex',
+            gap: '2px',
+            padding: '3px',
+          }}
+        >
+          {(['chart', 'summary'] as const).map((mode) => {
+            const isActive = displayMode === mode;
+            const label = mode === 'chart' ? 'Chart' : 'Account summary';
 
-          return (
-            <button
-              key={mode}
-              type="button"
-              aria-pressed={isActive}
-              disabled={mode === 'summary' && accounts.length === 0}
-              onClick={() => setDisplayMode(mode)}
-              style={{
-                backgroundColor: isActive ? '#526b7c' : '#ffffff',
-                border: '1px solid #526b7c',
-                borderRadius: '5px',
-                boxSizing: 'border-box',
-                color: isActive ? '#ffffff' : '#405866',
-                cursor: mode === 'summary' && accounts.length === 0 ? 'not-allowed' : 'pointer',
-                fontSize: '11px',
-                fontWeight: 600,
-                lineHeight: 1.2,
-                opacity: mode === 'summary' && accounts.length === 0 ? 0.55 : 1,
-                padding: '4px 10px',
-              }}
-            >
-              {label}
-            </button>
-          );
-        })}
+            return (
+              <button
+                key={mode}
+                type="button"
+                aria-pressed={isActive}
+                disabled={mode === 'summary' && accounts.length === 0}
+                onClick={() => setDisplayMode(mode)}
+                style={{
+                  backgroundColor: isActive ? '#405f70' : 'transparent',
+                  border: '1px solid transparent',
+                  borderRadius: '999px',
+                  boxShadow: isActive ? '0 1px 3px rgba(45, 65, 78, 0.34)' : 'none',
+                  boxSizing: 'border-box',
+                  color: isActive ? '#ffffff' : '#314b59',
+                  cursor: mode === 'summary' && accounts.length === 0 ? 'not-allowed' : 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  lineHeight: 1.2,
+                  opacity: mode === 'summary' && accounts.length === 0 ? 0.55 : 1,
+                  padding: '6px 14px',
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

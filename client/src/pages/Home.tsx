@@ -950,9 +950,11 @@ const Home = () => {
         left: 0,
         right: 0,
         zIndex: 998,
-        backgroundColor: '#f5f5f5'
+        backgroundColor: '#f5f5f5',
+        borderBottom: '1px solid #c8d6dd',
+        boxShadow: '0 5px 13px rgba(45, 65, 78, 0.18)',
       }}>
-        <div style={{ maxWidth: '600px', margin: '0 auto', padding: '2px 2px 0 2px' }}>
+        <div style={{ maxWidth: '600px', margin: '0 auto', padding: '2px 2px 6px' }}>
           <Suspense fallback={<ProjectionChartLoading />}>
             <ProjectionChart
               chartData={chartData}
