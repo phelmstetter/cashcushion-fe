@@ -9,7 +9,7 @@ import {
 } from "@/lib/activityBalances";
 import { getDashboardContentPadding } from "@/lib/dashboardLayout";
 import { useLocation } from "wouter";
-import { Trash2 } from "lucide-react";
+import { Info, Trash2 } from "lucide-react";
 
 const LONG_PRESS_MS = 500;
 const CHART_WINDOW_MIN = 33;
@@ -2070,8 +2070,17 @@ const Home = () => {
                         boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
                       }} />
                     </label>
-                    <span style={{ color: '#52636b', fontSize: '14px' }}>
-                      Auto-extend forecast 12 months
+                    <span style={{ alignItems: 'center', color: '#52636b', display: 'inline-flex', fontSize: '14px', gap: '5px' }}>
+                      Auto extend
+                      <span
+                        data-testid="info-auto-extend"
+                        role="img"
+                        aria-label="Auto extend keeps recurring forecasts extending into future months"
+                        title="Keeps recurring forecasts extending into future months."
+                        style={{ color: '#607d8b', display: 'inline-flex', cursor: 'help' }}
+                      >
+                        <Info size={16} strokeWidth={2} aria-hidden="true" />
+                      </span>
                     </span>
                   </div>
                 )}
