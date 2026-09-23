@@ -231,16 +231,16 @@ export default function ProjectionChart({
           >
             <colgroup>
               <col style={{ width: '12%' }} />
-              <col style={{ width: '30%' }} />
-              <col style={{ width: '29%' }} />
-              <col style={{ width: '29%' }} />
+              <col style={{ width: '29.3333%' }} />
+              <col style={{ width: '29.3333%' }} />
+              <col style={{ width: '29.3333%' }} />
             </colgroup>
             <thead>
-              <tr style={{ color: ui.color.textMuted, fontSize: '12px', textAlign: 'left' }}>
+              <tr style={{ color: ui.color.textMuted, fontSize: '13px', fontWeight: 700, lineHeight: '18px', textAlign: 'left' }}>
                 <th scope="col" style={{ backgroundColor: ui.color.surface, boxSizing: 'border-box', padding: '8px 4px 7px', position: 'sticky', textAlign: 'center', top: 0, zIndex: 1 }}>Show</th>
-                <th scope="col" style={{ backgroundColor: ui.color.surface, boxSizing: 'border-box', padding: '8px 7px 7px', position: 'sticky', top: 0, zIndex: 1 }}>Account</th>
-                <th scope="col" style={{ backgroundColor: ui.color.surface, boxSizing: 'border-box', padding: '8px 7px 7px', position: 'sticky', top: 0, whiteSpace: 'nowrap', zIndex: 1 }}>Current balance</th>
-                <th scope="col" style={{ backgroundColor: ui.color.surface, boxSizing: 'border-box', padding: '8px 6px 7px', position: 'sticky', top: 0, whiteSpace: 'nowrap', zIndex: 1 }}>Low balance</th>
+                <th scope="col" style={{ backgroundColor: ui.color.surface, borderLeft: `1px solid ${ui.color.border}`, boxSizing: 'border-box', padding: '8px 7px 7px', position: 'sticky', top: 0, zIndex: 1 }}>Account</th>
+                <th scope="col" style={{ backgroundColor: ui.color.surface, borderLeft: `1px solid ${ui.color.border}`, boxSizing: 'border-box', padding: '8px 7px 7px', position: 'sticky', top: 0, whiteSpace: 'nowrap', zIndex: 1 }}>Current balance</th>
+                <th scope="col" style={{ backgroundColor: ui.color.surface, borderLeft: `1px solid ${ui.color.border}`, boxSizing: 'border-box', padding: '8px 6px 7px', position: 'sticky', top: 0, whiteSpace: 'nowrap', zIndex: 1 }}>Low balance</th>
               </tr>
             </thead>
             <tbody>
@@ -258,6 +258,7 @@ export default function ProjectionChart({
                   <th
                     scope="row"
                     style={{
+                      borderLeft: `1px solid ${ui.color.border}`,
                       color: ui.color.text,
                       boxSizing: 'border-box',
                       fontWeight: 600,
@@ -280,7 +281,7 @@ export default function ProjectionChart({
                     />
                     {accountLabel(account)}
                   </th>
-                    <td style={{ boxSizing: 'border-box', color: ui.color.text, padding: '10px 7px', verticalAlign: 'top', whiteSpace: 'nowrap' }}>
+                    <td style={{ borderLeft: `1px solid ${ui.color.border}`, boxSizing: 'border-box', color: ui.color.text, padding: '10px 7px', verticalAlign: 'top', whiteSpace: 'nowrap' }}>
                     {typeof account.available_balance === 'number' && Number.isFinite(account.available_balance) ? (
                       <>
                         <strong style={{ display: 'block', fontSize: '16px', lineHeight: 1.25 }}>{currencyFormatter.format(account.available_balance)}</strong>
@@ -297,7 +298,7 @@ export default function ProjectionChart({
                       </>
                     ) : '—'}
                   </td>
-                   <td style={{ boxSizing: 'border-box', color: ui.color.text, padding: '10px 6px', verticalAlign: 'top', whiteSpace: 'nowrap' }}>
+                   <td style={{ borderLeft: `1px solid ${ui.color.border}`, boxSizing: 'border-box', color: ui.color.text, padding: '10px 6px', verticalAlign: 'top', whiteSpace: 'nowrap' }}>
                     {minimumBalance != null && minimumDate ? (
                       <>
                         <div style={{ alignItems: 'center', display: 'flex', gap: '4px' }}>
