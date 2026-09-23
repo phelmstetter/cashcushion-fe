@@ -294,10 +294,10 @@ export default function ProjectionChart({
             <div
               data-testid="account-balance-summary-cards"
               style={{
-                display: 'grid',
                 gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
                 gap: '8px',
                 padding: '10px 12px 12px',
+                display: 'none',
               }}
             >
               {accountSummaries.map(({ account, color, isIncluded, minimumBalance, minimumDate }) => (
@@ -479,22 +479,22 @@ export default function ProjectionChart({
               ))}
             </div>
 
-            {false && <table
+            <table
               aria-label="Account balance summary"
               style={{
                 borderCollapse: 'separate',
                 borderSpacing: 0,
                 fontSize: '14px',
-                minWidth: '520px',
+                minWidth: 0,
                 tableLayout: 'fixed',
                 width: '100%',
               }}
             >
               <colgroup>
-                <col style={{ width: '12%' }} />
-                <col style={{ width: '29.3333%' }} />
-                <col style={{ width: '29.3333%' }} />
-                <col style={{ width: '29.3333%' }} />
+                <col style={{ width: '20px' }} />
+                <col style={{ width: 'calc((100% - 20px) / 3)' }} />
+                <col style={{ width: 'calc((100% - 20px) / 3)' }} />
+                <col style={{ width: 'calc((100% - 20px) / 3)' }} />
               </colgroup>
               <thead>
                 <tr style={{ color: ui.color.textMuted, fontSize: '13px', fontWeight: 700, lineHeight: '18px', textAlign: 'left' }}>
@@ -511,10 +511,7 @@ export default function ProjectionChart({
                       zIndex: 1,
                     }}
                   >
-                    <span style={{ alignItems: 'center', display: 'inline-flex', gap: '4px', justifyContent: 'center' }}>
-                      <Eye aria-hidden="true" size={14} strokeWidth={2} />
-                      Track
-                    </span>
+                    <Eye aria-hidden="true" size={14} strokeWidth={2} />
                   </th>
                   <th
                     scope="col"
@@ -674,7 +671,7 @@ export default function ProjectionChart({
                         boxSizing: 'border-box',
                         padding: '12px 10px',
                         verticalAlign: 'middle',
-                        whiteSpace: 'nowrap',
+                        whiteSpace: 'normal',
                       }}
                     >
                       {typeof account.available_balance === 'number' && Number.isFinite(account.available_balance) ? (
@@ -722,7 +719,7 @@ export default function ProjectionChart({
                         boxSizing: 'border-box',
                         padding: '12px 10px',
                         verticalAlign: 'middle',
-                        whiteSpace: 'nowrap',
+                        whiteSpace: 'normal',
                       }}
                     >
                       {minimumBalance != null && minimumDate ? (
@@ -788,7 +785,7 @@ export default function ProjectionChart({
                   </tr>
                 ))}
               </tbody>
-            </table>}
+            </table>
           </div>
         </div>
       )}
