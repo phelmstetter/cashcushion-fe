@@ -698,7 +698,7 @@ export default function ProjectionChart({
               border: 'none',
               color: '#607d8b',
               cursor: previousView.mode === 'summary' && accounts.length === 0 ? 'not-allowed' : 'pointer',
-              fontSize: '11px',
+              fontSize: '12px',
               justifySelf: 'start',
               lineHeight: 1.2,
               maxWidth: '110px',
@@ -713,7 +713,7 @@ export default function ProjectionChart({
             {previousView.label}
           </button>
           <div style={{ alignItems: 'center', display: 'flex', justifyContent: 'center', minWidth: '120px' }}>
-            <strong style={{ color: '#405866', fontSize: '13px', lineHeight: 1.2 }}>
+            <strong style={{ color: '#405866', fontSize: '15px', lineHeight: 1.2 }}>
               {PROJECTION_VIEWS[displayModeIndex].label}
             </strong>
           </div>
@@ -727,7 +727,7 @@ export default function ProjectionChart({
               border: 'none',
               color: '#607d8b',
               cursor: nextView.mode === 'summary' && accounts.length === 0 ? 'not-allowed' : 'pointer',
-              fontSize: '11px',
+              fontSize: '12px',
               justifySelf: 'end',
               lineHeight: 1.2,
               maxWidth: '110px',
