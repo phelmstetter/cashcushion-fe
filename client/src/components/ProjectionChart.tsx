@@ -199,6 +199,15 @@ export default function ProjectionChart({
         touchAction: 'pan-y',
       }}
     >
+      <div
+        style={{
+          display: 'flex',
+          flex: '1 1 0',
+          flexDirection: 'column',
+          minHeight: 0,
+          position: 'relative',
+        }}
+      >
       {displayMode === 'summary' && accounts.length > 0 && (
         <div
           data-testid="account-balance-summary"
@@ -605,6 +614,58 @@ export default function ProjectionChart({
         )}
       </div>
       <div
+        aria-label="Projection view positions"
+        style={{
+          bottom: '10px',
+          display: 'flex',
+          justifyContent: 'center',
+          left: 0,
+          pointerEvents: 'none',
+          position: 'absolute',
+          right: 0,
+          zIndex: 4,
+        }}
+      >
+        <div
+          style={{
+            alignItems: 'center',
+            display: 'flex',
+            gap: '5px',
+            opacity: navigationDotsVisible ? 1 : 0,
+            pointerEvents: navigationDotsVisible ? 'auto' : 'none',
+            transition: 'opacity 260ms ease',
+          }}
+        >
+          {PROJECTION_VIEWS.map((view, index) => {
+            const isActive = index === displayModeIndex;
+            const isDisabled = view.mode === 'summary' && accounts.length === 0;
+
+            return (
+              <button
+                key={view.mode}
+                type="button"
+                aria-label={`Show ${view.label}`}
+                aria-pressed={isActive}
+                disabled={isDisabled}
+                onClick={() => selectDisplayMode(view.mode)}
+                style={{
+                  backgroundColor: isActive ? '#405f70' : '#b8cbd3',
+                  border: '1px solid rgba(255, 255, 255, 0.85)',
+                  borderRadius: '50%',
+                  boxShadow: '0 1px 3px rgba(45, 65, 78, 0.28)',
+                  cursor: isDisabled ? 'not-allowed' : 'pointer',
+                  height: '8px',
+                  opacity: isDisabled ? 0.45 : 1,
+                  padding: 0,
+                  width: '8px',
+                }}
+              />
+            );
+          })}
+        </div>
+      </div>
+      </div>
+      <div
         style={{
           alignItems: 'center',
           background: 'linear-gradient(180deg, #f8fbfc 0%, #edf3f6 100%)',
@@ -613,8 +674,8 @@ export default function ProjectionChart({
           display: 'flex',
           flexShrink: 0,
           justifyContent: 'center',
-          marginTop: '8px',
-          padding: '8px 10px 10px',
+          marginTop: '4px',
+          padding: '5px 10px 6px',
         }}
       >
         <div
@@ -651,49 +712,10 @@ export default function ProjectionChart({
           >
             {previousView.label}
           </button>
-          <div
-            role="tablist"
-            aria-label="Projection view"
-            style={{
-              alignItems: 'center',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '5px',
-              justifyContent: 'center',
-              minWidth: '120px',
-            }}
-          >
+          <div style={{ alignItems: 'center', display: 'flex', justifyContent: 'center', minWidth: '120px' }}>
             <strong style={{ color: '#405866', fontSize: '13px', lineHeight: 1.2 }}>
               {PROJECTION_VIEWS[displayModeIndex].label}
             </strong>
-            <div style={{ alignItems: 'center', display: 'flex', gap: '5px' }}>
-              {PROJECTION_VIEWS.map((view, index) => {
-                const isActive = index === displayModeIndex;
-                const isDisabled = view.mode === 'summary' && accounts.length === 0;
-
-                return (
-                  <button
-                    key={view.mode}
-                    type="button"
-                    role="tab"
-                    aria-label={`Show ${view.label}`}
-                    aria-selected={isActive}
-                    disabled={isDisabled}
-                    onClick={() => selectDisplayMode(view.mode)}
-                    style={{
-                      backgroundColor: isActive ? '#405f70' : '#b8cbd3',
-                      border: 'none',
-                      borderRadius: '50%',
-                      cursor: isDisabled ? 'not-allowed' : 'pointer',
-                      height: '7px',
-                      opacity: isDisabled ? 0.45 : 1,
-                      padding: 0,
-                      width: '7px',
-                    }}
-                  />
-                );
-              })}
-            </div>
           </div>
           <button
             type="button"
