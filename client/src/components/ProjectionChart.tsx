@@ -363,7 +363,7 @@ export default function ProjectionChart({
                           lineHeight: 1.2,
                         }}
                       >
-                        {isIncluded ? 'Included in projection' : 'Hidden from projection'}
+                        {isIncluded ? 'Include' : 'Exclude'}
                       </span>
                     </span>
                   </div>
@@ -620,7 +620,7 @@ export default function ProjectionChart({
                                 lineHeight: 1.3,
                               }}
                             >
-                              {isIncluded ? 'Included in projection' : 'Hidden from projection'}
+                              {isIncluded ? 'Include' : 'Exclude'}
                             </span>
                           </span>
                         </span>
