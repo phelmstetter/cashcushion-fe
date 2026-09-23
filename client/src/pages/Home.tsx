@@ -2282,29 +2282,29 @@ const Home = () => {
                 
                 <div style={{ alignItems: 'center', display: 'grid', gap: '12px', gridTemplateColumns: '96px minmax(0, 280px)', marginTop: '14px', minWidth: 0 }}>
                   <label htmlFor="input-edit-forecast-amount" style={{ color: '#607d8b', fontSize: '15px', fontWeight: 600 }}>Amount</label>
-                  <div style={{ minWidth: 0, position: 'relative', width: '100%' }}>
-                    <span aria-hidden="true" style={{ color: '#607d8b', fontSize: '16px', left: '11px', position: 'absolute', top: '50%', transform: 'translateY(-50%)' }}>$</span>
+                  <div style={{ minWidth: 0, width: '100%' }}>
                     <input
                       id="input-edit-forecast-amount"
                       type="text"
                       inputMode="decimal"
                       step="0.01"
-                      placeholder="0.00"
+                      placeholder="$ --"
                       data-testid="input-edit-forecast-amount"
-                      value={formatForecastInputAmount(forecastAmount)}
-                      onChange={(e) => setForecastAmount(e.target.value.replace(/,/g, ''))}
+                      value={forecastAmount ? `$${formatForecastInputAmount(forecastAmount)}` : ''}
+                      onChange={(e) => setForecastAmount(e.target.value.replace(/[$,]/g, ''))}
                       style={{
                         width: '100%',
                         minWidth: 0,
                         height: '38px',
-                        padding: '8px 10px 8px 26px',
+                        padding: '8px 10px',
                         borderRadius: '8px',
                         border: '1px solid #cbd9df',
                         backgroundColor: '#f8fbfc',
                         boxSizing: 'border-box',
                         color: '#263238',
                         fontFamily: 'inherit',
-                        fontSize: '16px'
+                        fontSize: '16px',
+                        textAlign: 'center'
                       }}
                     />
                   </div>
