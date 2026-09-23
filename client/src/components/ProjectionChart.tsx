@@ -1,6 +1,6 @@
 import type { Account } from "@/lib/firebase";
 import { MessageCircle, SquareArrowOutUpRight } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type TouchEvent } from "react";
 import {
   LineChart,
   Line,
@@ -32,6 +32,12 @@ const currencyFormatter = new Intl.NumberFormat('en-US', {
   minimumFractionDigits: 0,
   maximumFractionDigits: 0,
 });
+const PROJECTION_VIEWS = [
+  { mode: 'chart', label: 'Chart' },
+  { mode: 'summary', label: 'Account summary' },
+  { mode: 'placeholder', label: 'Coming soon' },
+] as const;
+type ProjectionView = typeof PROJECTION_VIEWS[number]['mode'];
 
 function accountLabel(account: Account) {
   return [account.name || 'Unnamed account', account.mask].filter(Boolean).join(' ');
@@ -57,7 +63,8 @@ export default function ProjectionChart({
 }: ProjectionChartProps) {
   const [calloutOpen, setCalloutOpen] = useState(true);
   const [calloutClosing, setCalloutClosing] = useState(false);
-  const [displayMode, setDisplayMode] = useState<'chart' | 'summary'>('chart');
+  const [displayMode, setDisplayMode] = useState<ProjectionView>('chart');
+  const swipeStartXRef = useRef<number | null>(null);
   const containerHeight = `${windowHeight}svh`;
   const includedAccountIdSet = new Set(includedAccountIds);
   const visibleAccounts = accounts.filter((account) => includedAccountIdSet.has(account.account_id));
@@ -77,6 +84,34 @@ export default function ProjectionChart({
   const currentBalanceDate = typeof chartData[0]?.fullDate === 'string'
     ? chartData[0].fullDate
     : null;
+  const displayModeIndex = Math.max(0, PROJECTION_VIEWS.findIndex(({ mode }) => mode === displayMode));
+  const previousView = PROJECTION_VIEWS[(displayModeIndex + PROJECTION_VIEWS.length - 1) % PROJECTION_VIEWS.length];
+  const nextView = PROJECTION_VIEWS[(displayModeIndex + 1) % PROJECTION_VIEWS.length];
+
+  const selectDisplayMode = (mode: ProjectionView) => {
+    if (mode === 'summary' && accounts.length === 0) return;
+    setDisplayMode(mode);
+  };
+
+  const moveDisplayMode = (direction: -1 | 1) => {
+    const nextIndex = (displayModeIndex + direction + PROJECTION_VIEWS.length) % PROJECTION_VIEWS.length;
+    selectDisplayMode(PROJECTION_VIEWS[nextIndex].mode);
+  };
+
+  const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    swipeStartXRef.current = event.touches[0]?.clientX ?? null;
+  };
+
+  const handleTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
+    const startX = swipeStartXRef.current;
+    const endX = event.changedTouches[0]?.clientX;
+    swipeStartXRef.current = null;
+    if (startX == null || endX == null) return;
+
+    const distance = endX - startX;
+    if (Math.abs(distance) < 45) return;
+    moveDisplayMode(distance < 0 ? 1 : -1);
+  };
 
   useEffect(() => {
     if (!calloutClosing) return;
@@ -130,11 +165,14 @@ export default function ProjectionChart({
   return (
     <div
       data-testid="chart-container"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
       style={{
         boxSizing: 'border-box',
         display: 'flex',
         flexDirection: 'column',
         height: containerHeight,
+        touchAction: 'pan-y',
       }}
     >
       {displayMode === 'summary' && accounts.length > 0 && (
@@ -269,6 +307,26 @@ export default function ProjectionChart({
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+      {displayMode === 'placeholder' && (
+        <div
+          data-testid="projection-placeholder"
+          style={{
+            alignItems: 'center',
+            backgroundColor: '#ffffff',
+            border: '1px solid #eee',
+            borderRadius: '8px',
+            boxSizing: 'border-box',
+            color: '#607d8b',
+            display: 'flex',
+            flex: '1 1 0',
+            fontSize: '14px',
+            justifyContent: 'center',
+            minHeight: 0,
+          }}
+        >
+          Coming soon
         </div>
       )}
       <div
@@ -532,60 +590,111 @@ export default function ProjectionChart({
           flexShrink: 0,
           justifyContent: 'center',
           marginTop: '8px',
-          padding: '8px 0 10px',
+          padding: '8px 10px 10px',
         }}
       >
         <div
           role="group"
           aria-label="Projection view"
           style={{
-            backgroundColor: '#dbe7ec',
-            border: '1px solid #bdcdd5',
-            borderRadius: '999px',
-            boxShadow: 'inset 0 1px 2px rgba(45, 65, 78, 0.16)',
-            display: 'flex',
-            gap: '2px',
-            padding: '3px',
+            alignItems: 'center',
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr)',
             width: '100%',
           }}
         >
-          {([
-            { mode: 'chart', label: 'Chart', disabled: false },
-            { mode: 'summary', label: 'Account summary', disabled: accounts.length === 0 },
-            { mode: 'placeholder', label: 'Coming soon', disabled: true },
-          ] as const).map(({ mode, label, disabled }) => {
-            const isActive = mode !== 'placeholder' && displayMode === mode;
+          <button
+            type="button"
+            aria-label={`Show ${previousView.label}`}
+            disabled={previousView.mode === 'summary' && accounts.length === 0}
+            onClick={() => moveDisplayMode(-1)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#607d8b',
+              cursor: previousView.mode === 'summary' && accounts.length === 0 ? 'not-allowed' : 'pointer',
+              fontSize: '11px',
+              justifySelf: 'start',
+              lineHeight: 1.2,
+              maxWidth: '110px',
+              opacity: previousView.mode === 'summary' && accounts.length === 0 ? 0.45 : 1,
+              overflow: 'hidden',
+              padding: '6px 0',
+              textAlign: 'left',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {previousView.label}
+          </button>
+          <div
+            role="tablist"
+            aria-label="Projection view"
+            style={{
+              alignItems: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '5px',
+              justifyContent: 'center',
+              minWidth: '120px',
+            }}
+          >
+            <strong style={{ color: '#405866', fontSize: '13px', lineHeight: 1.2 }}>
+              {PROJECTION_VIEWS[displayModeIndex].label}
+            </strong>
+            <div style={{ alignItems: 'center', display: 'flex', gap: '5px' }}>
+              {PROJECTION_VIEWS.map((view, index) => {
+                const isActive = index === displayModeIndex;
+                const isDisabled = view.mode === 'summary' && accounts.length === 0;
 
-            return (
-              <button
-                key={mode}
-                type="button"
-                aria-pressed={isActive}
-                disabled={disabled}
-                onClick={() => {
-                  if (mode !== 'placeholder') setDisplayMode(mode);
-                }}
-                style={{
-                  backgroundColor: isActive ? '#405f70' : 'transparent',
-                  border: '1px solid transparent',
-                  borderRadius: '999px',
-                  boxShadow: isActive ? '0 1px 3px rgba(45, 65, 78, 0.34)' : 'none',
-                  boxSizing: 'border-box',
-                  color: isActive ? '#ffffff' : '#314b59',
-                  cursor: disabled ? 'not-allowed' : 'pointer',
-                  flex: '1 1 0',
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  lineHeight: 1.2,
-                  opacity: disabled ? 0.55 : 1,
-                  padding: '6px 14px',
-                  width: '33.3333%',
-                }}
-              >
-                {label}
-              </button>
-            );
-          })}
+                return (
+                  <button
+                    key={view.mode}
+                    type="button"
+                    role="tab"
+                    aria-label={`Show ${view.label}`}
+                    aria-selected={isActive}
+                    disabled={isDisabled}
+                    onClick={() => selectDisplayMode(view.mode)}
+                    style={{
+                      backgroundColor: isActive ? '#405f70' : '#b8cbd3',
+                      border: 'none',
+                      borderRadius: '50%',
+                      cursor: isDisabled ? 'not-allowed' : 'pointer',
+                      height: '7px',
+                      opacity: isDisabled ? 0.45 : 1,
+                      padding: 0,
+                      width: '7px',
+                    }}
+                  />
+                );
+              })}
+            </div>
+          </div>
+          <button
+            type="button"
+            aria-label={`Show ${nextView.label}`}
+            disabled={nextView.mode === 'summary' && accounts.length === 0}
+            onClick={() => moveDisplayMode(1)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#607d8b',
+              cursor: nextView.mode === 'summary' && accounts.length === 0 ? 'not-allowed' : 'pointer',
+              fontSize: '11px',
+              justifySelf: 'end',
+              lineHeight: 1.2,
+              maxWidth: '110px',
+              opacity: nextView.mode === 'summary' && accounts.length === 0 ? 0.45 : 1,
+              overflow: 'hidden',
+              padding: '6px 0',
+              textAlign: 'right',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {nextView.label}
+          </button>
         </div>
       </div>
     </div>
