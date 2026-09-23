@@ -1714,8 +1714,8 @@ const Home = () => {
                     if (acct) {
                       return (
                         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
-                          <span style={{ color: ui.color.textMuted }}>Account</span>
-                          <span style={{ fontWeight: 500 }}>{acct.name} {acct.mask}</span>
+                          <span style={forecastFieldLabelStyle}>Account</span>
+                          <span style={{ ...forecastControlTextStyle, color: ui.color.text, fontWeight: 500 }}>{acct.name} {acct.mask}</span>
                         </div>
                       );
                     }
@@ -1730,8 +1730,8 @@ const Home = () => {
                     );
                     return (
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
-                        <span style={{ color: ui.color.textMuted }}>Forecasted</span>
-                        <span style={{ fontWeight: 500, color: hasForecast ? ui.color.success : ui.color.textDisabled }}>
+                        <span style={forecastFieldLabelStyle}>Forecasted</span>
+                        <span style={{ ...forecastControlTextStyle, color: hasForecast ? ui.color.success : ui.color.textDisabled, fontWeight: 500 }}>
                           {hasForecast ? 'True' : 'False'}
                         </span>
                       </div>
@@ -1742,7 +1742,7 @@ const Home = () => {
                     if (!matchedForecast) return null;
                     return (
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' }}>
-                        <span style={{ color: ui.color.success, fontWeight: 600 }}>Matched</span>
+                        <span style={{ ...forecastFieldLabelStyle, color: ui.color.success }}>Matched</span>
                         <button
                           data-testid="button-undo-match"
                           onClick={async () => {
