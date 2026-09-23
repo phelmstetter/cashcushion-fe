@@ -1704,7 +1704,7 @@ const Home = () => {
 
             {modalView === 'forecast' && (selectedTransaction || addingStandaloneForecast) && (
               <>
-                <div style={{ alignItems: 'center', backgroundColor: '#eef5f7', border: '1px solid #d1e0e6', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', marginBottom: '14px', padding: '12px 14px' }}>
+                <div style={{ alignItems: 'center', display: 'flex', justifyContent: 'space-between', margin: '0 0 14px', padding: '0 2px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     {selectedTransaction && (
                       <button
@@ -1722,10 +1722,10 @@ const Home = () => {
                           color: '#666',
                           padding: '4px'
                         }}
-                          aria-label="Back to transaction details"
-                        >←</button>
+                        aria-label="Back to transaction details"
+                      >←</button>
                     )}
-                    <h2 id="forecast-dialog-title" style={{ color: '#263238', fontSize: '18px', margin: 0 }}>Add forecast</h2>
+                    <h2 id="forecast-dialog-title" style={{ color: '#263238', fontSize: '18px', margin: 0 }}>Add Forecast</h2>
                   </div>
                   <button
                     aria-label="Close forecast form"
@@ -1733,12 +1733,18 @@ const Home = () => {
                       closeModal();
                     }}
                     style={{
+                      alignItems: 'center',
                       background: 'none',
                       border: 'none',
-                      fontSize: '20px',
+                      display: 'inline-flex',
+                      fontSize: '25px',
                       cursor: 'pointer',
                       color: '#666',
-                      padding: '4px 8px'
+                      height: '40px',
+                      justifyContent: 'center',
+                      lineHeight: 1,
+                      padding: 0,
+                      width: '40px'
                     }}
                   >×</button>
                 </div>
