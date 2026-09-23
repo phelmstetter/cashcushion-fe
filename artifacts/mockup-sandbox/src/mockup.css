@@ -430,4 +430,40 @@ button {
   .summary-table-wrap {
     padding-inline: 12px;
   }
+
+  .summary-preview--compact .summary-table {
+    display: block;
+    min-width: 0;
+  }
+
+  .summary-preview--compact .summary-table colgroup {
+    display: none;
+  }
+
+  .summary-preview--compact .summary-table thead,
+  .summary-preview--compact .summary-table tbody,
+  .summary-preview--compact .summary-table tr {
+    display: grid;
+    grid-template-columns: 20px repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .summary-preview--compact .summary-table th,
+  .summary-preview--compact .summary-table td {
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    overflow: hidden;
+  }
+
+  .summary-preview--compact .summary-table thead th {
+    padding-right: 4px;
+    padding-left: 4px;
+  }
+
+  .summary-preview--compact .summary-table tbody th,
+  .summary-preview--compact .summary-table tbody td {
+    padding-right: 4px;
+    padding-left: 4px;
+  }
 }
