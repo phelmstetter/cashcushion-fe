@@ -1947,6 +1947,133 @@ const Home = () => {
                   </div>
                 </div>
 
+                {forecastType === 'every_x_days' && (
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ color: '#607d8b', display: 'block', fontSize: '15px', fontWeight: 600, marginBottom: '6px' }}>
+                        Every
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        data-testid="input-forecast-day-interval"
+                        value={forecastDayInterval}
+                        onChange={(e) => setForecastDayInterval(Math.max(1, parseInt(e.target.value) || 1))}
+                        style={{
+                          width: '100%',
+                          height: '38px',
+                          padding: '8px 10px',
+                          borderRadius: '8px',
+                          border: '1px solid #cbd9df',
+                          backgroundColor: '#f8fbfc',
+                          boxSizing: 'border-box',
+                          color: '#263238',
+                          fontFamily: 'inherit',
+                          fontSize: '16px'
+                        }}
+                      />
+                      <span style={{ color: '#888', display: 'block', fontSize: '12px', marginTop: '2px' }}>days</span>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ color: '#607d8b', display: 'block', fontSize: '15px', fontWeight: 600, marginBottom: '6px' }}>
+                        Occurrences
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="52"
+                        data-testid="input-forecast-day-count"
+                        value={forecastDayCount}
+                        onChange={(e) => setForecastDayCount(Math.max(1, Math.min(52, parseInt(e.target.value) || 1)))}
+                        style={{
+                          width: '100%',
+                          height: '38px',
+                          padding: '8px 10px',
+                          borderRadius: '8px',
+                          border: '1px solid #cbd9df',
+                          backgroundColor: '#f8fbfc',
+                          boxSizing: 'border-box',
+                          color: '#263238',
+                          fontFamily: 'inherit',
+                          fontSize: '16px'
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {forecastType === 'monthly' && (
+                  <div style={{ marginTop: '10px' }}>
+                    <label style={{ color: '#607d8b', display: 'block', fontSize: '15px', fontWeight: 600, marginBottom: '6px' }}>
+                      Number of Months
+                    </label>
+                    <select
+                      data-testid="select-forecast-months"
+                      value={forecastMonths}
+                      onChange={(e) => setForecastMonths(parseInt(e.target.value))}
+                      style={{
+                        width: '100%',
+                        height: '38px',
+                        padding: '8px 10px',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd9df',
+                        backgroundColor: '#f8fbfc',
+                        boxSizing: 'border-box',
+                        color: '#263238',
+                        fontFamily: 'inherit',
+                        fontSize: '16px'
+                      }}
+                    >
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map(n => (
+                        <option key={n} value={n}>{n} month{n > 1 ? 's' : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {forecastType !== 'single' && (
+                  <div style={{ alignItems: 'center', display: 'flex', gap: '10px', marginTop: '10px' }}>
+                    <label
+                      data-testid="toggle-auto-extend"
+                      style={{
+                        position: 'relative',
+                        display: 'inline-block',
+                        width: '44px',
+                        height: '24px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={autoExtend}
+                        onChange={(e) => setAutoExtend(e.target.checked)}
+                        style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
+                      />
+                      <span style={{
+                        position: 'absolute',
+                        top: 0, left: 0, right: 0, bottom: 0,
+                        backgroundColor: autoExtend ? '#42A5F5' : '#ccc',
+                        borderRadius: '12px',
+                        transition: 'background-color 0.2s'
+                      }} />
+                      <span style={{
+                        position: 'absolute',
+                        top: '2px',
+                        left: autoExtend ? '22px' : '2px',
+                        width: '20px',
+                        height: '20px',
+                        backgroundColor: 'white',
+                        borderRadius: '50%',
+                        transition: 'left 0.2s',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                      }} />
+                    </label>
+                    <span style={{ color: '#52636b', fontSize: '14px' }}>
+                      Auto-extend forecast 12 months
+                    </span>
+                  </div>
+                )}
+
                 <div style={{ alignItems: 'center', display: 'grid', gap: '12px', gridTemplateColumns: '96px minmax(0, 280px)', marginTop: '14px', minWidth: 0 }}>
                   <label htmlFor="input-forecast-date" style={{ color: '#607d8b', fontSize: '15px', fontWeight: 600 }}>
                     {forecastType === 'single' ? 'Date' : 'Starting Date'}
@@ -2085,119 +2212,6 @@ const Home = () => {
                     </span>
                   </div>
                 </div>
-
-                {forecastType === 'every_x_days' && (
-                  <div style={{ marginTop: '16px', display: 'flex', gap: '8px' }}>
-                    <div style={{ flex: 1 }}>
-                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>
-                        Every
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        data-testid="input-forecast-day-interval"
-                        value={forecastDayInterval}
-                        onChange={(e) => setForecastDayInterval(Math.max(1, parseInt(e.target.value) || 1))}
-                        style={{
-                          width: '100%',
-                          padding: '8px',
-                          borderRadius: '4px',
-                          border: '1px solid #ccc',
-                          boxSizing: 'border-box'
-                        }}
-                      />
-                      <span style={{ fontSize: '12px', color: '#888', marginTop: '2px', display: 'block' }}>days</span>
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>
-                        Occurrences
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="52"
-                        data-testid="input-forecast-day-count"
-                        value={forecastDayCount}
-                        onChange={(e) => setForecastDayCount(Math.max(1, Math.min(52, parseInt(e.target.value) || 1)))}
-                        style={{
-                          width: '100%',
-                          padding: '8px',
-                          borderRadius: '4px',
-                          border: '1px solid #ccc',
-                          boxSizing: 'border-box'
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {forecastType === 'monthly' && (
-                  <div style={{ marginTop: '16px' }}>
-                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>
-                      Number of Months
-                    </label>
-                    <select
-                      data-testid="select-forecast-months"
-                      value={forecastMonths}
-                      onChange={(e) => setForecastMonths(parseInt(e.target.value))}
-                      style={{
-                        width: '100%',
-                        padding: '8px',
-                        borderRadius: '4px',
-                        border: '1px solid #ccc',
-                        boxSizing: 'border-box',
-                        backgroundColor: 'white'
-                      }}
-                    >
-                      {Array.from({ length: 12 }, (_, i) => i + 1).map(n => (
-                        <option key={n} value={n}>{n} month{n > 1 ? 's' : ''}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-                
-                {forecastType !== 'single' && (
-                  <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <label
-                      data-testid="toggle-auto-extend"
-                      style={{
-                        position: 'relative',
-                        display: 'inline-block',
-                        width: '44px',
-                        height: '24px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={autoExtend}
-                        onChange={(e) => setAutoExtend(e.target.checked)}
-                        style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
-                      />
-                      <span style={{
-                        position: 'absolute',
-                        top: 0, left: 0, right: 0, bottom: 0,
-                        backgroundColor: autoExtend ? '#42A5F5' : '#ccc',
-                        borderRadius: '12px',
-                        transition: 'background-color 0.2s'
-                      }} />
-                      <span style={{
-                        position: 'absolute',
-                        top: '2px',
-                        left: autoExtend ? '22px' : '2px',
-                        width: '20px',
-                        height: '20px',
-                        backgroundColor: 'white',
-                        borderRadius: '50%',
-                        transition: 'left 0.2s',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                      }} />
-                    </label>
-                    <span style={{ fontSize: '14px', color: '#333' }}>
-                      Auto-extend forecast 12 months
-                    </span>
-                  </div>
-                )}
 
                 <div style={{ marginTop: '20px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                   <button
