@@ -1942,7 +1942,7 @@ const Home = () => {
                         padding: '0 10px'
                       }}
                     >
-                      Every X Days
+                      Days
                     </button>
                   </div>
                 </div>
