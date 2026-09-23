@@ -1859,57 +1859,87 @@ const Home = () => {
                 )}
 
                 <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 500 }}>Type</label>
-                  <div style={{ display: 'flex', gap: '0' }}>
+                  <label style={{ color: '#607d8b', display: 'block', fontSize: '15px', fontWeight: 600, marginBottom: '6px' }}>Type</label>
+                  <div
+                    role="group"
+                    aria-label="Forecast type"
+                    style={{
+                      alignItems: 'center',
+                      backgroundColor: '#e8eff2',
+                      border: '1px solid #cbd9df',
+                      borderRadius: '999px',
+                      boxSizing: 'border-box',
+                      display: 'flex',
+                      gap: '3px',
+                      height: '38px',
+                      padding: '3px'
+                    }}
+                  >
                     <button
+                      type="button"
                       data-testid="button-forecast-single"
                       onClick={() => setForecastType('single')}
                       style={{
-                        flex: 1,
-                        padding: '8px',
-                        backgroundColor: forecastType === 'single' ? '#42A5F5' : '#f5f5f5',
-                        color: forecastType === 'single' ? 'white' : '#333',
-                        border: '1px solid #ccc',
-                        borderRadius: '4px 0 0 4px',
+                        alignItems: 'center',
+                        backgroundColor: forecastType === 'single' ? '#42A5F5' : 'transparent',
+                        border: 'none',
+                        borderRadius: '999px',
+                        color: forecastType === 'single' ? 'white' : '#52636b',
                         cursor: 'pointer',
+                        display: 'flex',
+                        flex: 1,
+                        height: '30px',
+                        justifyContent: 'center',
                         fontWeight: forecastType === 'single' ? 600 : 400,
-                        fontSize: '14px'
+                        fontSize: '14px',
+                        lineHeight: '20px',
+                        padding: '0 10px'
                       }}
                     >
                       Single
                     </button>
                     <button
+                      type="button"
                       data-testid="button-forecast-monthly"
                       onClick={() => setForecastType('monthly')}
                       style={{
-                        flex: 1,
-                        padding: '8px',
-                        backgroundColor: forecastType === 'monthly' ? '#42A5F5' : '#f5f5f5',
-                        color: forecastType === 'monthly' ? 'white' : '#333',
-                        border: '1px solid #ccc',
-                        borderLeft: 'none',
-                        borderRadius: '0',
+                        alignItems: 'center',
+                        backgroundColor: forecastType === 'monthly' ? '#42A5F5' : 'transparent',
+                        border: 'none',
+                        borderRadius: '999px',
+                        color: forecastType === 'monthly' ? 'white' : '#52636b',
                         cursor: 'pointer',
+                        display: 'flex',
+                        flex: 1,
+                        height: '30px',
+                        justifyContent: 'center',
                         fontWeight: forecastType === 'monthly' ? 600 : 400,
-                        fontSize: '14px'
+                        fontSize: '14px',
+                        lineHeight: '20px',
+                        padding: '0 10px'
                       }}
                     >
                       Monthly
                     </button>
                     <button
+                      type="button"
                       data-testid="button-forecast-every-x-days"
                       onClick={() => setForecastType('every_x_days')}
                       style={{
-                        flex: 1,
-                        padding: '8px',
-                        backgroundColor: forecastType === 'every_x_days' ? '#42A5F5' : '#f5f5f5',
-                        color: forecastType === 'every_x_days' ? 'white' : '#333',
-                        border: '1px solid #ccc',
-                        borderLeft: 'none',
-                        borderRadius: '0 4px 4px 0',
+                        alignItems: 'center',
+                        backgroundColor: forecastType === 'every_x_days' ? '#42A5F5' : 'transparent',
+                        border: 'none',
+                        borderRadius: '999px',
+                        color: forecastType === 'every_x_days' ? 'white' : '#52636b',
                         cursor: 'pointer',
+                        display: 'flex',
+                        flex: 1,
+                        height: '30px',
+                        justifyContent: 'center',
                         fontWeight: forecastType === 'every_x_days' ? 600 : 400,
-                        fontSize: '14px'
+                        fontSize: '14px',
+                        lineHeight: '20px',
+                        padding: '0 10px'
                       }}
                     >
                       Every X Days
