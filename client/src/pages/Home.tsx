@@ -2233,8 +2233,8 @@ const Home = () => {
                   );
                 })()}
 
-                <div style={{ alignItems: 'center', display: 'grid', gap: '12px', gridTemplateColumns: '108px minmax(0, 1fr)', marginTop: '0' }}>
-                  <label htmlFor="input-edit-forecast-date" style={{ color: '#455a64', fontSize: '14px', fontWeight: 600 }}>Date</label>
+                <div style={{ alignItems: 'center', display: 'grid', gap: '12px', gridTemplateColumns: '88px minmax(0, 280px)', marginTop: '0' }}>
+                  <label htmlFor="input-edit-forecast-date" style={{ color: '#607d8b', fontSize: '13px', fontWeight: 600 }}>Date</label>
                   <input 
                     id="input-edit-forecast-date"
                     type="date"
@@ -2243,36 +2243,49 @@ const Home = () => {
                     onChange={(e) => setForecastDate(e.target.value)}
                     style={{
                       width: '100%',
-                      padding: '8px',
-                      borderRadius: '4px',
-                      border: '1px solid #ccc',
-                      boxSizing: 'border-box'
+                      height: '38px',
+                      padding: '8px 10px',
+                      borderRadius: '8px',
+                      border: '1px solid #cbd9df',
+                      backgroundColor: '#f8fbfc',
+                      boxSizing: 'border-box',
+                      color: '#263238',
+                      fontFamily: 'inherit',
+                      fontSize: '14px'
                     }}
                   />
                 </div>
                 
-                <div style={{ alignItems: 'center', display: 'grid', gap: '12px', gridTemplateColumns: '108px minmax(0, 1fr)', marginTop: '14px' }}>
-                  <label htmlFor="input-edit-forecast-amount" style={{ color: '#455a64', fontSize: '14px', fontWeight: 600 }}>Amount</label>
-                  <input 
-                    id="input-edit-forecast-amount"
-                    type="number" 
-                    step="0.01"
-                    placeholder="0.00"
-                    data-testid="input-edit-forecast-amount"
-                    value={forecastAmount}
-                    onChange={(e) => setForecastAmount(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px',
-                      borderRadius: '4px',
-                      border: '1px solid #ccc',
-                      boxSizing: 'border-box'
-                    }}
-                  />
+                <div style={{ alignItems: 'center', display: 'grid', gap: '12px', gridTemplateColumns: '88px minmax(0, 280px)', marginTop: '14px' }}>
+                  <label htmlFor="input-edit-forecast-amount" style={{ color: '#607d8b', fontSize: '13px', fontWeight: 600 }}>Amount</label>
+                  <div style={{ position: 'relative', width: '100%' }}>
+                    <span aria-hidden="true" style={{ color: '#607d8b', fontSize: '14px', left: '11px', position: 'absolute', top: '50%', transform: 'translateY(-50%)' }}>$</span>
+                    <input
+                      id="input-edit-forecast-amount"
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      data-testid="input-edit-forecast-amount"
+                      value={forecastAmount}
+                      onChange={(e) => setForecastAmount(e.target.value)}
+                      style={{
+                        width: '100%',
+                        height: '38px',
+                        padding: '8px 10px 8px 26px',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd9df',
+                        backgroundColor: '#f8fbfc',
+                        boxSizing: 'border-box',
+                        color: '#263238',
+                        fontFamily: 'inherit',
+                        fontSize: '14px'
+                      }}
+                    />
+                  </div>
                 </div>
 
-                <div style={{ alignItems: 'center', display: 'grid', gap: '12px', gridTemplateColumns: '108px minmax(0, 1fr)', marginTop: '14px' }}>
-                  <span style={{ color: '#455a64', fontSize: '14px', fontWeight: 600 }}>Cash flow</span>
+                <div style={{ alignItems: 'center', display: 'grid', gap: '12px', gridTemplateColumns: '88px minmax(0, 280px)', marginTop: '14px' }}>
+                  <span style={{ color: '#607d8b', fontSize: '13px', fontWeight: 600 }}>Cash flow</span>
                   <div
                     role="group"
                     aria-label="Forecast cash-flow direction"
@@ -2282,6 +2295,8 @@ const Home = () => {
                       borderRadius: '999px',
                       display: 'flex',
                       gap: '3px',
+                      height: '38px',
+                      boxSizing: 'border-box',
                       padding: '3px'
                     }}
                   >
