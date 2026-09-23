@@ -594,18 +594,6 @@ export default function ProjectionChart({
                             width: '16px',
                           }}
                         />
-                        <span
-                          aria-hidden="true"
-                          style={{
-                            backgroundColor: color,
-                            borderRadius: ui.radius.pill,
-                            boxShadow: `0 0 0 3px ${ui.color.surface}`,
-                            flexShrink: 0,
-                            height: '30px',
-                            opacity: isIncluded ? 1 : 0.45,
-                            width: '4px',
-                          }}
-                        />
                         <span style={{ minWidth: 0 }}>
                           <strong
                             style={{
