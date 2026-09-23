@@ -1120,6 +1120,12 @@ const Home = () => {
               logoUrl = transaction.logo_url;
               transactionForModal = transaction;
             }
+            const canOpenTransactionDetails = !isForecast && Boolean(transactionForModal);
+            const openTransactionDetails = () => {
+              if (!transactionForModal) return;
+              setSelectedTransaction(transactionForModal);
+              setModalView('details');
+            };
 
             const isMatched = !isForecast && matchedTransactionIds.has((item.data as Transaction).id);
             const isForecasted = !isForecast && !isMatched && (() => {
