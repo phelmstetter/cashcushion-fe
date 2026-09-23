@@ -65,6 +65,24 @@ button {
   min-width: 0;
 }
 
+.summary-preview--compact .summary-table-wrap {
+  overflow-x: hidden;
+}
+
+.summary-preview--compact .summary-table th,
+.summary-preview--compact .summary-table td {
+  min-width: 0;
+  max-width: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.summary-preview--compact .summary-table tbody th,
+.summary-preview--compact .summary-table tbody td {
+  padding-right: 4px;
+  padding-left: 4px;
+}
+
 .summary-preview--compact .summary-table__track {
   width: 20px;
   padding-right: 0;
@@ -101,8 +119,27 @@ button {
   height: 28px;
 }
 
+.summary-preview--compact .summary-table__low {
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.summary-preview--compact .summary-table__money {
+  min-width: 0;
+  max-width: 100%;
+  font-size: 15px;
+}
+
+.summary-preview--compact .summary-table__jump {
+  width: 22px;
+  height: 22px;
+}
+
 .summary-preview--compact .summary-table__date {
   margin-top: 4px;
+  max-width: 100%;
+  white-space: normal;
 }
 
 .summary-panel {
