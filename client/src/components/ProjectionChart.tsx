@@ -294,8 +294,8 @@ export default function ProjectionChart({
             <div
               data-testid="account-balance-summary-cards"
               style={{
-                display: 'flex',
-                flexDirection: 'column',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
                 gap: '8px',
                 padding: '10px 12px 12px',
               }}
