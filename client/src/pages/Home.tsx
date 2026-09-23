@@ -61,6 +61,7 @@ const Home = () => {
   const [autoExtend, setAutoExtend] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState<'one' | 'series' | null>(null);
+  const [seriesActionPrompt, setSeriesActionPrompt] = useState<'save' | 'delete' | null>(null);
   const [editingForecast, setEditingForecast] = useState<Forecast | null>(null);
   const [addingStandaloneForecast, setAddingStandaloneForecast] = useState(false);
   const [standaloneForecastName, setStandaloneForecastName] = useState('');
@@ -109,6 +110,7 @@ const Home = () => {
     setAutoExtend(false);
     setActionError(null);
     setConfirmingDelete(null);
+    setSeriesActionPrompt(null);
   }, []);
 
   const openStandaloneForecast = (date = '') => {
@@ -488,6 +490,82 @@ const Home = () => {
   const signedForecastAmount = () => {
     const enteredAmount = Math.abs(parseFloat(forecastAmount));
     return forecastDirection === 'expense' ? enteredAmount : -enteredAmount;
+  };
+
+  const resetEditingForecast = () => {
+    setEditingForecast(null);
+    setModalView('details');
+    setForecastDate('');
+    setForecastAmount('');
+    setForecastType('single');
+    setForecastMonths(12);
+    setAutoExtend(false);
+    setConfirmingDelete(null);
+    setSeriesActionPrompt(null);
+  };
+
+  const saveEditedForecast = async (scope: 'individual' | 'series') => {
+    if (!editingForecast?.id || !auth.currentUser) return;
+    if (scope === 'series' && !editingForecast.series_id) return;
+
+    setSaving(true);
+    setActionError(null);
+    try {
+      if (scope === 'series' && editingForecast.series_id) {
+        await updateSeriesForecasts(
+          editingForecast.series_id,
+          auth.currentUser.uid,
+          { amount: signedForecastAmount() }
+        );
+      } else {
+        await updateForecast(editingForecast.id, {
+          date: forecastDate,
+          amount: signedForecastAmount()
+        });
+      }
+      const updatedForecasts = await getForecasts(auth.currentUser.uid);
+      setForecasts(updatedForecasts);
+      resetEditingForecast();
+    } catch (error: any) {
+      console.error(`Error updating ${scope === 'series' ? 'series' : 'forecast'}:`, error);
+      setActionError(
+        scope === 'series'
+          ? 'We couldn’t update this forecast series. Please try again.'
+          : 'We couldn’t update this forecast. Please try again.'
+      );
+    } finally {
+      setSaving(false);
+      setSeriesActionPrompt(null);
+    }
+  };
+
+  const deleteEditedForecast = async (scope: 'individual' | 'series') => {
+    if (!editingForecast?.id || !auth.currentUser) return;
+    if (scope === 'series' && !editingForecast.series_id) return;
+
+    setSaving(true);
+    setActionError(null);
+    try {
+      if (scope === 'series' && editingForecast.series_id) {
+        await deleteSeriesForecasts(editingForecast.series_id, auth.currentUser.uid);
+      } else {
+        await deleteForecast(editingForecast.id);
+      }
+      const updatedForecasts = await getForecasts(auth.currentUser.uid);
+      setForecasts(updatedForecasts);
+      resetEditingForecast();
+    } catch (error: any) {
+      console.error(`Error deleting ${scope === 'series' ? 'series' : 'forecast'}:`, error);
+      setActionError(
+        scope === 'series'
+          ? 'We couldn’t delete this forecast series. Please try again.'
+          : 'We couldn’t delete this forecast. Please try again.'
+      );
+    } finally {
+      setSaving(false);
+      setConfirmingDelete(null);
+      setSeriesActionPrompt(null);
+    }
   };
 
   const visibleForecasts = useMemo(
