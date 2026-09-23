@@ -580,20 +580,6 @@ export default function ProjectionChart({
                       }}
                     >
                       <span style={{ alignItems: 'center', display: 'flex', gap: '8px', minWidth: 0 }}>
-                        <input
-                          type="checkbox"
-                          checked={isIncluded}
-                          onChange={() => onAccountToggle(account.account_id)}
-                          aria-label={`${isIncluded ? 'Exclude' : 'Include'} ${accountLabel(account)}`}
-                          style={{
-                            accentColor: color,
-                            cursor: 'pointer',
-                            flex: '0 0 auto',
-                            height: '16px',
-                            margin: 0,
-                            width: '16px',
-                          }}
-                        />
                         <span style={{ minWidth: 0 }}>
                           <strong
                             style={{
@@ -609,18 +595,33 @@ export default function ProjectionChart({
                           >
                             {accountLabel(account)}
                           </strong>
-                          <span
-                            style={{
-                              color: isIncluded ? ui.color.primary : ui.color.textDisabled,
-                              display: 'block',
-                              fontSize: '10px',
-                              fontWeight: 600,
-                              letterSpacing: '0.02em',
-                              lineHeight: 1.3,
-                              marginTop: '2px',
-                            }}
-                          >
-                            {isIncluded ? 'Included in projection' : 'Hidden from projection'}
+                          <span style={{ alignItems: 'center', display: 'inline-flex', gap: '5px', marginTop: '2px' }}>
+                            <input
+                              type="checkbox"
+                              checked={isIncluded}
+                              onChange={() => onAccountToggle(account.account_id)}
+                              aria-label={`${isIncluded ? 'Exclude' : 'Include'} ${accountLabel(account)}`}
+                              style={{
+                                accentColor: color,
+                                cursor: 'pointer',
+                                flex: '0 0 auto',
+                                height: '14px',
+                                margin: 0,
+                                width: '14px',
+                              }}
+                            />
+                            <span
+                              style={{
+                                color: isIncluded ? ui.color.primary : ui.color.textDisabled,
+                                display: 'block',
+                                fontSize: '10px',
+                                fontWeight: 600,
+                                letterSpacing: '0.02em',
+                                lineHeight: 1.3,
+                              }}
+                            >
+                              {isIncluded ? 'Included in projection' : 'Hidden from projection'}
+                            </span>
                           </span>
                         </span>
                       </span>
