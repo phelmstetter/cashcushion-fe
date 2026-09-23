@@ -2037,6 +2037,31 @@ const Home = () => {
 
             {modalView === 'editForecast' && editingForecast && (
               <>
+                <div style={{ alignItems: 'center', display: 'flex', justifyContent: 'space-between', margin: '0 0 14px', padding: '0 2px' }}>
+                  <h2 id="forecast-dialog-title" style={{ color: '#263238', fontSize: '18px', margin: 0 }}>Edit Forecast</h2>
+                  <button
+                    data-testid="button-close-edit-forecast"
+                    aria-label="Close forecast editor"
+                    onClick={() => {
+                      setEditingForecast(null);
+                      setModalView('details');
+                      setForecastDate('');
+                      setForecastAmount('');
+                      setForecastType('single');
+                      setForecastMonths(12);
+                      setAutoExtend(false);
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '20px',
+                      cursor: 'pointer',
+                      color: '#666',
+                      padding: '4px 8px'
+                    }}
+                  >×</button>
+                </div>
+
                 {(() => {
                   const { display: forecastAmountDisplay } = formatAmount(editingForecast.amount);
                   const projectedBalance = editingForecast.id
@@ -2108,34 +2133,10 @@ const Home = () => {
                   );
                 })()}
 
-                <div style={{ alignItems: 'center', display: 'flex', justifyContent: 'space-between', margin: '0 0 14px', padding: '0 2px' }}>
-                  <h2 id="forecast-dialog-title" style={{ color: '#263238', fontSize: '18px', margin: 0 }}>Edit Forecast</h2>
-                  <button
-                    data-testid="button-close-edit-forecast"
-                    aria-label="Close forecast editor"
-                    onClick={() => {
-                      setEditingForecast(null);
-                      setModalView('details');
-                      setForecastDate('');
-                      setForecastAmount('');
-                      setForecastType('single');
-                      setForecastMonths(12);
-                      setAutoExtend(false);
-                    }}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      fontSize: '20px',
-                      cursor: 'pointer',
-                      color: '#666',
-                      padding: '4px 8px'
-                    }}
-                  >×</button>
-                </div>
-
-                <div style={{ marginTop: '0' }}>
-                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Date</label>
+                <div style={{ alignItems: 'center', display: 'grid', gap: '12px', gridTemplateColumns: '108px minmax(0, 1fr)', marginTop: '0' }}>
+                  <label htmlFor="input-edit-forecast-date" style={{ color: '#455a64', fontSize: '14px', fontWeight: 600 }}>Date</label>
                   <input 
+                    id="input-edit-forecast-date"
                     type="date"
                     data-testid="input-edit-forecast-date"
                     value={forecastDate}
@@ -2150,9 +2151,10 @@ const Home = () => {
                   />
                 </div>
                 
-                <div style={{ marginTop: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Amount</label>
+                <div style={{ alignItems: 'center', display: 'grid', gap: '12px', gridTemplateColumns: '108px minmax(0, 1fr)', marginTop: '14px' }}>
+                  <label htmlFor="input-edit-forecast-amount" style={{ color: '#455a64', fontSize: '14px', fontWeight: 600 }}>Amount</label>
                   <input 
+                    id="input-edit-forecast-amount"
                     type="number" 
                     step="0.01"
                     placeholder="0.00"
@@ -2167,6 +2169,63 @@ const Home = () => {
                       boxSizing: 'border-box'
                     }}
                   />
+                </div>
+
+                <div style={{ alignItems: 'center', display: 'grid', gap: '12px', gridTemplateColumns: '108px minmax(0, 1fr)', marginTop: '14px' }}>
+                  <span style={{ color: '#455a64', fontSize: '14px', fontWeight: 600 }}>Cash flow</span>
+                  <div
+                    role="group"
+                    aria-label="Forecast cash-flow direction"
+                    style={{
+                      backgroundColor: '#e8eff2',
+                      border: '1px solid #cbd9df',
+                      borderRadius: '999px',
+                      display: 'flex',
+                      gap: '3px',
+                      padding: '3px'
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setForecastDirection('expense')}
+                      aria-pressed={forecastDirection === 'expense'}
+                      style={{
+                        backgroundColor: forecastDirection === 'expense' ? '#37474f' : 'transparent',
+                        border: 'none',
+                        borderRadius: '999px',
+                        boxShadow: forecastDirection === 'expense' ? '0 1px 2px rgba(38, 50, 56, 0.28)' : 'none',
+                        color: forecastDirection === 'expense' ? 'white' : '#52636b',
+                        cursor: 'pointer',
+                        flex: 1,
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        padding: '7px 10px',
+                        transition: 'background-color 0.15s, color 0.15s'
+                      }}
+                    >
+                      Expense
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setForecastDirection('income')}
+                      aria-pressed={forecastDirection === 'income'}
+                      style={{
+                        backgroundColor: forecastDirection === 'income' ? '#2e7d32' : 'transparent',
+                        border: 'none',
+                        borderRadius: '999px',
+                        boxShadow: forecastDirection === 'income' ? '0 1px 2px rgba(38, 50, 56, 0.28)' : 'none',
+                        color: forecastDirection === 'income' ? 'white' : '#52636b',
+                        cursor: 'pointer',
+                        flex: 1,
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        padding: '7px 10px',
+                        transition: 'background-color 0.15s, color 0.15s'
+                      }}
+                    >
+                      Income
+                    </button>
+                  </div>
                 </div>
 
                 <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
