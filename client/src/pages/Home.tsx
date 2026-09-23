@@ -2160,12 +2160,18 @@ const Home = () => {
                     aria-label="Close forecast editor"
                     onClick={resetEditingForecast}
                     style={{
+                      alignItems: 'center',
                       background: 'none',
                       border: 'none',
-                      fontSize: '20px',
+                      display: 'inline-flex',
+                      fontSize: '28px',
+                      height: '40px',
+                      justifyContent: 'center',
+                      lineHeight: 1,
                       cursor: 'pointer',
                       color: '#666',
-                      padding: '4px 8px'
+                      padding: 0,
+                      width: '40px'
                     }}
                   >×</button>
                 </div>
