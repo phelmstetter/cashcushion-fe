@@ -546,19 +546,25 @@ export default function ProjectionChart({
             display: 'flex',
             gap: '2px',
             padding: '3px',
+            width: '100%',
           }}
         >
-          {(['chart', 'summary'] as const).map((mode) => {
-            const isActive = displayMode === mode;
-            const label = mode === 'chart' ? 'Chart' : 'Account summary';
+          {([
+            { mode: 'chart', label: 'Chart', disabled: false },
+            { mode: 'summary', label: 'Account summary', disabled: accounts.length === 0 },
+            { mode: 'placeholder', label: 'Coming soon', disabled: true },
+          ] as const).map(({ mode, label, disabled }) => {
+            const isActive = mode !== 'placeholder' && displayMode === mode;
 
             return (
               <button
                 key={mode}
                 type="button"
                 aria-pressed={isActive}
-                disabled={mode === 'summary' && accounts.length === 0}
-                onClick={() => setDisplayMode(mode)}
+                disabled={disabled}
+                onClick={() => {
+                  if (mode !== 'placeholder') setDisplayMode(mode);
+                }}
                 style={{
                   backgroundColor: isActive ? '#405f70' : 'transparent',
                   border: '1px solid transparent',
@@ -566,12 +572,14 @@ export default function ProjectionChart({
                   boxShadow: isActive ? '0 1px 3px rgba(45, 65, 78, 0.34)' : 'none',
                   boxSizing: 'border-box',
                   color: isActive ? '#ffffff' : '#314b59',
-                  cursor: mode === 'summary' && accounts.length === 0 ? 'not-allowed' : 'pointer',
+                  cursor: disabled ? 'not-allowed' : 'pointer',
+                  flex: '1 1 0',
                   fontSize: '12px',
                   fontWeight: 700,
                   lineHeight: 1.2,
-                  opacity: mode === 'summary' && accounts.length === 0 ? 0.55 : 1,
+                  opacity: disabled ? 0.55 : 1,
                   padding: '6px 14px',
+                  width: '33.3333%',
                 }}
               >
                 {label}
