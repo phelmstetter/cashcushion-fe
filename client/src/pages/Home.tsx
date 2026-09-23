@@ -493,6 +493,14 @@ const Home = () => {
     return forecastDirection === 'expense' ? enteredAmount : -enteredAmount;
   };
 
+  const formatForecastInputAmount = (value: string) => {
+    if (!value) return '';
+    const normalized = value.replace(/,/g, '');
+    const [integerPart, decimalPart] = normalized.split('.');
+    const groupedInteger = (integerPart || '0').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return decimalPart === undefined ? groupedInteger : `${groupedInteger}.${decimalPart}`;
+  };
+
   const resetEditingForecast = () => {
     setEditingForecast(null);
     setModalView('details');
@@ -2278,12 +2286,13 @@ const Home = () => {
                     <span aria-hidden="true" style={{ color: '#607d8b', fontSize: '16px', left: '11px', position: 'absolute', top: '50%', transform: 'translateY(-50%)' }}>$</span>
                     <input
                       id="input-edit-forecast-amount"
-                      type="number"
+                      type="text"
+                      inputMode="decimal"
                       step="0.01"
                       placeholder="0.00"
                       data-testid="input-edit-forecast-amount"
-                      value={forecastAmount}
-                      onChange={(e) => setForecastAmount(e.target.value)}
+                      value={formatForecastInputAmount(forecastAmount)}
+                      onChange={(e) => setForecastAmount(e.target.value.replace(/,/g, ''))}
                       style={{
                         width: '100%',
                         minWidth: 0,
