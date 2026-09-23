@@ -2034,29 +2034,32 @@ const Home = () => {
                         textAlign: 'center'
                       }}
                     />
-                    <span>days for</span>
-                    <input
-                      type="number"
-                      min="1"
-                      max="52"
-                      data-testid="input-forecast-day-count"
-                      value={forecastDayCount}
-                      onChange={(e) => setForecastDayCount(Math.max(1, Math.min(52, parseInt(e.target.value) || 1)))}
-                      style={{
-                        width: '86px',
-                        height: '38px',
-                        padding: '8px 10px',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd9df',
-                        backgroundColor: '#f8fbfc',
-                        boxSizing: 'border-box',
-                        color: '#263238',
-                        fontFamily: 'inherit',
-                        fontSize: '16px',
-                        textAlign: 'center'
-                      }}
-                    />
-                    <span>occurrences.</span>
+                    <span>days</span>
+                    <span style={{ alignItems: 'center', display: 'inline-flex', gap: '6px', whiteSpace: 'nowrap' }}>
+                      <span>for</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max="52"
+                        data-testid="input-forecast-day-count"
+                        value={forecastDayCount}
+                        onChange={(e) => setForecastDayCount(Math.max(1, Math.min(52, parseInt(e.target.value) || 1)))}
+                        style={{
+                          width: '86px',
+                          height: '38px',
+                          padding: '8px 10px',
+                          borderRadius: '8px',
+                          border: '1px solid #cbd9df',
+                          backgroundColor: '#f8fbfc',
+                          boxSizing: 'border-box',
+                          color: '#263238',
+                          fontFamily: 'inherit',
+                          fontSize: '16px',
+                          textAlign: 'center'
+                        }}
+                      />
+                      <span>occurrences.</span>
+                    </span>
                   </div>
                 )}
 
