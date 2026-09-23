@@ -13,7 +13,7 @@ export const ui = {
     surface: "#FFFFFF",
     surfaceSubtle: "#F8FAFC",
     surfaceSelected: "#EFF6FF",
-    surfaceForecast: "#EFF6FF",
+    surfaceForecast: "#DBEAFE",
     surfaceMuted: "#F1F5F9",
     text: "#172554",
     textMuted: "#64748B",
