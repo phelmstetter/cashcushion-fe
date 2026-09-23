@@ -40,6 +40,64 @@ function ProjectionChartLoading() {
   );
 }
 
+type InfoHintProps = {
+  active: boolean;
+  label: string;
+  onToggle: () => void;
+  testId: string;
+  text: string;
+};
+
+function InfoHint({ active, label, onToggle, testId, text }: InfoHintProps) {
+  return (
+    <span style={{ display: 'inline-flex', position: 'relative' }}>
+      <button
+        type="button"
+        data-testid={testId}
+        aria-label={label}
+        aria-expanded={active}
+        onClick={onToggle}
+        style={{
+          alignItems: 'center',
+          background: 'none',
+          border: 'none',
+          color: '#607d8b',
+          cursor: 'pointer',
+          display: 'inline-flex',
+          justifyContent: 'center',
+          padding: 0
+        }}
+      >
+        <Info size={16} strokeWidth={2} aria-hidden="true" />
+      </button>
+      {active && (
+        <span
+          role="tooltip"
+          style={{
+            backgroundColor: '#263238',
+            borderRadius: '6px',
+            boxShadow: '0 3px 10px rgba(38, 50, 56, 0.28)',
+            color: 'white',
+            fontSize: '12px',
+            fontWeight: 400,
+            left: '50%',
+            lineHeight: 1.4,
+            padding: '8px 10px',
+            position: 'absolute',
+            textAlign: 'left',
+            top: 'calc(100% + 8px)',
+            transform: 'translateX(-50%)',
+            width: '230px',
+            zIndex: 20
+          }}
+        >
+          {text}
+        </span>
+      )}
+    </span>
+  );
+}
+
 const Home = () => {
   const [, setLocation] = useLocation();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -60,6 +118,7 @@ const Home = () => {
   const [forecastDayInterval, setForecastDayInterval] = useState(14);
   const [forecastDayCount, setForecastDayCount] = useState(12);
   const [autoExtend, setAutoExtend] = useState(true);
+  const [activeInfoTip, setActiveInfoTip] = useState<'autoExtend' | 'cashFlow' | null>(null);
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState<'one' | 'series' | null>(null);
   const [seriesActionPrompt, setSeriesActionPrompt] = useState<'save' | 'delete' | null>(null);
@@ -109,6 +168,7 @@ const Home = () => {
     setForecastDirection('expense');
     setForecastMonths(12);
     setAutoExtend(true);
+    setActiveInfoTip(null);
     setActionError(null);
     setConfirmingDelete(null);
     setSeriesActionPrompt(null);
@@ -123,6 +183,7 @@ const Home = () => {
     setForecastType('single');
     setForecastDirection('expense');
     setAutoExtend(true);
+    setActiveInfoTip(null);
     setModalView('forecast');
   };
 
@@ -1619,6 +1680,7 @@ const Home = () => {
                       setForecastDirection(selectedTransaction.amount >= 0 ? 'expense' : 'income');
                     }
                     setAutoExtend(true);
+                    setActiveInfoTip(null);
                     setModalView('forecast');
                   }}
                   style={{
@@ -2066,15 +2128,13 @@ const Home = () => {
                     </label>
                     <span style={{ alignItems: 'center', color: '#52636b', display: 'inline-flex', fontSize: '14px', gap: '5px' }}>
                       Auto extend
-                      <span
-                        data-testid="info-auto-extend"
-                        role="img"
-                        aria-label="Auto extend keeps recurring forecasts extending into future months"
-                        title="Keeps recurring forecasts extending into future months."
-                        style={{ color: '#607d8b', display: 'inline-flex', cursor: 'help' }}
-                      >
-                        <Info size={16} strokeWidth={2} aria-hidden="true" />
-                      </span>
+                      <InfoHint
+                        active={activeInfoTip === 'autoExtend'}
+                        label="Explain auto extend"
+                        onToggle={() => setActiveInfoTip(activeInfoTip === 'autoExtend' ? null : 'autoExtend')}
+                        testId="info-auto-extend"
+                        text="Keeps recurring forecasts extending into future months."
+                      />
                     </span>
                   </div>
                 )}
@@ -2118,15 +2178,13 @@ const Home = () => {
                 <div style={{ alignItems: 'center', display: 'grid', gap: '12px', gridTemplateColumns: '96px minmax(0, 280px)', marginTop: '14px', minWidth: 0 }}>
                   <span style={{ alignItems: 'center', color: '#607d8b', display: 'inline-flex', fontSize: '15px', fontWeight: 600, gap: '5px' }}>
                     Cash flow
-                    <span
-                      data-testid="info-cash-flow"
-                      role="img"
-                      aria-label="Expense lowers the projected balance on the selected date. Income raises it."
-                      title="Expense lowers the projected balance on the selected date. Income raises it."
-                      style={{ color: '#607d8b', cursor: 'help', display: 'inline-flex' }}
-                    >
-                      <Info size={16} strokeWidth={2} aria-hidden="true" />
-                    </span>
+                    <InfoHint
+                      active={activeInfoTip === 'cashFlow'}
+                      label="Explain cash flow direction"
+                      onToggle={() => setActiveInfoTip(activeInfoTip === 'cashFlow' ? null : 'cashFlow')}
+                      testId="info-cash-flow"
+                      text="Expense lowers the projected balance on the selected date. Income raises it."
+                    />
                   </span>
                   <div
                     role="group"
@@ -2224,7 +2282,8 @@ const Home = () => {
                   </div>
                 </div>
 
-                <div style={{ marginTop: '20px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'flex', gap: '10px' }}>
                   <button
                     data-testid="button-save-forecast"
                     disabled={saving || !forecastDate || !forecastAmount || (addingStandaloneForecast && (!standaloneForecastName.trim() || !standaloneForecastAccountId))}
@@ -2284,6 +2343,7 @@ const Home = () => {
                         setForecastType('single');
                         setForecastMonths(12);
                         setAutoExtend(true);
+                        setActiveInfoTip(null);
                       } catch (error: any) {
                         console.error('Error saving forecast:', error?.code, error?.message, error);
                         setActionError('We couldn’t save this forecast. Please check the details and try again.');
@@ -2292,17 +2352,20 @@ const Home = () => {
                       }
                     }}
                     style={{
-                      padding: '8px 16px',
+                      flex: 1,
+                      padding: '10px 16px',
                       backgroundColor: '#42A5F5',
                       color: 'white',
                       border: 'none',
-                      borderRadius: '4px',
-                      cursor: saving || !forecastDate || !forecastAmount ? 'not-allowed' : 'pointer',
-                      opacity: saving || !forecastDate || !forecastAmount ? 0.6 : 1
+                      borderRadius: '6px',
+                      cursor: saving ? 'not-allowed' : 'pointer',
+                      opacity: saving ? 0.6 : 1,
+                      fontWeight: 600
                     }}
                   >
                     {saving ? 'Saving...' : forecastType === 'monthly' ? `Save ${forecastMonths} Forecasts` : forecastType === 'every_x_days' ? `Save ${forecastDayCount} Forecasts` : 'Save'}
                   </button>
+                  </div>
                 </div>
               </>
             )}
