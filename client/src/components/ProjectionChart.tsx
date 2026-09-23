@@ -1,7 +1,6 @@
 import type { Account } from "@/lib/firebase";
 import { sharedStyles, ui } from "@/lib/uiTheme";
 import {
-  CircleDollarSign,
   Landmark,
   MessageCircle,
   SquareArrowOutUpRight,
@@ -523,10 +522,7 @@ export default function ProjectionChart({
                       zIndex: 1,
                     }}
                   >
-                    <span style={{ alignItems: 'center', display: 'inline-flex', gap: '5px' }}>
-                      <CircleDollarSign aria-hidden="true" size={14} strokeWidth={2} />
-                      Current balance
-                    </span>
+                    Current balance
                   </th>
                   <th
                     scope="col"
