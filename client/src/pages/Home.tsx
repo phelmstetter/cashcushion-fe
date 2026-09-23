@@ -1797,7 +1797,7 @@ const Home = () => {
                         aria-label="Back to transaction details"
                       >←</button>
                     )}
-                    <h2 id="forecast-dialog-title" style={{ color: ui.color.text, fontSize: '18px', margin: 0 }}>Add Forecast</h2>
+                    <h2 id="forecast-dialog-title" style={{ color: ui.color.text, fontSize: '18px', fontWeight: 600, margin: 0 }}>Add Forecast</h2>
                   </div>
                   <button
                     aria-label="Close forecast form"
@@ -2402,7 +2402,7 @@ const Home = () => {
                     >
                       <Trash2 size={17} strokeWidth={2} aria-hidden="true" />
                     </button>
-                    <h2 id="forecast-dialog-title" style={{ color: ui.color.text, fontSize: '18px', margin: 0 }}>Edit Forecast</h2>
+                    <h2 id="forecast-dialog-title" style={{ color: ui.color.text, fontSize: '18px', fontWeight: 600, margin: 0 }}>Edit Forecast</h2>
                   </div>
                   <button
                     data-testid="button-close-edit-forecast"
