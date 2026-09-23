@@ -1955,26 +1955,41 @@ const Home = () => {
                       <label style={{ color: '#607d8b', display: 'block', fontSize: '15px', fontWeight: 600, marginBottom: '6px' }}>
                         Every
                       </label>
-                      <input
-                        type="number"
-                        min="1"
-                        data-testid="input-forecast-day-interval"
-                        value={forecastDayInterval}
-                        onChange={(e) => setForecastDayInterval(Math.max(1, parseInt(e.target.value) || 1))}
-                        style={{
-                          width: '100%',
-                          height: '38px',
-                          padding: '8px 10px',
-                          borderRadius: '8px',
-                          border: '1px solid #cbd9df',
-                          backgroundColor: '#f8fbfc',
-                          boxSizing: 'border-box',
-                          color: '#263238',
-                          fontFamily: 'inherit',
-                          fontSize: '16px'
-                        }}
-                      />
-                      <span style={{ color: '#888', display: 'block', fontSize: '12px', marginTop: '2px' }}>days</span>
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type="number"
+                          min="1"
+                          data-testid="input-forecast-day-interval"
+                          value={forecastDayInterval}
+                          onChange={(e) => setForecastDayInterval(Math.max(1, parseInt(e.target.value) || 1))}
+                          style={{
+                            width: '100%',
+                            height: '38px',
+                            padding: '8px 48px 8px 10px',
+                            borderRadius: '8px',
+                            border: '1px solid #cbd9df',
+                            backgroundColor: '#f8fbfc',
+                            boxSizing: 'border-box',
+                            color: '#263238',
+                            fontFamily: 'inherit',
+                            fontSize: '16px'
+                          }}
+                        />
+                        <span
+                          aria-hidden="true"
+                          style={{
+                            color: '#607d8b',
+                            fontSize: '14px',
+                            pointerEvents: 'none',
+                            position: 'absolute',
+                            right: '10px',
+                            top: '50%',
+                            transform: 'translateY(-50%)'
+                          }}
+                        >
+                          days
+                        </span>
+                      </div>
                     </div>
                     <div style={{ flex: 1 }}>
                       <label style={{ color: '#607d8b', display: 'block', fontSize: '15px', fontWeight: 600, marginBottom: '6px' }}>
