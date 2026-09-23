@@ -42,17 +42,17 @@ export function Current() {
         <div className="summary-table-wrap">
           <table className="summary-table">
             <colgroup>
-              <col style={{ width: '9%' }} />
-              <col style={{ width: '31%' }} />
-              <col style={{ width: '30%' }} />
-              <col style={{ width: '30%' }} />
+              <col style={{ width: '20px' }} />
+              <col style={{ width: 'calc((100% - 20px) / 3)' }} />
+              <col style={{ width: 'calc((100% - 20px) / 3)' }} />
+              <col style={{ width: 'calc((100% - 20px) / 3)' }} />
             </colgroup>
             <thead>
               <tr>
                 <th className="summary-table__track" scope="col"><Eye size={14} aria-hidden="true" /></th>
                 <th scope="col">Account</th>
-                <th scope="col"><span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><CircleDollarSign size={14} aria-hidden="true" /> Current balance</span></th>
-                <th scope="col"><span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><TrendingDown size={14} aria-hidden="true" /> Low balance</span></th>
+                <th scope="col"><span className="summary-table__heading"><CircleDollarSign size={14} aria-hidden="true" /> Current balance</span></th>
+                <th scope="col"><span className="summary-table__heading"><TrendingDown size={14} aria-hidden="true" /> Low balance</span></th>
               </tr>
             </thead>
             <tbody>

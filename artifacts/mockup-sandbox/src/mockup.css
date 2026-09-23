@@ -47,6 +47,30 @@ button {
   padding: 10px 16px 14px;
 }
 
+.summary-preview--compact .summary-panel {
+  width: 100%;
+}
+
+.summary-preview--compact .summary-table {
+  width: 100%;
+  min-width: 0;
+}
+
+.summary-preview--compact .summary-table__track {
+  width: 20px;
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.summary-preview--compact .summary-table__heading {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  line-height: 1.15;
+  white-space: normal;
+}
+
 .summary-preview--compact .summary-table thead th {
   padding-top: 8px;
   padding-bottom: 8px;
