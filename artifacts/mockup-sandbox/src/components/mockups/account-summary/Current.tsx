@@ -23,7 +23,7 @@ export function Current() {
   const trackedCount = Object.values(tracked).filter(Boolean).length;
 
   return (
-    <main className="summary-preview">
+    <main className="summary-preview summary-preview--compact">
       <section className="summary-panel" aria-label="Current account outlook">
         <header className="summary-panel__topline">
           <div className="summary-panel__identity">

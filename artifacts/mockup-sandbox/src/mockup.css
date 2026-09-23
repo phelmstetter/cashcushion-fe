@@ -30,6 +30,42 @@ button {
   padding: 24px;
 }
 
+.summary-preview--compact {
+  padding: 16px;
+}
+
+.summary-preview--compact .summary-panel__topline {
+  padding: 14px 16px;
+}
+
+.summary-preview--compact .summary-panel__icon {
+  width: 32px;
+  height: 32px;
+}
+
+.summary-preview--compact .summary-table-wrap {
+  padding: 10px 16px 14px;
+}
+
+.summary-preview--compact .summary-table thead th {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.summary-preview--compact .summary-table tbody th,
+.summary-preview--compact .summary-table tbody td {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.summary-preview--compact .summary-table__rail {
+  height: 28px;
+}
+
+.summary-preview--compact .summary-table__date {
+  margin-top: 4px;
+}
+
 .summary-panel {
   width: min(100%, 720px);
   margin: 0 auto;
@@ -301,6 +337,10 @@ button {
 @media (max-width: 560px) {
   .summary-preview {
     padding: 12px;
+  }
+
+  .summary-preview--compact {
+    padding: 10px;
   }
 
   .summary-panel__topline {
