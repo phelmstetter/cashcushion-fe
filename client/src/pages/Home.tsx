@@ -14,6 +14,11 @@ import { Info, Trash2 } from "lucide-react";
 
 const LONG_PRESS_MS = 500;
 const CHART_WINDOW_MIN = 33;
+const forecastFieldLabelStyle = {
+  color: ui.color.textMuted,
+  fontSize: '15px',
+  fontWeight: 600,
+} as const;
 const ProjectionChart = lazy(() => import("@/components/ProjectionChart"));
 
 function ProjectionChartLoading() {
@@ -1872,7 +1877,7 @@ const Home = () => {
                   })()
                 ) : (
                   <div style={{ marginBottom: '16px' }}>
-                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>
+                    <label style={{ ...forecastFieldLabelStyle, display: 'block', marginBottom: '6px' }}>
                       Name <span aria-hidden="true">*</span>
                     </label>
                     <input
@@ -2194,7 +2199,7 @@ const Home = () => {
                 </div>
 
                 <div style={{ alignItems: 'center', display: 'grid', gap: '12px', gridTemplateColumns: '96px minmax(0, 280px)', marginTop: '14px', minWidth: 0 }}>
-                  <label htmlFor="input-forecast-amount" style={{ color: ui.color.textMuted, fontSize: '15px', fontWeight: 600 }}>
+                  <label htmlFor="input-forecast-amount" style={forecastFieldLabelStyle}>
                     Amount <span aria-hidden="true">*</span>
                   </label>
                   <div style={{ minWidth: 0, width: '100%' }}>
