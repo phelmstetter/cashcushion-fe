@@ -699,17 +699,20 @@ export default function ProjectionChart({
                             width: '100%',
                           }}
                         >
-                          <strong
-                            style={{
-                              color: minimumBalance < 0 ? ui.color.danger : ui.color.warning,
-                              display: 'block',
-                              fontSize: '16px',
-                              fontWeight: 700,
-                              lineHeight: 1.2,
-                            }}
-                          >
-                            {currencyFormatter.format(minimumBalance)}
-                          </strong>
+                          <span style={{ alignItems: 'center', display: 'inline-flex', gap: '6px' }}>
+                            <strong
+                              style={{
+                                color: minimumBalance < 0 ? ui.color.danger : ui.color.warning,
+                                display: 'block',
+                                fontSize: '16px',
+                                fontWeight: 700,
+                                lineHeight: 1.2,
+                              }}
+                            >
+                              {currencyFormatter.format(minimumBalance)}
+                            </strong>
+                            <SquareArrowOutUpRight aria-hidden="true" size={14} strokeWidth={2.25} />
+                          </span>
                           <time
                             dateTime={minimumDate}
                             aria-label={`Projected low balance date: ${formatDate(minimumDate)}`}
