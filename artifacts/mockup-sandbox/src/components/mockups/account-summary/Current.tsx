@@ -40,70 +40,60 @@ export function Current() {
             </div>
           )}
 
-          <div className="summary-table-wrap">
-            <table className="summary-table simple-summary__table">
-              <colgroup>
-                <col style={{ width: '20px' }} />
-                <col style={{ width: 'calc((100% - 20px) / 3)' }} />
-                <col style={{ width: 'calc((100% - 20px) / 3)' }} />
-                <col style={{ width: 'calc((100% - 20px) / 3)' }} />
-              </colgroup>
-              <thead>
-                <tr>
-                  <th className="summary-table__track" scope="col" aria-label="Include in projection" />
-                  <th scope="col">Account</th>
-                  <th scope="col">Current balance</th>
-                  <th scope="col">Low balance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {accounts.map((account) => {
-                  const isTracked = Boolean(tracked[account.id]);
-                  const lowTone = account.low < 0 ? 'danger' : 'warning';
-                  return (
-                    <tr key={account.id}>
-                      <td className="summary-table__track">
-                        <input
-                          type="checkbox"
-                          checked={isTracked}
-                          onChange={() => setTracked((value) => ({ ...value, [account.id]: !value[account.id] }))}
-                          aria-label={`${isTracked ? 'Exclude' : 'Include'} ${account.name}`}
-                        />
-                      </td>
-                      <th scope="row">
-                        <span className="simple-summary__account">
-                          <span className="simple-summary__dot" style={{ backgroundColor: account.color, opacity: isTracked ? 1 : 0.4 }} aria-hidden="true" />
-                          <span className="simple-summary__account-name">{account.name}</span>
-                        </span>
-                      </th>
-                      <td>
-                        <strong className={`simple-summary__money${account.current < 0 ? ' simple-summary__money--danger' : ''}`}>
-                          {money.format(account.current)}
+          <div className="simple-summary__accounts">
+            {accounts.map((account) => {
+              const isTracked = Boolean(tracked[account.id]);
+              const lowTone = account.low < 0 ? 'danger' : 'warning';
+
+              return (
+                <article className="simple-account-card" key={account.id}>
+                  <div className="simple-account-card__identity">
+                    <input
+                      type="checkbox"
+                      checked={isTracked}
+                      onChange={() => setTracked((value) => ({ ...value, [account.id]: !value[account.id] }))}
+                      aria-label={`${isTracked ? 'Exclude' : 'Include'} ${account.name}`}
+                    />
+                    <span className="simple-account-card__dot" style={{ backgroundColor: account.color, opacity: isTracked ? 1 : 0.4 }} aria-hidden="true" />
+                    <div className="simple-account-card__name">
+                      <strong>{account.name}</strong>
+                      <span style={{ color: isTracked ? '#2563eb' : '#94a3b8' }}>
+                        {isTracked ? 'Included in projection' : 'Hidden from projection'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="simple-account-card__metrics">
+                    <div className="simple-account-card__metric">
+                      <span className="simple-account-card__label">Current balance</span>
+                      <strong className={`simple-summary__money${account.current < 0 ? ' simple-summary__money--danger' : ''}`}>
+                        {money.format(account.current)}
+                      </strong>
+                      <span className="simple-summary__date">As of Jan 02</span>
+                    </div>
+
+                    <div className="simple-account-card__metric">
+                      <span className="simple-account-card__label">Projected low</span>
+                      <div className="simple-account-card__low">
+                        <strong className={`simple-summary__money simple-summary__money--${lowTone}`}>
+                          {money.format(account.low)}
                         </strong>
-                        <span className="simple-summary__date">As of Jan 02</span>
-                      </td>
-                      <td>
-                        <span className="simple-summary__low">
-                          <strong className={`simple-summary__money simple-summary__money--${lowTone}`}>
-                            {money.format(account.low)}
-                          </strong>
-                          <button
-                            className="simple-summary__jump"
-                            type="button"
-                            onClick={() => setFocusedLow(account.lowDate)}
-                            aria-label={`Show chart for ${account.lowDate}`}
-                            title={`Show chart for ${account.lowDate}`}
-                          >
-                            <ArrowUpRight size={13} aria-hidden="true" />
-                          </button>
-                        </span>
-                        <span className={`simple-summary__date simple-summary__date--${lowTone}`}>Low on {account.lowDate}</span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        <button
+                          className="simple-summary__jump"
+                          type="button"
+                          onClick={() => setFocusedLow(account.lowDate)}
+                          aria-label={`Show chart for ${account.lowDate}`}
+                          title={`Show chart for ${account.lowDate}`}
+                        >
+                          <ArrowUpRight size={13} aria-hidden="true" />
+                        </button>
+                      </div>
+                      <span className={`simple-summary__date simple-summary__date--${lowTone}`}>Low on {account.lowDate}</span>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         </section>
       </div>
