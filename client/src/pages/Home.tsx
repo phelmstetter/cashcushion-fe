@@ -2021,9 +2021,9 @@ const Home = () => {
                       value={forecastDayInterval}
                       onChange={(e) => setForecastDayInterval(Math.max(1, parseInt(e.target.value) || 1))}
                       style={{
-                        width: '58px',
+                        width: '52px',
                         height: '38px',
-                        padding: '6px',
+                        padding: '6px 2px',
                         borderRadius: '8px',
                         border: '1px solid #cbd9df',
                         backgroundColor: '#f8fbfc',
@@ -2045,9 +2045,9 @@ const Home = () => {
                         value={forecastDayCount}
                         onChange={(e) => setForecastDayCount(Math.max(1, Math.min(52, parseInt(e.target.value) || 1)))}
                         style={{
-                          width: '70px',
+                          width: '62px',
                           height: '38px',
-                          padding: '6px',
+                          padding: '6px 2px',
                           borderRadius: '8px',
                           border: '1px solid #cbd9df',
                           backgroundColor: '#f8fbfc',
