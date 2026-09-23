@@ -1950,72 +1950,51 @@ const Home = () => {
                 </div>
 
                 {forecastType === 'every_x_days' && (
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-                    <div style={{ flex: 1 }}>
-                      <label style={{ color: '#607d8b', display: 'block', fontSize: '15px', fontWeight: 600, marginBottom: '6px' }}>
-                        Every
-                      </label>
-                      <div style={{ position: 'relative' }}>
-                        <input
-                          type="number"
-                          min="1"
-                          data-testid="input-forecast-day-interval"
-                          value={forecastDayInterval}
-                          onChange={(e) => setForecastDayInterval(Math.max(1, parseInt(e.target.value) || 1))}
-                          style={{
-                            width: '100%',
-                            height: '38px',
-                            padding: '8px 48px 8px 10px',
-                            borderRadius: '8px',
-                            border: '1px solid #cbd9df',
-                            backgroundColor: '#f8fbfc',
-                            boxSizing: 'border-box',
-                            color: '#263238',
-                            fontFamily: 'inherit',
-                            fontSize: '16px'
-                          }}
-                        />
-                        <span
-                          aria-hidden="true"
-                          style={{
-                            color: '#607d8b',
-                            fontSize: '14px',
-                            pointerEvents: 'none',
-                            position: 'absolute',
-                            right: '10px',
-                            top: '50%',
-                            transform: 'translateY(-50%)'
-                          }}
-                        >
-                          days
-                        </span>
-                      </div>
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <label style={{ color: '#607d8b', display: 'block', fontSize: '15px', fontWeight: 600, marginBottom: '6px' }}>
-                        Occurrences
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="52"
-                        data-testid="input-forecast-day-count"
-                        value={forecastDayCount}
-                        onChange={(e) => setForecastDayCount(Math.max(1, Math.min(52, parseInt(e.target.value) || 1)))}
-                        style={{
-                          width: '100%',
-                          height: '38px',
-                          padding: '8px 10px',
-                          borderRadius: '8px',
-                          border: '1px solid #cbd9df',
-                          backgroundColor: '#f8fbfc',
-                          boxSizing: 'border-box',
-                          color: '#263238',
-                          fontFamily: 'inherit',
-                          fontSize: '16px'
-                        }}
-                      />
-                    </div>
+                  <div style={{ alignItems: 'center', color: '#607d8b', display: 'flex', flexWrap: 'wrap', fontSize: '15px', fontWeight: 600, gap: '6px', marginTop: '10px' }}>
+                    <span>Every</span>
+                    <input
+                      type="number"
+                      min="1"
+                      data-testid="input-forecast-day-interval"
+                      value={forecastDayInterval}
+                      onChange={(e) => setForecastDayInterval(Math.max(1, parseInt(e.target.value) || 1))}
+                      style={{
+                        width: '72px',
+                        height: '38px',
+                        padding: '8px 10px',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd9df',
+                        backgroundColor: '#f8fbfc',
+                        boxSizing: 'border-box',
+                        color: '#263238',
+                        fontFamily: 'inherit',
+                        fontSize: '16px',
+                        textAlign: 'center'
+                      }}
+                    />
+                    <span>days for</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max="52"
+                      data-testid="input-forecast-day-count"
+                      value={forecastDayCount}
+                      onChange={(e) => setForecastDayCount(Math.max(1, Math.min(52, parseInt(e.target.value) || 1)))}
+                      style={{
+                        width: '86px',
+                        height: '38px',
+                        padding: '8px 10px',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd9df',
+                        backgroundColor: '#f8fbfc',
+                        boxSizing: 'border-box',
+                        color: '#263238',
+                        fontFamily: 'inherit',
+                        fontSize: '16px',
+                        textAlign: 'center'
+                      }}
+                    />
+                    <span>occurrences.</span>
                   </div>
                 )}
 
