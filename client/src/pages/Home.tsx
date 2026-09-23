@@ -1262,6 +1262,8 @@ const Home = () => {
                 onClick={isForecast && !draggingForecast ? () => {
                   const fc = item.data as Forecast;
                   setEditingForecast(fc);
+                  setConfirmingDelete(null);
+                  setSeriesActionPrompt(null);
                   setForecastDate(fc.date);
                   setForecastAmount(Math.abs(fc.amount).toString());
                   setForecastDirection(fc.amount >= 0 ? 'expense' : 'income');
@@ -1275,6 +1277,8 @@ const Home = () => {
                     event.preventDefault();
                     const fc = item.data as Forecast;
                     setEditingForecast(fc);
+                    setConfirmingDelete(null);
+                    setSeriesActionPrompt(null);
                     setForecastDate(fc.date);
                     setForecastAmount(Math.abs(fc.amount).toString());
                     setForecastDirection(fc.amount >= 0 ? 'expense' : 'income');
@@ -2120,15 +2124,7 @@ const Home = () => {
                   <button
                     data-testid="button-close-edit-forecast"
                     aria-label="Close forecast editor"
-                    onClick={() => {
-                      setEditingForecast(null);
-                      setModalView('details');
-                      setForecastDate('');
-                      setForecastAmount('');
-                      setForecastType('single');
-                      setForecastMonths(12);
-                      setAutoExtend(false);
-                    }}
+                    onClick={resetEditingForecast}
                     style={{
                       background: 'none',
                       border: 'none',
@@ -2306,127 +2302,45 @@ const Home = () => {
                   </div>
                 </div>
 
-                <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <button
-                    data-testid="button-save-this-forecast"
-                    disabled={saving || !forecastDate || !forecastAmount}
-                    onClick={async () => {
-                      if (!editingForecast?.id || !auth.currentUser) return;
-                      setSaving(true);
-                      setActionError(null);
-                      try {
-                        await updateForecast(editingForecast.id, {
-                          date: forecastDate,
-                          amount: signedForecastAmount()
-                        });
-                        const updatedForecasts = await getForecasts(auth.currentUser.uid);
-                        setForecasts(updatedForecasts);
-                        setEditingForecast(null);
-                        setModalView('details');
-                        setForecastDate('');
-                        setForecastAmount('');
-                      } catch (error: any) {
-                        console.error('Error updating forecast:', error);
-                        setActionError('We couldn’t update this forecast. Please try again.');
-                      } finally {
-                        setSaving(false);
-                      }
-                    }}
-                    style={{
-                      padding: '10px 16px',
-                      backgroundColor: '#42A5F5',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: saving ? 'not-allowed' : 'pointer',
-                      opacity: saving ? 0.6 : 1,
-                      fontWeight: 600
-                    }}
-                  >
-                    {saving ? 'Saving...' : 'Save This Forecast'}
-                  </button>
-
-                  {editingForecast.series_id && (
+                <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: '1fr 1fr' }}>
                     <button
-                      data-testid="button-save-series-forecast"
-                      disabled={saving || !forecastAmount}
-                      onClick={async () => {
-                        if (!editingForecast?.series_id || !auth.currentUser) return;
-                        setSaving(true);
-                        setActionError(null);
-                        try {
-                          await updateSeriesForecasts(
-                            editingForecast.series_id,
-                            auth.currentUser.uid,
-                            { amount: signedForecastAmount() }
-                          );
-                          const updatedForecasts = await getForecasts(auth.currentUser.uid);
-                          setForecasts(updatedForecasts);
-                          setEditingForecast(null);
-                          setModalView('details');
-                          setForecastDate('');
-                          setForecastAmount('');
-                        } catch (error: any) {
-                          console.error('Error updating series:', error);
-                          setActionError('We couldn’t update this forecast series. Please try again.');
-                        } finally {
-                          setSaving(false);
+                      data-testid="button-save-this-forecast"
+                      disabled={saving || !forecastDate || !forecastAmount}
+                      onClick={() => {
+                        setConfirmingDelete(null);
+                        if (editingForecast.series_id) {
+                          setSeriesActionPrompt('save');
+                        } else {
+                          void saveEditedForecast('individual');
                         }
                       }}
                       style={{
                         padding: '10px 16px',
-                        backgroundColor: '#1976d2',
+                        backgroundColor: '#42A5F5',
                         color: 'white',
                         border: 'none',
-                        borderRadius: '4px',
+                        borderRadius: '6px',
                         cursor: saving ? 'not-allowed' : 'pointer',
                         opacity: saving ? 0.6 : 1,
                         fontWeight: 600
                       }}
                     >
-                      {saving ? 'Saving...' : 'Update Entire Series (Amount)'}
+                      {saving ? 'Saving...' : 'Save Forecast'}
                     </button>
-                  )}
 
-                  <div style={{ borderTop: '1px solid #eee', paddingTop: '8px', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {confirmingDelete && (
-                      <div role="alert" style={{ padding: '10px', background: '#fef2f2', color: '#991b1b', borderRadius: '6px', fontSize: '13px' }}>
-                        {confirmingDelete === 'series'
-                          ? 'This will permanently delete every forecast in this series.'
-                          : 'This will permanently delete this forecast.'}
-                        <button onClick={() => setConfirmingDelete(null)} style={{ marginLeft: '8px', background: 'transparent', border: 'none', color: '#991b1b', textDecoration: 'underline', cursor: 'pointer' }}>
-                          Cancel
-                        </button>
-                      </div>
-                    )}
                     <button
                       data-testid="button-delete-this-forecast"
                       disabled={saving}
-                      onClick={async () => {
-                        if (!editingForecast?.id || !auth.currentUser) return;
-                        if (confirmingDelete !== 'one') {
-                          setConfirmingDelete('one');
+                      onClick={() => {
+                        if (confirmingDelete) {
+                          void deleteEditedForecast(confirmingDelete === 'series' ? 'series' : 'individual');
                           return;
                         }
-                        setSaving(true);
-                        setActionError(null);
-                        try {
-                          await deleteForecast(editingForecast.id);
-                          const updatedForecasts = await getForecasts(auth.currentUser.uid);
-                          setForecasts(updatedForecasts);
-                          setEditingForecast(null);
-                          setModalView('details');
-                          setForecastDate('');
-                          setForecastAmount('');
-                          setForecastType('single');
-                          setForecastMonths(12);
-                          setAutoExtend(false);
-                        } catch (error: any) {
-                          console.error('Error deleting forecast:', error);
-                          setActionError('We couldn’t delete this forecast. Please try again.');
-                        } finally {
-                          setSaving(false);
-                          setConfirmingDelete(null);
+                        if (editingForecast.series_id) {
+                          setSeriesActionPrompt('delete');
+                        } else {
+                          setConfirmingDelete('one');
                         }
                       }}
                       style={{
@@ -2434,72 +2348,114 @@ const Home = () => {
                         backgroundColor: '#d32f2f',
                         color: 'white',
                         border: 'none',
-                        borderRadius: '4px',
+                        borderRadius: '6px',
                         cursor: saving ? 'not-allowed' : 'pointer',
                         opacity: saving ? 0.6 : 1,
                         fontWeight: 600
                       }}
                     >
-                      {saving ? 'Deleting...' : confirmingDelete === 'one' ? 'Confirm Delete This Forecast' : 'Delete This Forecast'}
+                      {saving
+                        ? 'Deleting...'
+                        : confirmingDelete === 'series'
+                          ? 'Confirm Delete Series'
+                          : confirmingDelete === 'one'
+                            ? 'Confirm Delete Forecast'
+                            : 'Delete Forecast'}
                     </button>
-
-                    {editingForecast.series_id && (
-                      <button
-                        data-testid="button-delete-series-forecast"
-                        disabled={saving}
-                        onClick={async () => {
-                          if (!editingForecast?.series_id || !auth.currentUser) return;
-                          if (confirmingDelete !== 'series') {
-                            setConfirmingDelete('series');
-                            return;
-                          }
-                          setSaving(true);
-                          setActionError(null);
-                          try {
-                            await deleteSeriesForecasts(editingForecast.series_id, auth.currentUser.uid);
-                            const updatedForecasts = await getForecasts(auth.currentUser.uid);
-                            setForecasts(updatedForecasts);
-                            setEditingForecast(null);
-                            setModalView('details');
-                            setForecastDate('');
-                            setForecastAmount('');
-                            setForecastType('single');
-                            setForecastMonths(12);
-                            setAutoExtend(false);
-                          } catch (error: any) {
-                            console.error('Error deleting series:', error);
-                            setActionError('We couldn’t delete this forecast series. Please try again.');
-                          } finally {
-                            setSaving(false);
-                            setConfirmingDelete(null);
-                          }
-                        }}
-                        style={{
-                          padding: '10px 16px',
-                          backgroundColor: '#b71c1c',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: saving ? 'not-allowed' : 'pointer',
-                          opacity: saving ? 0.6 : 1,
-                          fontWeight: 600
-                        }}
-                      >
-                        {saving ? 'Deleting...' : confirmingDelete === 'series' ? 'Confirm Delete Entire Series' : 'Delete Entire Series'}
-                      </button>
-                    )}
                   </div>
 
+                  {seriesActionPrompt && editingForecast.series_id && (
+                    <div
+                      role="group"
+                      aria-label={`${seriesActionPrompt === 'save' ? 'Save' : 'Delete'} forecast scope`}
+                      style={{
+                        backgroundColor: seriesActionPrompt === 'delete' ? '#fff7f7' : '#f5f9fb',
+                        border: `1px solid ${seriesActionPrompt === 'delete' ? '#efc7c7' : '#d5e1e6'}`,
+                        borderRadius: '8px',
+                        padding: '10px'
+                      }}
+                    >
+                      <div style={{ color: '#455a64', fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>
+                        {seriesActionPrompt === 'save' ? 'Where should these changes apply?' : 'What do you want to delete?'}
+                      </div>
+                      <div style={{ display: 'grid', gap: '8px', gridTemplateColumns: '1fr 1fr' }}>
+                        <button
+                          data-testid={`${seriesActionPrompt === 'save' ? 'button-save' : 'button-delete'}-individual-option`}
+                          onClick={() => {
+                            if (seriesActionPrompt === 'save') {
+                              void saveEditedForecast('individual');
+                            } else {
+                              setSeriesActionPrompt(null);
+                              setConfirmingDelete('one');
+                            }
+                          }}
+                          style={{
+                            backgroundColor: 'white',
+                            border: '1px solid #9dafb7',
+                            borderRadius: '6px',
+                            color: '#37474f',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                            padding: '9px 10px'
+                          }}
+                        >
+                          This Forecast
+                        </button>
+                        <button
+                          data-testid={`${seriesActionPrompt === 'save' ? 'button-save' : 'button-delete'}-series-forecast`}
+                          onClick={() => {
+                            if (seriesActionPrompt === 'save') {
+                              void saveEditedForecast('series');
+                            } else {
+                              setSeriesActionPrompt(null);
+                              setConfirmingDelete('series');
+                            }
+                          }}
+                          style={{
+                            backgroundColor: seriesActionPrompt === 'delete' ? '#b71c1c' : '#1976d2',
+                            border: 'none',
+                            borderRadius: '6px',
+                            color: 'white',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                            padding: '9px 10px'
+                          }}
+                        >
+                          Entire Series
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => setSeriesActionPrompt(null)}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#607d8b',
+                          cursor: 'pointer',
+                          display: 'block',
+                          fontSize: '12px',
+                          margin: '8px auto 0',
+                          padding: '2px 6px',
+                          textDecoration: 'underline'
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+
+                  {confirmingDelete && (
+                    <div role="alert" style={{ padding: '10px', background: '#fef2f2', color: '#991b1b', borderRadius: '6px', fontSize: '13px' }}>
+                      {confirmingDelete === 'series'
+                        ? 'This will permanently delete every forecast in this series.'
+                        : 'This will permanently delete this forecast.'}
+                      <button onClick={() => setConfirmingDelete(null)} style={{ marginLeft: '8px', background: 'transparent', border: 'none', color: '#991b1b', textDecoration: 'underline', cursor: 'pointer' }}>
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+
                   <button
-                    onClick={() => {
-                      setEditingForecast(null);
-                      setModalView('details');
-                      setForecastDate('');
-                      setForecastAmount('');
-                      setForecastType('single');
-                      setForecastMonths(12);
-                      setAutoExtend(false);
-                    }}
+                    onClick={resetEditingForecast}
                     style={{
                       padding: '10px 16px',
                       backgroundColor: '#666',
