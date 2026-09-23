@@ -2013,29 +2013,6 @@ const Home = () => {
 
                 <div style={{ marginTop: '20px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                   <button
-                    onClick={() => {
-                      setAddingStandaloneForecast(false);
-                      setStandaloneForecastName('');
-                      setStandaloneForecastAccountId('');
-                      setModalView('details');
-                      setForecastDate('');
-                      setForecastAmount('');
-                      setForecastType('single');
-                      setForecastMonths(12);
-                      setAutoExtend(false);
-                    }}
-                    style={{
-                      padding: '8px 16px',
-                      backgroundColor: '#666',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
                     data-testid="button-save-forecast"
                     disabled={saving || !forecastDate || !forecastAmount || (addingStandaloneForecast && (!standaloneForecastName.trim() || !standaloneForecastAccountId))}
                     onClick={async () => {
@@ -2424,22 +2401,6 @@ const Home = () => {
                           Entire Series
                         </button>
                       </div>
-                      <button
-                        onClick={() => setSeriesActionPrompt(null)}
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: '#607d8b',
-                          cursor: 'pointer',
-                          display: 'block',
-                          fontSize: '12px',
-                          margin: '8px auto 0',
-                          padding: '2px 6px',
-                          textDecoration: 'underline'
-                        }}
-                      >
-                        Cancel
-                      </button>
                     </div>
                   )}
 
@@ -2448,25 +2409,9 @@ const Home = () => {
                       {confirmingDelete === 'series'
                         ? 'This will permanently delete every forecast in this series.'
                         : 'This will permanently delete this forecast.'}
-                      <button onClick={() => setConfirmingDelete(null)} style={{ marginLeft: '8px', background: 'transparent', border: 'none', color: '#991b1b', textDecoration: 'underline', cursor: 'pointer' }}>
-                        Cancel
-                      </button>
                     </div>
                   )}
 
-                  <button
-                    onClick={resetEditingForecast}
-                    style={{
-                      padding: '10px 16px',
-                      backgroundColor: '#666',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Cancel
-                  </button>
                 </div>
               </>
             )}
