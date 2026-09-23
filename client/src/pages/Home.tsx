@@ -9,6 +9,7 @@ import {
 } from "@/lib/activityBalances";
 import { getDashboardContentPadding } from "@/lib/dashboardLayout";
 import { useLocation } from "wouter";
+import { Trash2 } from "lucide-react";
 
 const LONG_PRESS_MS = 500;
 const CHART_WINDOW_MIN = 33;
@@ -565,6 +566,19 @@ const Home = () => {
       setSaving(false);
       setConfirmingDelete(null);
       setSeriesActionPrompt(null);
+    }
+  };
+
+  const handleDeleteEditedForecast = () => {
+    if (saving || !editingForecast) return;
+    if (confirmingDelete) {
+      void deleteEditedForecast(confirmingDelete === 'series' ? 'series' : 'individual');
+      return;
+    }
+    if (editingForecast.series_id) {
+      setSeriesActionPrompt('delete');
+    } else {
+      setConfirmingDelete('one');
     }
   };
 
@@ -2097,7 +2111,42 @@ const Home = () => {
             {modalView === 'editForecast' && editingForecast && (
               <>
                 <div style={{ alignItems: 'center', display: 'flex', justifyContent: 'space-between', margin: '0 0 14px', padding: '0 2px' }}>
-                  <h2 id="forecast-dialog-title" style={{ color: '#263238', fontSize: '18px', margin: 0 }}>Edit Forecast</h2>
+                  <div style={{ alignItems: 'center', display: 'flex', gap: '8px' }}>
+                    <button
+                      data-testid="button-delete-this-forecast"
+                      aria-label={
+                        confirmingDelete === 'series'
+                          ? 'Confirm delete entire forecast series'
+                          : confirmingDelete === 'one'
+                            ? 'Confirm delete this forecast'
+                            : 'Delete forecast'
+                      }
+                      title={
+                        confirmingDelete
+                          ? 'Confirm deletion'
+                          : 'Delete forecast'
+                      }
+                      disabled={saving}
+                      onClick={handleDeleteEditedForecast}
+                      style={{
+                        alignItems: 'center',
+                        backgroundColor: '#eef1f3',
+                        border: '1px solid #c5cdd2',
+                        borderRadius: '7px',
+                        color: '#5f6b72',
+                        cursor: saving ? 'not-allowed' : 'pointer',
+                        display: 'inline-flex',
+                        height: '34px',
+                        justifyContent: 'center',
+                        opacity: saving ? 0.6 : 1,
+                        padding: 0,
+                        width: '34px'
+                      }}
+                    >
+                      <Trash2 size={17} strokeWidth={2} aria-hidden="true" />
+                    </button>
+                    <h2 id="forecast-dialog-title" style={{ color: '#263238', fontSize: '18px', margin: 0 }}>Edit Forecast</h2>
+                  </div>
                   <button
                     data-testid="button-close-edit-forecast"
                     aria-label="Close forecast editor"
@@ -2280,7 +2329,7 @@ const Home = () => {
                 </div>
 
                 <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: '1fr 1fr' }}>
+                  <div style={{ display: 'flex', gap: '10px' }}>
                     <button
                       data-testid="button-save-this-forecast"
                       disabled={saving || !forecastDate || !forecastAmount}
@@ -2293,6 +2342,7 @@ const Home = () => {
                         }
                       }}
                       style={{
+                        flex: 1,
                         padding: '10px 16px',
                         backgroundColor: '#42A5F5',
                         color: 'white',
@@ -2304,40 +2354,6 @@ const Home = () => {
                       }}
                     >
                       {saving ? 'Saving...' : 'Save Forecast'}
-                    </button>
-
-                    <button
-                      data-testid="button-delete-this-forecast"
-                      disabled={saving}
-                      onClick={() => {
-                        if (confirmingDelete) {
-                          void deleteEditedForecast(confirmingDelete === 'series' ? 'series' : 'individual');
-                          return;
-                        }
-                        if (editingForecast.series_id) {
-                          setSeriesActionPrompt('delete');
-                        } else {
-                          setConfirmingDelete('one');
-                        }
-                      }}
-                      style={{
-                        padding: '10px 16px',
-                        backgroundColor: '#d32f2f',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: saving ? 'not-allowed' : 'pointer',
-                        opacity: saving ? 0.6 : 1,
-                        fontWeight: 600
-                      }}
-                    >
-                      {saving
-                        ? 'Deleting...'
-                        : confirmingDelete === 'series'
-                          ? 'Confirm Delete Series'
-                          : confirmingDelete === 'one'
-                            ? 'Confirm Delete Forecast'
-                            : 'Delete Forecast'}
                     </button>
                   </div>
 
