@@ -576,12 +576,12 @@ export default function ProjectionChart({
                       }}
                     >
                       <span style={{ alignItems: 'center', display: 'flex', gap: '8px', minWidth: 0 }}>
-                        <span style={{ minWidth: 0 }}>
+                        <span style={{ alignItems: 'flex-start', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                           <strong
                             style={{
                               color: isIncluded ? ui.color.text : ui.color.textMuted,
                               display: 'block',
-                              fontSize: '14px',
+                              fontSize: '16px',
                               fontWeight: 700,
                               lineHeight: 1.25,
                               overflow: 'hidden',
@@ -591,7 +591,7 @@ export default function ProjectionChart({
                           >
                             {accountLabel(account)}
                           </strong>
-                          <span style={{ alignItems: 'center', display: 'inline-flex', gap: '5px', marginTop: '2px' }}>
+                          <span style={{ alignItems: 'center', display: 'inline-flex', gap: '5px', justifyContent: 'flex-start', marginTop: '2px' }}>
                             <input
                               type="checkbox"
                               checked={isIncluded}
