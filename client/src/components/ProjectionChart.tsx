@@ -64,7 +64,9 @@ export default function ProjectionChart({
   const [calloutOpen, setCalloutOpen] = useState(true);
   const [calloutClosing, setCalloutClosing] = useState(false);
   const [displayMode, setDisplayMode] = useState<ProjectionView>('chart');
+  const [navigationDotsVisible, setNavigationDotsVisible] = useState(true);
   const swipeStartXRef = useRef<number | null>(null);
+  const navigationDotsTimerRef = useRef<number | null>(null);
   const containerHeight = `${windowHeight}svh`;
   const includedAccountIdSet = new Set(includedAccountIds);
   const visibleAccounts = accounts.filter((account) => includedAccountIdSet.has(account.account_id));
@@ -98,6 +100,17 @@ export default function ProjectionChart({
     selectDisplayMode(PROJECTION_VIEWS[nextIndex].mode);
   };
 
+  const revealNavigationDots = () => {
+    setNavigationDotsVisible(true);
+    if (navigationDotsTimerRef.current !== null) {
+      window.clearTimeout(navigationDotsTimerRef.current);
+    }
+    navigationDotsTimerRef.current = window.setTimeout(() => {
+      setNavigationDotsVisible(false);
+      navigationDotsTimerRef.current = null;
+    }, 1800);
+  };
+
   const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
     swipeStartXRef.current = event.touches[0]?.clientX ?? null;
   };
@@ -110,8 +123,19 @@ export default function ProjectionChart({
 
     const distance = endX - startX;
     if (Math.abs(distance) < 45) return;
+    revealNavigationDots();
     moveDisplayMode(distance < 0 ? 1 : -1);
   };
+
+  useEffect(() => {
+    revealNavigationDots();
+
+    return () => {
+      if (navigationDotsTimerRef.current !== null) {
+        window.clearTimeout(navigationDotsTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!calloutClosing) return;
