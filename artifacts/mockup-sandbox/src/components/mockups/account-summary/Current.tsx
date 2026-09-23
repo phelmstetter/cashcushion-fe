@@ -24,7 +24,8 @@ export function Current() {
 
   return (
     <main className="summary-preview summary-preview--compact">
-      <section className="summary-panel" aria-label="Current account outlook">
+      <div className="summary-preview__viewport">
+        <section className="summary-panel" aria-label="Current account outlook">
         <header className="summary-panel__topline">
           <div className="summary-panel__identity">
             <span className="summary-panel__icon" aria-hidden="true"><Landmark size={18} /></span>
@@ -99,7 +100,8 @@ export function Current() {
             </tbody>
           </table>
         </div>
-      </section>
+        </section>
+      </div>
     </main>
   );
 }
