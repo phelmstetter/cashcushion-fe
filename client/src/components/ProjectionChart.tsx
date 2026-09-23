@@ -282,8 +282,204 @@ export default function ProjectionChart({
               {accountSummaries.filter(({ isIncluded }) => isIncluded).length}/{accountSummaries.length} tracked
             </span>
           </div>
-          <div style={{ flex: '1 1 0', minHeight: 0, overflow: 'auto' }}>
-            <table
+          <div
+            style={{
+              display: 'flex',
+              flex: '1 1 0',
+              flexDirection: 'column',
+              minHeight: 0,
+              overflow: 'auto',
+            }}
+          >
+            <div
+              data-testid="account-balance-summary-cards"
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                padding: '10px 12px 12px',
+              }}
+            >
+              {accountSummaries.map(({ account, color, isIncluded, minimumBalance, minimumDate }) => (
+                <article
+                  key={account.account_id}
+                  style={{
+                    backgroundColor: ui.color.surface,
+                    border: `1px solid ${ui.color.border}`,
+                    borderRadius: ui.radius.control,
+                    boxSizing: 'border-box',
+                    display: 'grid',
+                    gap: '12px',
+                    gridTemplateColumns: 'minmax(0, 1.1fr) minmax(0, 1fr)',
+                    minWidth: 0,
+                    padding: '10px',
+                  }}
+                >
+                  <div style={{ alignItems: 'center', display: 'flex', gap: '8px', minWidth: 0 }}>
+                    <input
+                      type="checkbox"
+                      checked={isIncluded}
+                      onChange={() => onAccountToggle(account.account_id)}
+                      aria-label={`${isIncluded ? 'Exclude' : 'Include'} ${accountLabel(account)}`}
+                      style={{
+                        accentColor: color,
+                        cursor: 'pointer',
+                        flex: '0 0 auto',
+                        height: '16px',
+                        margin: 0,
+                        width: '16px',
+                      }}
+                    />
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        backgroundColor: color,
+                        borderRadius: ui.radius.pill,
+                        flex: '0 0 auto',
+                        height: '28px',
+                        opacity: isIncluded ? 1 : 0.45,
+                        width: '4px',
+                      }}
+                    />
+                    <span style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0 }}>
+                      <strong
+                        style={{
+                          color: isIncluded ? ui.color.text : ui.color.textMuted,
+                          display: 'block',
+                          fontSize: '13px',
+                          fontWeight: 700,
+                          lineHeight: 1.2,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {accountLabel(account)}
+                      </strong>
+                      <span
+                        style={{
+                          color: isIncluded ? ui.color.primary : ui.color.textDisabled,
+                          fontSize: '10px',
+                          fontWeight: 600,
+                          lineHeight: 1.2,
+                        }}
+                      >
+                        {isIncluded ? 'Included in projection' : 'Hidden from projection'}
+                      </span>
+                    </span>
+                  </div>
+
+                  <div
+                    style={{
+                      display: 'grid',
+                      gap: '10px',
+                      gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                      minWidth: 0,
+                    }}
+                  >
+                    <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                      <span style={{ color: ui.color.textMuted, fontSize: '10px', fontWeight: 700, lineHeight: 1.15, marginBottom: '3px' }}>
+                        Current balance
+                      </span>
+                      {typeof account.available_balance === 'number' && Number.isFinite(account.available_balance) ? (
+                        <>
+                          <strong
+                            style={{
+                              color: account.available_balance < 0 ? ui.color.danger : ui.color.text,
+                              fontSize: '16px',
+                              fontWeight: 700,
+                              lineHeight: 1.2,
+                            }}
+                          >
+                            {currencyFormatter.format(account.available_balance)}
+                          </strong>
+                          {currentBalanceDate && (
+                            <time
+                              dateTime={currentBalanceDate}
+                              aria-label={`Current balance date: ${formatDate(currentBalanceDate)}`}
+                              title={formatDate(currentBalanceDate)}
+                              style={{
+                                color: ui.color.textMuted,
+                                fontSize: '10px',
+                                fontWeight: 600,
+                                lineHeight: 1.3,
+                                marginTop: '3px',
+                              }}
+                            >
+                              As of {compactDate(currentBalanceDate)}
+                            </time>
+                          )}
+                        </>
+                      ) : (
+                        <span style={{ color: ui.color.textDisabled }}>—</span>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                      <span style={{ color: ui.color.textMuted, fontSize: '10px', fontWeight: 700, lineHeight: 1.15, marginBottom: '3px' }}>
+                        Projected low
+                      </span>
+                      {minimumBalance != null && minimumDate ? (
+                        <>
+                          <div style={{ alignItems: 'center', display: 'flex', flexWrap: 'wrap', gap: '4px', minWidth: 0 }}>
+                            <strong
+                              style={{
+                                color: minimumBalance < 0 ? ui.color.danger : ui.color.warning,
+                                fontSize: '16px',
+                                fontWeight: 700,
+                                lineHeight: 1.2,
+                              }}
+                            >
+                              {currencyFormatter.format(minimumBalance)}
+                            </strong>
+                            <button
+                              type="button"
+                              aria-label={`Show the chart and transactions for the projected low balance on ${formatDate(minimumDate)}`}
+                              title={`Show chart and transactions for ${formatDate(minimumDate)}`}
+                              onClick={() => jumpToLowBalance(minimumDate)}
+                              style={{
+                                alignItems: 'center',
+                                backgroundColor: minimumBalance < 0 ? ui.color.dangerSoft : ui.color.warningSoft,
+                                border: `1px solid ${minimumBalance < 0 ? ui.color.dangerBorder : ui.color.warningBorder}`,
+                                borderRadius: ui.radius.pill,
+                                color: minimumBalance < 0 ? ui.color.danger : ui.color.warning,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                flex: '0 0 auto',
+                                height: '22px',
+                                justifyContent: 'center',
+                                padding: 0,
+                                width: '22px',
+                              }}
+                            >
+                              <SquareArrowOutUpRight aria-hidden="true" size={13} strokeWidth={2.25} />
+                            </button>
+                          </div>
+                          <time
+                            dateTime={minimumDate}
+                            aria-label={`Projected low balance date: ${formatDate(minimumDate)}`}
+                            title={formatDate(minimumDate)}
+                            style={{
+                              color: minimumBalance < 0 ? ui.color.danger : ui.color.warning,
+                              fontSize: '10px',
+                              fontWeight: 600,
+                              lineHeight: 1.3,
+                              marginTop: '3px',
+                            }}
+                          >
+                            Low on {compactDate(minimumDate)}
+                          </time>
+                        </>
+                      ) : (
+                        <span style={{ color: ui.color.textDisabled }}>—</span>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            {false && <table
               aria-label="Account balance summary"
               style={{
                 borderCollapse: 'separate',
@@ -592,7 +788,7 @@ export default function ProjectionChart({
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table>}
           </div>
         </div>
       )}
