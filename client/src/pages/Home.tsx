@@ -1373,9 +1373,11 @@ const Home = () => {
           bottom: 0,
           backgroundColor: 'rgba(0,0,0,0.5)',
           display: 'flex',
-          alignItems: 'center',
+           alignItems: 'flex-start',
           justifyContent: 'center',
-          zIndex: 1000
+           overflowY: 'auto',
+           padding: '12px 0',
+           zIndex: 1000,
         }}
         onMouseDown={(event) => {
           if (event.target === event.currentTarget && !saving) closeModal();
@@ -1388,12 +1390,14 @@ const Home = () => {
             tabIndex={-1}
             style={{
             backgroundColor: 'white',
-            padding: '24px',
-            borderRadius: '8px',
-            maxWidth: '400px',
-            width: '90%',
-            maxHeight: '90vh',
-            overflowY: 'auto'
+             border: '1px solid #cbd9df',
+             borderRadius: '14px',
+             boxShadow: '0 18px 42px rgba(38, 50, 56, 0.28)',
+             boxSizing: 'border-box',
+             margin: 'auto 0',
+             maxWidth: '640px',
+             padding: '20px',
+             width: 'calc(100% - 24px)',
           }}>
             {actionError && (
               <div role="alert" style={{ marginBottom: '16px', padding: '10px 12px', borderRadius: '6px', background: '#fef2f2', color: '#b91c1c', fontSize: '14px' }}>
@@ -1408,12 +1412,14 @@ const Home = () => {
                   const { display: transactionAmount, isPositive } = formatAmount(selectedTransaction.amount);
                   return (
                     <div style={{
+                       backgroundColor: '#eef5f7',
+                       border: '1px solid #d1e0e6',
+                       borderRadius: '12px',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '12px',
-                      paddingBottom: '16px',
-                      marginBottom: '16px',
-                      borderBottom: '1px solid #eee'
+                       marginBottom: '14px',
+                       padding: '14px',
                     }}>
                       {selectedTransaction.logo_url ? (
                         <img
@@ -1439,9 +1445,10 @@ const Home = () => {
                       )}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <h2 id="forecast-dialog-title" style={{
+                          color: '#263238',
                           margin: 0,
-                          fontSize: '16px',
-                          fontWeight: 600,
+                          fontSize: '18px',
+                          fontWeight: 700,
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap'
@@ -1500,15 +1507,16 @@ const Home = () => {
                   }}
                   style={{
                     width: '100%',
-                    padding: '10px',
-                    backgroundColor: '#42A5F5',
+                    padding: '11px 14px',
+                    background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)',
                     color: 'white',
                     border: 'none',
-                    borderRadius: '4px',
+                    borderRadius: '8px',
+                    boxShadow: '0 2px 5px rgba(25, 118, 210, 0.3)',
                     cursor: 'pointer',
-                    fontWeight: 600,
+                    fontWeight: 700,
                     fontSize: '14px',
-                    marginBottom: '20px'
+                    marginBottom: '14px'
                   }}
                 >
                   + Add Forecast
@@ -1582,7 +1590,7 @@ const Home = () => {
 
             {modalView === 'forecast' && (selectedTransaction || addingStandaloneForecast) && (
               <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <div style={{ alignItems: 'center', backgroundColor: '#eef5f7', border: '1px solid #d1e0e6', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', marginBottom: '14px', padding: '12px 14px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     {selectedTransaction && (
                       <button
@@ -1603,7 +1611,7 @@ const Home = () => {
                           aria-label="Back to transaction details"
                         >←</button>
                     )}
-                    <h2 id="forecast-dialog-title" style={{ margin: 0 }}>Add forecast</h2>
+                    <h2 id="forecast-dialog-title" style={{ color: '#263238', fontSize: '18px', margin: 0 }}>Add forecast</h2>
                   </div>
                   <button
                     aria-label="Close forecast form"
@@ -1622,7 +1630,7 @@ const Home = () => {
                 </div>
 
                 {selectedTransaction ? (
-                  <p style={{ margin: '0 0 16px 0' }}>
+                  <p style={{ backgroundColor: '#f8fbfc', border: '1px solid #e0eaee', borderRadius: '8px', margin: '0 0 14px', padding: '10px 12px' }}>
                     <strong>{selectedTransaction.merchant_name || selectedTransaction.counterparty_name}</strong>
                   </p>
                 ) : (
@@ -2029,8 +2037,8 @@ const Home = () => {
 
             {modalView === 'editForecast' && editingForecast && (
               <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <h2 id="forecast-dialog-title" style={{ margin: 0 }}>Edit Forecast</h2>
+                <div style={{ alignItems: 'center', backgroundColor: '#eef5f7', border: '1px solid #d1e0e6', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', marginBottom: '14px', padding: '12px 14px' }}>
+                  <h2 id="forecast-dialog-title" style={{ color: '#263238', fontSize: '18px', margin: 0 }}>Edit Forecast</h2>
                   <button
                     data-testid="button-close-edit-forecast"
                     aria-label="Close forecast editor"
@@ -2054,7 +2062,7 @@ const Home = () => {
                   >×</button>
                 </div>
 
-                <p style={{ margin: '0 0 16px 0' }}>
+                <p style={{ backgroundColor: '#f8fbfc', border: '1px solid #e0eaee', borderRadius: '8px', margin: '0 0 14px', padding: '10px 12px' }}>
                   <strong>{editingForecast.name}</strong>
                   {editingForecast.series_id && (
                     <span style={{ fontSize: '12px', color: '#42A5F5', marginLeft: '8px', fontWeight: 600 }}>SERIES</span>
