@@ -1,6 +1,13 @@
 import type { Account } from "@/lib/firebase";
 import { sharedStyles, ui } from "@/lib/uiTheme";
-import { MessageCircle, SquareArrowOutUpRight } from "lucide-react";
+import {
+  CircleDollarSign,
+  Eye,
+  Landmark,
+  MessageCircle,
+  SquareArrowOutUpRight,
+  TrendingDown,
+} from "lucide-react";
 import { useEffect, useRef, useState, type TouchEvent } from "react";
 import {
   LineChart,
@@ -215,132 +222,378 @@ export default function ProjectionChart({
           style={{
             ...sharedStyles.card,
             boxSizing: 'border-box',
+            display: 'flex',
             flex: '1 1 0',
+            flexDirection: 'column',
             maxHeight: 'none',
-            overflow: 'auto',
+            overflow: 'hidden',
           }}
         >
-          <table
-            aria-label="Account balance summary"
+          <div
             style={{
-              borderCollapse: 'collapse',
-              fontSize: '14px',
-              tableLayout: 'fixed',
-              width: '100%',
+              alignItems: 'center',
+              background: `linear-gradient(135deg, ${ui.color.surface} 0%, ${ui.color.surfaceSelected} 100%)`,
+              borderBottom: `1px solid ${ui.color.border}`,
+              display: 'flex',
+              flexShrink: 0,
+              gap: '10px',
+              justifyContent: 'space-between',
+              padding: '10px 12px',
             }}
           >
-            <colgroup>
-              <col style={{ width: '12%' }} />
-              <col style={{ width: '29.3333%' }} />
-              <col style={{ width: '29.3333%' }} />
-              <col style={{ width: '29.3333%' }} />
-            </colgroup>
-            <thead>
-              <tr style={{ color: ui.color.textMuted, fontSize: '13px', fontWeight: 700, lineHeight: '18px', textAlign: 'left' }}>
-                <th scope="col" style={{ backgroundColor: ui.color.surface, boxSizing: 'border-box', padding: '8px 4px 7px', position: 'sticky', textAlign: 'center', top: 0, zIndex: 1 }}>Show</th>
-                <th scope="col" style={{ backgroundColor: ui.color.surface, borderLeft: `1px solid ${ui.color.border}`, boxSizing: 'border-box', padding: '8px 7px 7px', position: 'sticky', top: 0, zIndex: 1 }}>Account</th>
-                <th scope="col" style={{ backgroundColor: ui.color.surface, borderLeft: `1px solid ${ui.color.border}`, boxSizing: 'border-box', padding: '8px 7px 7px', position: 'sticky', top: 0, whiteSpace: 'nowrap', zIndex: 1 }}>Current balance</th>
-                <th scope="col" style={{ backgroundColor: ui.color.surface, borderLeft: `1px solid ${ui.color.border}`, boxSizing: 'border-box', padding: '8px 6px 7px', position: 'sticky', top: 0, whiteSpace: 'nowrap', zIndex: 1 }}>Low balance</th>
-              </tr>
-            </thead>
-            <tbody>
-              {accountSummaries.map(({ account, color, isIncluded, minimumBalance, minimumDate }) => (
-                <tr key={account.account_id} style={{ borderTop: `1px solid ${ui.color.border}`, opacity: isIncluded ? 1 : 0.55 }}>
-                  <td style={{ boxSizing: 'border-box', padding: '10px 4px', textAlign: 'center', verticalAlign: 'top' }}>
-                    <input
-                      type="checkbox"
-                      checked={isIncluded}
-                      onChange={() => onAccountToggle(account.account_id)}
-                      aria-label={`${isIncluded ? 'Exclude' : 'Include'} ${accountLabel(account)}`}
-                      style={{ accentColor: color, cursor: 'pointer', margin: 0 }}
-                    />
-                  </td>
+            <div style={{ alignItems: 'center', display: 'flex', gap: '9px', minWidth: 0 }}>
+              <span
+                aria-hidden="true"
+                style={{
+                  alignItems: 'center',
+                  backgroundColor: ui.color.primarySoft,
+                  borderRadius: ui.radius.control,
+                  color: ui.color.primary,
+                  display: 'inline-flex',
+                  flexShrink: 0,
+                  height: '30px',
+                  justifyContent: 'center',
+                  width: '30px',
+                }}
+              >
+                <Landmark size={17} strokeWidth={2.1} />
+              </span>
+              <div style={{ minWidth: 0 }}>
+                <strong style={{ color: ui.color.text, display: 'block', fontSize: '14px', lineHeight: 1.2 }}>
+                  Account outlook
+                </strong>
+                <span style={{ color: ui.color.textMuted, display: 'block', fontSize: '11px', lineHeight: 1.3 }}>
+                  Current balances and projected lows
+                </span>
+              </div>
+            </div>
+            <span
+              style={{
+                backgroundColor: ui.color.surface,
+                border: `1px solid ${ui.color.border}`,
+                borderRadius: ui.radius.pill,
+                color: ui.color.textMuted,
+                flexShrink: 0,
+                fontSize: '11px',
+                fontWeight: 600,
+                padding: '4px 8px',
+              }}
+            >
+              {accountSummaries.filter(({ isIncluded }) => isIncluded).length}/{accountSummaries.length} tracked
+            </span>
+          </div>
+          <div style={{ flex: '1 1 0', minHeight: 0, overflow: 'auto' }}>
+            <table
+              aria-label="Account balance summary"
+              style={{
+                borderCollapse: 'separate',
+                borderSpacing: 0,
+                fontSize: '14px',
+                minWidth: '520px',
+                tableLayout: 'fixed',
+                width: '100%',
+              }}
+            >
+              <colgroup>
+                <col style={{ width: '12%' }} />
+                <col style={{ width: '29.3333%' }} />
+                <col style={{ width: '29.3333%' }} />
+                <col style={{ width: '29.3333%' }} />
+              </colgroup>
+              <thead>
+                <tr style={{ color: ui.color.textMuted, fontSize: '13px', fontWeight: 700, lineHeight: '18px', textAlign: 'left' }}>
                   <th
-                    scope="row"
+                    scope="col"
                     style={{
-                      borderLeft: `1px solid ${ui.color.border}`,
-                      color: ui.color.text,
+                      backgroundColor: ui.color.surfaceSubtle,
+                      borderBottom: `1px solid ${ui.color.border}`,
                       boxSizing: 'border-box',
-                      fontWeight: 600,
-                      overflowWrap: 'anywhere',
-                      padding: '10px 7px',
-                      textAlign: 'left',
-                      verticalAlign: 'top',
+                      padding: '9px 4px',
+                      position: 'sticky',
+                      textAlign: 'center',
+                      top: 0,
+                      zIndex: 1,
                     }}
                   >
-                    <span
-                      aria-hidden="true"
-                      style={{
-                        backgroundColor: color,
-                        borderRadius: '50%',
-                        display: 'inline-block',
-                        height: '8px',
-                        marginRight: '6px',
-                        width: '8px',
-                      }}
-                    />
-                    {accountLabel(account)}
+                    <span style={{ alignItems: 'center', display: 'inline-flex', gap: '4px', justifyContent: 'center' }}>
+                      <Eye aria-hidden="true" size={14} strokeWidth={2} />
+                      Track
+                    </span>
                   </th>
-                    <td style={{ borderLeft: `1px solid ${ui.color.border}`, boxSizing: 'border-box', color: ui.color.text, padding: '10px 7px', verticalAlign: 'top', whiteSpace: 'nowrap' }}>
-                    {typeof account.available_balance === 'number' && Number.isFinite(account.available_balance) ? (
-                      <>
-                        <strong style={{ display: 'block', fontSize: '16px', lineHeight: 1.25 }}>{currencyFormatter.format(account.available_balance)}</strong>
-                        {currentBalanceDate && (
-                          <time
-                            dateTime={currentBalanceDate}
-                            aria-label={`Current balance date: ${formatDate(currentBalanceDate)}`}
-                            title={formatDate(currentBalanceDate)}
-                            style={{ color: ui.color.textMuted, display: 'block', fontSize: '11px', lineHeight: 1.3, marginTop: '2px' }}
-                          >
-                            {compactDate(currentBalanceDate)}
-                          </time>
-                        )}
-                      </>
-                    ) : '—'}
-                  </td>
-                   <td style={{ borderLeft: `1px solid ${ui.color.border}`, boxSizing: 'border-box', color: ui.color.text, padding: '10px 6px', verticalAlign: 'top', whiteSpace: 'nowrap' }}>
-                    {minimumBalance != null && minimumDate ? (
-                      <>
-                        <div style={{ alignItems: 'center', display: 'flex', gap: '4px' }}>
-                          <strong style={{ display: 'block', fontSize: '16px', lineHeight: 1.25 }}>{currencyFormatter.format(minimumBalance)}</strong>
-                          <button
-                            type="button"
-                            aria-label={`Show the chart and transactions for the projected low balance on ${formatDate(minimumDate)}`}
-                            title={`Show chart and transactions for ${formatDate(minimumDate)}`}
-                            onClick={() => jumpToLowBalance(minimumDate)}
+                  <th
+                    scope="col"
+                    style={{
+                      backgroundColor: ui.color.surfaceSubtle,
+                      borderBottom: `1px solid ${ui.color.border}`,
+                      borderLeft: `1px solid ${ui.color.border}`,
+                      boxSizing: 'border-box',
+                      padding: '9px 10px',
+                      position: 'sticky',
+                      top: 0,
+                      zIndex: 1,
+                    }}
+                  >
+                    Account
+                  </th>
+                  <th
+                    scope="col"
+                    style={{
+                      backgroundColor: ui.color.surfaceSubtle,
+                      borderBottom: `1px solid ${ui.color.border}`,
+                      borderLeft: `1px solid ${ui.color.border}`,
+                      boxSizing: 'border-box',
+                      padding: '9px 10px',
+                      position: 'sticky',
+                      top: 0,
+                      zIndex: 1,
+                    }}
+                  >
+                    <span style={{ alignItems: 'center', display: 'inline-flex', gap: '5px' }}>
+                      <CircleDollarSign aria-hidden="true" size={14} strokeWidth={2} />
+                      Current balance
+                    </span>
+                  </th>
+                  <th
+                    scope="col"
+                    style={{
+                      backgroundColor: ui.color.surfaceSubtle,
+                      borderBottom: `1px solid ${ui.color.border}`,
+                      borderLeft: `1px solid ${ui.color.border}`,
+                      boxSizing: 'border-box',
+                      padding: '9px 10px',
+                      position: 'sticky',
+                      top: 0,
+                      zIndex: 1,
+                    }}
+                  >
+                    <span style={{ alignItems: 'center', display: 'inline-flex', gap: '5px' }}>
+                      <TrendingDown aria-hidden="true" size={14} strokeWidth={2} />
+                      Low balance
+                    </span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {accountSummaries.map(({ account, color, isIncluded, minimumBalance, minimumDate }) => (
+                  <tr
+                    key={account.account_id}
+                    style={{
+                      backgroundColor: isIncluded ? ui.color.surface : ui.color.surfaceSubtle,
+                      color: isIncluded ? ui.color.text : ui.color.textMuted,
+                      transition: 'background-color 0.15s ease, opacity 0.15s ease',
+                    }}
+                    onMouseEnter={(event) => {
+                      event.currentTarget.style.backgroundColor = isIncluded
+                        ? ui.color.surfaceSelected
+                        : ui.color.surfaceMuted;
+                    }}
+                    onMouseLeave={(event) => {
+                      event.currentTarget.style.backgroundColor = isIncluded
+                        ? ui.color.surface
+                        : ui.color.surfaceSubtle;
+                    }}
+                  >
+                    <td
+                      style={{
+                        borderBottom: `1px solid ${ui.color.border}`,
+                        boxSizing: 'border-box',
+                        padding: '12px 4px',
+                        textAlign: 'center',
+                        verticalAlign: 'middle',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isIncluded}
+                        onChange={() => onAccountToggle(account.account_id)}
+                        aria-label={`${isIncluded ? 'Exclude' : 'Include'} ${accountLabel(account)}`}
+                        style={{
+                          accentColor: color,
+                          cursor: 'pointer',
+                          height: '16px',
+                          margin: 0,
+                          width: '16px',
+                        }}
+                      />
+                    </td>
+                    <th
+                      scope="row"
+                      style={{
+                        borderBottom: `1px solid ${ui.color.border}`,
+                        borderLeft: `1px solid ${ui.color.border}`,
+                        boxSizing: 'border-box',
+                        padding: '12px 10px',
+                        textAlign: 'left',
+                        verticalAlign: 'middle',
+                      }}
+                    >
+                      <span style={{ alignItems: 'center', display: 'flex', gap: '8px', minWidth: 0 }}>
+                        <span
+                          aria-hidden="true"
+                          style={{
+                            backgroundColor: color,
+                            borderRadius: ui.radius.pill,
+                            boxShadow: `0 0 0 3px ${ui.color.surface}`,
+                            flexShrink: 0,
+                            height: '30px',
+                            opacity: isIncluded ? 1 : 0.45,
+                            width: '4px',
+                          }}
+                        />
+                        <span style={{ minWidth: 0 }}>
+                          <strong
                             style={{
-                              alignItems: 'center',
-                               backgroundColor: ui.color.surfaceSelected,
-                               border: `1px solid ${ui.color.borderStrong}`,
-                               borderRadius: ui.radius.small,
-                               color: ui.color.primary,
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              flexShrink: 0,
-                              height: '22px',
-                              justifyContent: 'center',
-                              padding: 0,
-                              width: '22px',
+                              color: isIncluded ? ui.color.text : ui.color.textMuted,
+                              display: 'block',
+                              fontSize: '14px',
+                              fontWeight: 700,
+                              lineHeight: 1.25,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
                             }}
                           >
-                            <SquareArrowOutUpRight aria-hidden="true" size={14} strokeWidth={2.25} />
-                          </button>
-                        </div>
-                        <time
-                          dateTime={minimumDate}
-                          aria-label={`Projected low balance date: ${formatDate(minimumDate)}`}
-                          title={formatDate(minimumDate)}
-                          style={{ color: ui.color.textMuted, display: 'block', fontSize: '11px', lineHeight: 1.3, marginTop: '2px' }}
+                            {accountLabel(account)}
+                          </strong>
+                          <span
+                            style={{
+                              color: isIncluded ? ui.color.primary : ui.color.textDisabled,
+                              display: 'block',
+                              fontSize: '10px',
+                              fontWeight: 600,
+                              letterSpacing: '0.02em',
+                              lineHeight: 1.3,
+                              marginTop: '2px',
+                            }}
+                          >
+                            {isIncluded ? 'Included in projection' : 'Hidden from projection'}
+                          </span>
+                        </span>
+                      </span>
+                    </th>
+                    <td
+                      style={{
+                        borderBottom: `1px solid ${ui.color.border}`,
+                        borderLeft: `1px solid ${ui.color.border}`,
+                        boxSizing: 'border-box',
+                        padding: '12px 10px',
+                        verticalAlign: 'middle',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {typeof account.available_balance === 'number' && Number.isFinite(account.available_balance) ? (
+                        <>
+                          <strong
+                            style={{
+                              color: account.available_balance < 0 ? ui.color.danger : ui.color.text,
+                              display: 'block',
+                              fontSize: '16px',
+                              fontWeight: 700,
+                              lineHeight: 1.2,
+                            }}
                         >
-                          {compactDate(minimumDate)}
-                        </time>
-                      </>
-                    ) : '—'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                            {currencyFormatter.format(account.available_balance)}
+                          </strong>
+                          {currentBalanceDate && (
+                            <time
+                              dateTime={currentBalanceDate}
+                              aria-label={`Current balance date: ${formatDate(currentBalanceDate)}`}
+                              title={formatDate(currentBalanceDate)}
+                              style={{
+                                backgroundColor: ui.color.surfaceMuted,
+                                borderRadius: ui.radius.pill,
+                                color: ui.color.textMuted,
+                                display: 'inline-block',
+                                fontSize: '10px',
+                                fontWeight: 600,
+                                lineHeight: 1.3,
+                                marginTop: '5px',
+                                padding: '2px 6px',
+                              }}
+                            >
+                              As of {compactDate(currentBalanceDate)}
+                            </time>
+                          )}
+                        </>
+                      ) : (
+                        <span style={{ color: ui.color.textDisabled }}>—</span>
+                      )}
+                    </td>
+                    <td
+                      style={{
+                        borderBottom: `1px solid ${ui.color.border}`,
+                        borderLeft: `1px solid ${ui.color.border}`,
+                        boxSizing: 'border-box',
+                        padding: '12px 10px',
+                        verticalAlign: 'middle',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {minimumBalance != null && minimumDate ? (
+                        <>
+                          <div style={{ alignItems: 'center', display: 'flex', gap: '6px' }}>
+                            <strong
+                              style={{
+                                color: minimumBalance < 0 ? ui.color.danger : ui.color.warning,
+                                display: 'block',
+                                fontSize: '16px',
+                                fontWeight: 700,
+                                lineHeight: 1.2,
+                              }}
+                            >
+                              {currencyFormatter.format(minimumBalance)}
+                            </strong>
+                            <button
+                              type="button"
+                              aria-label={`Show the chart and transactions for the projected low balance on ${formatDate(minimumDate)}`}
+                              title={`Show chart and transactions for ${formatDate(minimumDate)}`}
+                              onClick={() => jumpToLowBalance(minimumDate)}
+                              style={{
+                                alignItems: 'center',
+                                backgroundColor: minimumBalance < 0 ? ui.color.dangerSoft : ui.color.warningSoft,
+                                border: `1px solid ${minimumBalance < 0 ? ui.color.dangerBorder : ui.color.warningBorder}`,
+                                borderRadius: ui.radius.pill,
+                                color: minimumBalance < 0 ? ui.color.danger : ui.color.warning,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                flexShrink: 0,
+                                height: '26px',
+                                justifyContent: 'center',
+                                padding: 0,
+                                width: '26px',
+                              }}
+                            >
+                              <SquareArrowOutUpRight aria-hidden="true" size={14} strokeWidth={2.25} />
+                            </button>
+                          </div>
+                          <time
+                            dateTime={minimumDate}
+                            aria-label={`Projected low balance date: ${formatDate(minimumDate)}`}
+                            title={formatDate(minimumDate)}
+                            style={{
+                              backgroundColor: minimumBalance < 0 ? ui.color.dangerSoft : ui.color.warningSoft,
+                              borderRadius: ui.radius.pill,
+                              color: minimumBalance < 0 ? ui.color.danger : ui.color.warning,
+                              display: 'inline-block',
+                              fontSize: '10px',
+                              fontWeight: 600,
+                              lineHeight: 1.3,
+                              marginTop: '5px',
+                              padding: '2px 6px',
+                            }}
+                          >
+                            Low on {compactDate(minimumDate)}
+                          </time>
+                        </>
+                      ) : (
+                        <span style={{ color: ui.color.textDisabled }}>—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
       {displayMode === 'placeholder' && (
