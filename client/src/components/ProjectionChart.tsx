@@ -681,42 +681,35 @@ export default function ProjectionChart({
                       }}
                     >
                       {minimumBalance != null && minimumDate ? (
-                        <>
-                          <div style={{ alignItems: 'center', display: 'flex', gap: '6px' }}>
-                            <strong
-                              style={{
-                                color: minimumBalance < 0 ? ui.color.danger : ui.color.warning,
-                                display: 'block',
-                                fontSize: '16px',
-                                fontWeight: 700,
-                                lineHeight: 1.2,
-                              }}
-                            >
-                              {currencyFormatter.format(minimumBalance)}
-                            </strong>
-                            <button
-                              type="button"
-                              aria-label={`Show the chart and transactions for the projected low balance on ${formatDate(minimumDate)}`}
-                              title={`Show chart and transactions for ${formatDate(minimumDate)}`}
-                              onClick={() => jumpToLowBalance(minimumDate)}
-                              style={{
-                                alignItems: 'center',
-                                backgroundColor: minimumBalance < 0 ? ui.color.dangerSoft : ui.color.warningSoft,
-                                border: `1px solid ${minimumBalance < 0 ? ui.color.dangerBorder : ui.color.warningBorder}`,
-                                borderRadius: ui.radius.pill,
-                                color: minimumBalance < 0 ? ui.color.danger : ui.color.warning,
-                                cursor: 'pointer',
-                                display: 'inline-flex',
-                                flexShrink: 0,
-                                height: '26px',
-                                justifyContent: 'center',
-                                padding: 0,
-                                width: '26px',
-                              }}
-                            >
-                              <SquareArrowOutUpRight aria-hidden="true" size={14} strokeWidth={2.25} />
-                            </button>
-                          </div>
+                        <button
+                          type="button"
+                          aria-label={`Show the chart and transactions for the projected low balance on ${formatDate(minimumDate)}`}
+                          title={`Show chart and transactions for ${formatDate(minimumDate)}`}
+                          onClick={() => jumpToLowBalance(minimumDate)}
+                          style={{
+                            alignItems: 'flex-start',
+                            backgroundColor: 'transparent',
+                            border: 0,
+                            color: 'inherit',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            padding: 0,
+                            textAlign: 'left',
+                            width: '100%',
+                          }}
+                        >
+                          <strong
+                            style={{
+                              color: minimumBalance < 0 ? ui.color.danger : ui.color.warning,
+                              display: 'block',
+                              fontSize: '16px',
+                              fontWeight: 700,
+                              lineHeight: 1.2,
+                            }}
+                          >
+                            {currencyFormatter.format(minimumBalance)}
+                          </strong>
                           <time
                             dateTime={minimumDate}
                             aria-label={`Projected low balance date: ${formatDate(minimumDate)}`}
@@ -735,7 +728,7 @@ export default function ProjectionChart({
                           >
                             Low on {compactDate(minimumDate)}
                           </time>
-                        </>
+                        </button>
                       ) : (
                         <span style={{ color: ui.color.textDisabled }}>—</span>
                       )}
