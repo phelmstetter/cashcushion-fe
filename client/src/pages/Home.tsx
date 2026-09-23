@@ -2137,7 +2137,18 @@ const Home = () => {
                 </div>
                 
                 <div style={{ alignItems: 'center', display: 'grid', gap: '12px', gridTemplateColumns: '96px minmax(0, 280px)', marginTop: '14px', minWidth: 0 }}>
-                  <span style={{ color: '#607d8b', fontSize: '15px', fontWeight: 600 }}>Cash flow</span>
+                  <span style={{ alignItems: 'center', color: '#607d8b', display: 'inline-flex', fontSize: '15px', fontWeight: 600, gap: '5px' }}>
+                    Cash flow
+                    <span
+                      data-testid="info-cash-flow"
+                      role="img"
+                      aria-label="Expense lowers the projected balance on the selected date. Income raises it."
+                      title="Expense lowers the projected balance on the selected date. Income raises it."
+                      style={{ color: '#607d8b', cursor: 'help', display: 'inline-flex' }}
+                    >
+                      <Info size={16} strokeWidth={2} aria-hidden="true" />
+                    </span>
+                  </span>
                   <div
                     role="group"
                     aria-label="Forecast cash-flow direction"
@@ -2231,11 +2242,6 @@ const Home = () => {
                         textAlign: 'center'
                       }}
                     />
-                    <span style={{ display: 'block', marginTop: '4px', color: '#666', fontSize: '12px' }}>
-                      {forecastDirection === 'expense'
-                        ? 'This lowers the projected balance on the selected date.'
-                        : 'This raises the projected balance on the selected date.'}
-                    </span>
                   </div>
                 </div>
 
