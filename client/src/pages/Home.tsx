@@ -1750,9 +1750,65 @@ const Home = () => {
                 </div>
 
                 {selectedTransaction ? (
-                  <p style={{ backgroundColor: '#f8fbfc', border: '1px solid #e0eaee', borderRadius: '8px', margin: '0 0 14px', padding: '10px 12px' }}>
-                    <strong>{selectedTransaction.merchant_name || selectedTransaction.counterparty_name}</strong>
-                  </p>
+                  (() => {
+                    const transactionName = selectedTransaction.merchant_name || selectedTransaction.counterparty_name;
+                    const { display: transactionAmount, isPositive } = formatAmount(selectedTransaction.amount);
+                    return (
+                      <div style={{
+                        alignItems: 'center',
+                        backgroundColor: '#E3F2FD',
+                        borderRadius: '8px',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                        display: 'flex',
+                        gap: '12px',
+                        minHeight: '68px',
+                        marginBottom: '14px',
+                        padding: '8px'
+                      }}>
+                        {selectedTransaction.logo_url ? (
+                          <img
+                            src={selectedTransaction.logo_url}
+                            alt={transactionName}
+                            style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                          />
+                        ) : (
+                          <div style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '50%',
+                            backgroundColor: '#e0e0e0',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '14px',
+                            fontWeight: 'bold',
+                            flexShrink: 0
+                          }}>
+                            {getInitials(transactionName)}
+                          </div>
+                        )}
+                        <div style={{
+                          flex: 1,
+                          minWidth: 0,
+                          fontWeight: 500,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden'
+                        }}>
+                          {transactionName}
+                        </div>
+                        <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                          <div style={{ color: isPositive ? 'green' : '#263238', fontSize: '16px', fontWeight: 600 }}>
+                            {transactionAmount}
+                          </div>
+                          <div style={{ color: '#666', fontSize: '14px' }}>
+                            {formatDate(selectedTransaction.date)}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()
                 ) : (
                   <div style={{ marginBottom: '16px' }}>
                     <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>
@@ -1861,37 +1917,78 @@ const Home = () => {
                   </div>
                 </div>
 
-                <div style={{ marginTop: '0' }}>
-                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>
-                    {forecastType === 'single' ? 'Date' : 'Starting Date'} <span aria-hidden="true">*</span>
+                <div style={{ alignItems: 'center', display: 'grid', gap: '12px', gridTemplateColumns: '96px minmax(0, 280px)', marginTop: '14px', minWidth: 0 }}>
+                  <label htmlFor="input-forecast-date" style={{ color: '#607d8b', fontSize: '15px', fontWeight: 600 }}>
+                    {forecastType === 'single' ? 'Date' : 'Starting Date'}
                   </label>
-                  <input 
-                    type="date"
-                    data-testid="input-forecast-date"
-                    value={forecastDate}
-                    onChange={(e) => setForecastDate(e.target.value)}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '8px',
-                      borderRadius: '4px',
-                      border: '1px solid #ccc',
-                      boxSizing: 'border-box'
-                    }}
-                  />
+                  <div style={{
+                    backgroundColor: '#f8fbfc',
+                    border: '1px solid #cbd9df',
+                    borderRadius: '8px',
+                    boxSizing: 'border-box',
+                    minWidth: 0,
+                    padding: '8px 10px 8px 26px',
+                    width: '100%'
+                  }}>
+                    <input
+                      id="input-forecast-date"
+                      type="date"
+                      data-testid="input-forecast-date"
+                      value={forecastDate}
+                      onChange={(e) => setForecastDate(e.target.value)}
+                      required
+                      style={{
+                        width: '100%',
+                        minWidth: 0,
+                        height: '20px',
+                        padding: 0,
+                        border: 'none',
+                        backgroundColor: 'transparent',
+                        boxSizing: 'border-box',
+                        color: '#263238',
+                        fontFamily: 'inherit',
+                        fontSize: '16px'
+                      }}
+                    />
+                  </div>
                 </div>
                 
-                <div style={{ marginTop: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 500 }}>Cash-flow direction</label>
-                  <div role="group" aria-label="Forecast cash-flow direction" style={{ display: 'flex', marginBottom: '10px' }}>
+                <div style={{ alignItems: 'center', display: 'grid', gap: '12px', gridTemplateColumns: '96px minmax(0, 280px)', marginTop: '14px', minWidth: 0 }}>
+                  <span style={{ color: '#607d8b', fontSize: '15px', fontWeight: 600 }}>Cash flow</span>
+                  <div
+                    role="group"
+                    aria-label="Forecast cash-flow direction"
+                    style={{
+                      alignItems: 'center',
+                      backgroundColor: '#e8eff2',
+                      border: '1px solid #cbd9df',
+                      borderRadius: '999px',
+                      boxSizing: 'border-box',
+                      display: 'flex',
+                      gap: '3px',
+                      height: '38px',
+                      padding: '3px'
+                    }}
+                  >
                     <button
                       type="button"
                       onClick={() => setForecastDirection('expense')}
                       aria-pressed={forecastDirection === 'expense'}
                       style={{
-                        flex: 1, padding: '8px', border: '1px solid #ccc', borderRadius: '4px 0 0 4px',
-                        background: forecastDirection === 'expense' ? '#37474f' : '#f5f5f5',
-                        color: forecastDirection === 'expense' ? 'white' : '#333', cursor: 'pointer'
+                        alignItems: 'center',
+                        backgroundColor: forecastDirection === 'expense' ? '#37474f' : 'transparent',
+                        border: 'none',
+                        borderRadius: '999px',
+                        color: forecastDirection === 'expense' ? 'white' : '#52636b',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flex: 1,
+                        fontSize: '15px',
+                        fontWeight: 600,
+                        height: '30px',
+                        justifyContent: 'center',
+                        lineHeight: '20px',
+                        padding: '0 10px'
                       }}
                     >
                       Expense
@@ -1901,39 +1998,62 @@ const Home = () => {
                       onClick={() => setForecastDirection('income')}
                       aria-pressed={forecastDirection === 'income'}
                       style={{
-                        flex: 1, padding: '8px', border: '1px solid #ccc', borderLeft: 'none', borderRadius: '0 4px 4px 0',
-                        background: forecastDirection === 'income' ? '#2e7d32' : '#f5f5f5',
-                        color: forecastDirection === 'income' ? 'white' : '#333', cursor: 'pointer'
+                        alignItems: 'center',
+                        backgroundColor: forecastDirection === 'income' ? '#2e7d32' : 'transparent',
+                        border: 'none',
+                        borderRadius: '999px',
+                        color: forecastDirection === 'income' ? 'white' : '#52636b',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flex: 1,
+                        fontSize: '15px',
+                        fontWeight: 600,
+                        height: '30px',
+                        justifyContent: 'center',
+                        lineHeight: '20px',
+                        padding: '0 10px'
                       }}
                     >
                       Income
                     </button>
                   </div>
-                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>
-                    Amount (enter a positive number) <span aria-hidden="true">*</span>
+                </div>
+
+                <div style={{ alignItems: 'center', display: 'grid', gap: '12px', gridTemplateColumns: '96px minmax(0, 280px)', marginTop: '14px', minWidth: 0 }}>
+                  <label htmlFor="input-forecast-amount" style={{ color: '#607d8b', fontSize: '15px', fontWeight: 600 }}>
+                    Amount <span aria-hidden="true">*</span>
                   </label>
-                  <input 
-                    type="number" 
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                    data-testid="input-forecast-amount"
-                    value={forecastAmount}
-                    onChange={(e) => setForecastAmount(e.target.value)}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '8px',
-                      borderRadius: '4px',
-                      border: '1px solid #ccc',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                  <span style={{ display: 'block', marginTop: '4px', color: '#666', fontSize: '12px' }}>
-                    {forecastDirection === 'expense'
-                      ? 'This lowers the projected balance on the selected date.'
-                      : 'This raises the projected balance on the selected date.'}
-                  </span>
+                  <div style={{ minWidth: 0, width: '100%' }}>
+                    <input
+                      id="input-forecast-amount"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="$ --"
+                      data-testid="input-forecast-amount"
+                      value={forecastAmount ? `$${formatForecastInputAmount(forecastAmount)}` : ''}
+                      onChange={(e) => setForecastAmount(e.target.value.replace(/[$,]/g, ''))}
+                      required
+                      style={{
+                        width: '100%',
+                        minWidth: 0,
+                        height: '38px',
+                        padding: '8px 10px',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd9df',
+                        backgroundColor: '#f8fbfc',
+                        boxSizing: 'border-box',
+                        color: '#263238',
+                        fontFamily: 'inherit',
+                        fontSize: '16px',
+                        textAlign: 'center'
+                      }}
+                    />
+                    <span style={{ display: 'block', marginTop: '4px', color: '#666', fontSize: '12px' }}>
+                      {forecastDirection === 'expense'
+                        ? 'This lowers the projected balance on the selected date.'
+                        : 'This raises the projected balance on the selected date.'}
+                    </span>
+                  </div>
                 </div>
 
                 {forecastType === 'every_x_days' && (
