@@ -3,6 +3,7 @@ import { useLocation } from 'wouter';
 import { usePlaidLink } from 'react-plaid-link';
 import { auth, getAccounts, type Account } from '@/lib/firebase';
 import { apiFetch } from '@/lib/queryClient';
+import { sharedStyles, ui } from '@/lib/uiTheme';
 
 // Many US banks require an OAuth login step in Plaid Link: the user gets
 // redirected to their bank's real login page and back via a full page
@@ -270,13 +271,13 @@ export default function LinkedAccounts() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: ui.color.canvas }}>
       <div style={{
         position: 'sticky',
         top: 0,
         zIndex: 100,
-        backgroundColor: 'white',
-        borderBottom: '1px solid #e0e0e0',
+        backgroundColor: ui.color.surface,
+        borderBottom: `1px solid ${ui.color.border}`,
         padding: '12px 16px',
         display: 'flex',
         alignItems: 'center',
@@ -291,7 +292,7 @@ export default function LinkedAccounts() {
             border: 'none',
             cursor: 'pointer',
             fontSize: '20px',
-            color: '#333',
+            color: ui.color.text,
             padding: '4px 8px',
             display: 'flex',
             alignItems: 'center'
@@ -299,7 +300,7 @@ export default function LinkedAccounts() {
         >
           ←
         </button>
-        <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#333' }}>
+        <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: ui.color.text, letterSpacing: '-0.01em' }}>
           Linked Accounts
         </h1>
       </div>
@@ -316,14 +317,15 @@ export default function LinkedAccounts() {
             marginBottom: error ? '8px' : '16px',
             fontSize: '15px',
             fontWeight: 600,
-            color: 'white',
-            backgroundColor: linking ? '#888' : '#333',
+            color: ui.color.surface,
+            backgroundColor: linking ? ui.color.textDisabled : ui.color.primary,
             border: 'none',
-            borderRadius: '8px',
+            borderRadius: ui.radius.control,
+            boxShadow: linking ? 'none' : ui.shadow.card,
             cursor: linking ? 'not-allowed' : 'pointer'
           }}
-          onMouseEnter={(e) => { if (!linking) e.currentTarget.style.backgroundColor = '#444'; }}
-          onMouseLeave={(e) => { if (!linking) e.currentTarget.style.backgroundColor = '#333'; }}
+          onMouseEnter={(e) => { if (!linking) e.currentTarget.style.backgroundColor = ui.color.primaryHover; }}
+          onMouseLeave={(e) => { if (!linking) e.currentTarget.style.backgroundColor = ui.color.primary; }}
         >
           {linking ? 'Linking...' : '+ Add Bank Account'}
         </button>
@@ -334,28 +336,25 @@ export default function LinkedAccounts() {
             style={{
               marginBottom: '16px',
               padding: '10px 14px',
-              backgroundColor: '#fef2f2',
-              border: '1px solid #fecaca',
-              borderRadius: '8px',
+              ...sharedStyles.alertError,
               fontSize: '14px',
-              color: '#b91c1c'
             }}
           >
             {error}
             <button
               onClick={loadAccounts}
-              style={{ display: 'block', marginTop: '8px', padding: '5px 9px', border: '1px solid #b91c1c', borderRadius: '4px', background: 'white', color: '#b91c1c', cursor: 'pointer' }}
+              style={{ display: 'block', marginTop: '8px', padding: '5px 9px', border: `1px solid ${ui.color.danger}`, borderRadius: ui.radius.small, background: ui.color.surface, color: ui.color.danger, cursor: 'pointer' }}
             >
               Retry
             </button>
           </div>
         )}
         {loading ? (
-          <div aria-busy="true" style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
+          <div aria-busy="true" style={{ textAlign: 'center', padding: '40px', color: ui.color.textMuted }}>
             Loading your linked accounts…
           </div>
         ) : Object.keys(grouped).length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
+          <div style={{ textAlign: 'center', padding: '40px', color: ui.color.textMuted }}>
             No linked accounts found. Add a bank account to see balances and transactions here.
           </div>
         ) : (
@@ -364,19 +363,17 @@ export default function LinkedAccounts() {
               key={instId}
               data-testid={`card-institution-${instId}`}
               style={{
-                backgroundColor: 'white',
-                borderRadius: '8px',
-                border: '1px solid #e0e0e0',
+                ...sharedStyles.card,
                 marginBottom: '16px',
                 overflow: 'hidden'
               }}
             >
               <div style={{
                 padding: '14px 16px',
-                borderBottom: '1px solid #eee',
+                borderBottom: `1px solid ${ui.color.border}`,
                 fontSize: '16px',
-                fontWeight: 600,
-                color: '#333'
+                fontWeight: 700,
+                color: ui.color.text
               }}>
                 {group.name}
               </div>
@@ -389,13 +386,13 @@ export default function LinkedAccounts() {
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    borderBottom: '1px solid #f0f0f0'
+                    borderBottom: `1px solid ${ui.color.border}`
                   }}
                 >
-                  <div style={{ fontSize: '14px', color: '#333', fontWeight: 500 }}>
+                  <div style={{ fontSize: '14px', color: ui.color.text, fontWeight: 500 }}>
                     {acct.name} {acct.mask}
                   </div>
-                  <div style={{ fontSize: '15px', fontWeight: 600, color: '#333' }}>
+                  <div style={{ fontSize: '15px', fontWeight: 700, color: ui.color.text }}>
                     {acct.available_balance != null
                       ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(acct.available_balance)
                       : '—'}
@@ -407,7 +404,7 @@ export default function LinkedAccounts() {
                 display: 'flex',
                 gap: '12px',
                 flexWrap: 'wrap',
-                borderTop: '1px solid #eee'
+                borderTop: `1px solid ${ui.color.border}`
               }}>
                 <button
                   data-testid={`button-add-remove-accounts-${instId}`}
@@ -416,14 +413,14 @@ export default function LinkedAccounts() {
                   title={!group.itemId ? 'Re-link this bank to manage accounts' : undefined}
                   style={{
                     fontSize: '13px',
-                    color: (!group.itemId || updatingItemId === group.itemId || linking) ? '#999' : '#555',
+                    color: (!group.itemId || updatingItemId === group.itemId || linking) ? ui.color.textDisabled : ui.color.textMuted,
                     background: 'none',
-                    border: `1px solid ${(!group.itemId || updatingItemId === group.itemId || linking) ? '#e0e0e0' : '#ddd'}`,
-                    borderRadius: '6px',
+                    border: `1px solid ${(!group.itemId || updatingItemId === group.itemId || linking) ? ui.color.border : ui.color.borderStrong}`,
+                    borderRadius: ui.radius.control,
                     padding: '6px 12px',
                     cursor: (!group.itemId || updatingItemId === group.itemId || linking) ? 'not-allowed' : 'pointer'
                   }}
-                  onMouseEnter={(e) => { if (group.itemId && updatingItemId !== group.itemId && !linking) e.currentTarget.style.backgroundColor = '#f5f5f5'; }}
+                  onMouseEnter={(e) => { if (group.itemId && updatingItemId !== group.itemId && !linking) e.currentTarget.style.backgroundColor = ui.color.surfaceMuted; }}
                   onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                 >
                   {updatingItemId !== null && updatingItemId === group.itemId ? 'Loading...' : 'Add/Remove Accounts'}
@@ -435,14 +432,14 @@ export default function LinkedAccounts() {
                   title={!group.itemId ? 'Re-link this bank to sync' : undefined}
                   style={{
                     fontSize: '13px',
-                    color: (!group.itemId || syncingItemId === group.itemId) ? '#999' : '#555',
+                    color: (!group.itemId || syncingItemId === group.itemId) ? ui.color.textDisabled : ui.color.textMuted,
                     background: 'none',
-                    border: `1px solid ${(!group.itemId || syncingItemId === group.itemId) ? '#e0e0e0' : '#ddd'}`,
-                    borderRadius: '6px',
+                    border: `1px solid ${(!group.itemId || syncingItemId === group.itemId) ? ui.color.border : ui.color.borderStrong}`,
+                    borderRadius: ui.radius.control,
                     padding: '6px 12px',
                     cursor: (!group.itemId || syncingItemId === group.itemId) ? 'not-allowed' : 'pointer'
                   }}
-                  onMouseEnter={(e) => { if (group.itemId && syncingItemId !== group.itemId) e.currentTarget.style.backgroundColor = '#f5f5f5'; }}
+                  onMouseEnter={(e) => { if (group.itemId && syncingItemId !== group.itemId) e.currentTarget.style.backgroundColor = ui.color.surfaceMuted; }}
                   onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                 >
                   {syncingItemId === group.itemId ? 'Syncing...' : 'Sync'}
@@ -456,7 +453,7 @@ export default function LinkedAccounts() {
                       <div role="alertdialog" aria-label={`Confirm removal of ${group.name}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         <span
                           data-testid={`text-confirm-remove-${instId}`}
-                          style={{ fontSize: '13px', color: '#b91c1c' }}
+                          style={{ fontSize: '13px', color: ui.color.danger }}
                         >
                           Remove {group.accounts.length} account{group.accounts.length === 1 ? '' : 's'} from {group.name}? Bank-managed transactions and forecasts for these accounts will also be removed.
                         </span>
@@ -468,15 +465,13 @@ export default function LinkedAccounts() {
                           disabled={isRemoving}
                           style={{
                             fontSize: '13px',
-                            color: 'white',
-                            backgroundColor: '#c44',
+                            ...sharedStyles.destructiveButton,
                             border: 'none',
-                            borderRadius: '6px',
                             padding: '6px 12px',
                             cursor: isRemoving ? 'not-allowed' : 'pointer'
                           }}
-                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#a33'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#c44'; }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = ui.color.dangerHover; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ui.color.danger; }}
                         >
                           Remove
                         </button>
@@ -485,14 +480,14 @@ export default function LinkedAccounts() {
                           onClick={() => setConfirmRemoveKey(null)}
                           style={{
                             fontSize: '13px',
-                            color: '#555',
+                            color: ui.color.textMuted,
                             background: 'none',
-                            border: '1px solid #ddd',
-                            borderRadius: '6px',
+                            border: `1px solid ${ui.color.borderStrong}`,
+                            borderRadius: ui.radius.control,
                             padding: '6px 12px',
                             cursor: 'pointer'
                           }}
-                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f5f5f5'; }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = ui.color.surfaceMuted; }}
                           onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                         >
                           Cancel
@@ -511,14 +506,14 @@ export default function LinkedAccounts() {
                       disabled={isRemoving}
                       style={{
                         fontSize: '13px',
-                        color: isRemoving ? '#999' : '#c44',
+                        color: isRemoving ? ui.color.textDisabled : ui.color.danger,
                         background: 'none',
-                        border: `1px solid ${isRemoving ? '#ddd' : '#e0c0c0'}`,
-                        borderRadius: '6px',
+                        border: `1px solid ${isRemoving ? ui.color.borderStrong : ui.color.dangerBorder}`,
+                        borderRadius: ui.radius.control,
                         padding: '6px 12px',
                         cursor: isRemoving ? 'not-allowed' : 'pointer'
                       }}
-                      onMouseEnter={(e) => { if (!isRemoving) e.currentTarget.style.backgroundColor = '#fef5f5'; }}
+                      onMouseEnter={(e) => { if (!isRemoving) e.currentTarget.style.backgroundColor = ui.color.dangerSoft; }}
                       onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                     >
                       {isRemoving ? 'Removing...' : 'Remove Bank'}
@@ -532,8 +527,8 @@ export default function LinkedAccounts() {
                   style={{
                     padding: '8px 16px',
                     fontSize: '13px',
-                    color: syncStatus.ok ? '#2a7a3a' : '#b91c1c',
-                    borderTop: '1px solid #eee'
+                    color: syncStatus.ok ? ui.color.success : ui.color.danger,
+                    borderTop: `1px solid ${ui.color.border}`
                   }}
                 >
                   {syncStatus.message}

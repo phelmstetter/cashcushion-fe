@@ -1,4 +1,5 @@
 import type { Account } from "@/lib/firebase";
+import { sharedStyles, ui } from "@/lib/uiTheme";
 import { MessageCircle, SquareArrowOutUpRight } from "lucide-react";
 import { useEffect, useRef, useState, type TouchEvent } from "react";
 import {
@@ -24,7 +25,7 @@ type ProjectionChartProps = {
   onAccountToggle: (accountId: string) => void;
 };
 
-const CHART_COLORS = ['#1976d2', '#e53935', '#43a047', '#fb8c00', '#8e24aa', '#00acc1', '#d81b60', '#6d4c41'];
+const CHART_COLORS = ui.chartSeries;
 const CALLOUT_TRANSITION_MS = 220;
 const currencyFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -212,8 +213,7 @@ export default function ProjectionChart({
         <div
           data-testid="account-balance-summary"
           style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '8px',
+            ...sharedStyles.card,
             boxSizing: 'border-box',
             flex: '1 1 0',
             maxHeight: 'none',
@@ -236,16 +236,16 @@ export default function ProjectionChart({
               <col style={{ width: '29%' }} />
             </colgroup>
             <thead>
-              <tr style={{ color: '#405866', fontSize: '12px', textAlign: 'left' }}>
-                <th scope="col" style={{ backgroundColor: '#ffffff', boxSizing: 'border-box', padding: '8px 4px 7px', position: 'sticky', textAlign: 'center', top: 0, zIndex: 1 }}>Show</th>
-                <th scope="col" style={{ backgroundColor: '#ffffff', boxSizing: 'border-box', padding: '8px 7px 7px', position: 'sticky', top: 0, zIndex: 1 }}>Account</th>
-                <th scope="col" style={{ backgroundColor: '#ffffff', boxSizing: 'border-box', padding: '8px 7px 7px', position: 'sticky', top: 0, whiteSpace: 'nowrap', zIndex: 1 }}>Current balance</th>
-                <th scope="col" style={{ backgroundColor: '#ffffff', boxSizing: 'border-box', padding: '8px 6px 7px', position: 'sticky', top: 0, whiteSpace: 'nowrap', zIndex: 1 }}>Low balance</th>
+              <tr style={{ color: ui.color.textMuted, fontSize: '12px', textAlign: 'left' }}>
+                <th scope="col" style={{ backgroundColor: ui.color.surface, boxSizing: 'border-box', padding: '8px 4px 7px', position: 'sticky', textAlign: 'center', top: 0, zIndex: 1 }}>Show</th>
+                <th scope="col" style={{ backgroundColor: ui.color.surface, boxSizing: 'border-box', padding: '8px 7px 7px', position: 'sticky', top: 0, zIndex: 1 }}>Account</th>
+                <th scope="col" style={{ backgroundColor: ui.color.surface, boxSizing: 'border-box', padding: '8px 7px 7px', position: 'sticky', top: 0, whiteSpace: 'nowrap', zIndex: 1 }}>Current balance</th>
+                <th scope="col" style={{ backgroundColor: ui.color.surface, boxSizing: 'border-box', padding: '8px 6px 7px', position: 'sticky', top: 0, whiteSpace: 'nowrap', zIndex: 1 }}>Low balance</th>
               </tr>
             </thead>
             <tbody>
               {accountSummaries.map(({ account, color, isIncluded, minimumBalance, minimumDate }) => (
-                <tr key={account.account_id} style={{ borderTop: '1px solid #dce5e9', opacity: isIncluded ? 1 : 0.55 }}>
+                <tr key={account.account_id} style={{ borderTop: `1px solid ${ui.color.border}`, opacity: isIncluded ? 1 : 0.55 }}>
                   <td style={{ boxSizing: 'border-box', padding: '10px 4px', textAlign: 'center', verticalAlign: 'top' }}>
                     <input
                       type="checkbox"
@@ -258,7 +258,7 @@ export default function ProjectionChart({
                   <th
                     scope="row"
                     style={{
-                      color: '#263238',
+                      color: ui.color.text,
                       boxSizing: 'border-box',
                       fontWeight: 600,
                       overflowWrap: 'anywhere',
@@ -280,7 +280,7 @@ export default function ProjectionChart({
                     />
                     {accountLabel(account)}
                   </th>
-                  <td style={{ boxSizing: 'border-box', color: '#263238', padding: '10px 7px', verticalAlign: 'top', whiteSpace: 'nowrap' }}>
+                    <td style={{ boxSizing: 'border-box', color: ui.color.text, padding: '10px 7px', verticalAlign: 'top', whiteSpace: 'nowrap' }}>
                     {typeof account.available_balance === 'number' && Number.isFinite(account.available_balance) ? (
                       <>
                         <strong style={{ display: 'block', fontSize: '16px', lineHeight: 1.25 }}>{currencyFormatter.format(account.available_balance)}</strong>
@@ -289,7 +289,7 @@ export default function ProjectionChart({
                             dateTime={currentBalanceDate}
                             aria-label={`Current balance date: ${formatDate(currentBalanceDate)}`}
                             title={formatDate(currentBalanceDate)}
-                            style={{ color: '#607d8b', display: 'block', fontSize: '11px', lineHeight: 1.3, marginTop: '2px' }}
+                            style={{ color: ui.color.textMuted, display: 'block', fontSize: '11px', lineHeight: 1.3, marginTop: '2px' }}
                           >
                             {compactDate(currentBalanceDate)}
                           </time>
@@ -297,7 +297,7 @@ export default function ProjectionChart({
                       </>
                     ) : '—'}
                   </td>
-                  <td style={{ boxSizing: 'border-box', color: '#37474f', padding: '10px 6px', verticalAlign: 'top', whiteSpace: 'nowrap' }}>
+                   <td style={{ boxSizing: 'border-box', color: ui.color.text, padding: '10px 6px', verticalAlign: 'top', whiteSpace: 'nowrap' }}>
                     {minimumBalance != null && minimumDate ? (
                       <>
                         <div style={{ alignItems: 'center', display: 'flex', gap: '4px' }}>
@@ -309,10 +309,10 @@ export default function ProjectionChart({
                             onClick={() => jumpToLowBalance(minimumDate)}
                             style={{
                               alignItems: 'center',
-                              backgroundColor: '#edf4f7',
-                              border: '1px solid #b8ccd6',
-                              borderRadius: '4px',
-                              color: '#405f70',
+                               backgroundColor: ui.color.surfaceSelected,
+                               border: `1px solid ${ui.color.borderStrong}`,
+                               borderRadius: ui.radius.small,
+                               color: ui.color.primary,
                               cursor: 'pointer',
                               display: 'inline-flex',
                               flexShrink: 0,
@@ -329,7 +329,7 @@ export default function ProjectionChart({
                           dateTime={minimumDate}
                           aria-label={`Projected low balance date: ${formatDate(minimumDate)}`}
                           title={formatDate(minimumDate)}
-                          style={{ color: '#607d8b', display: 'block', fontSize: '11px', lineHeight: 1.3, marginTop: '2px' }}
+                          style={{ color: ui.color.textMuted, display: 'block', fontSize: '11px', lineHeight: 1.3, marginTop: '2px' }}
                         >
                           {compactDate(minimumDate)}
                         </time>
@@ -347,11 +347,9 @@ export default function ProjectionChart({
           data-testid="projection-placeholder"
           style={{
             alignItems: 'center',
-            backgroundColor: '#ffffff',
-            border: '1px solid #eee',
-            borderRadius: '8px',
+            ...sharedStyles.card,
             boxSizing: 'border-box',
-            color: '#607d8b',
+            color: ui.color.textMuted,
             display: 'flex',
             flex: '1 1 0',
             fontSize: '14px',
@@ -369,9 +367,7 @@ export default function ProjectionChart({
           flex: '1 1 0',
           minHeight: 0,
           position: 'relative',
-          backgroundColor: 'white',
-          border: '1px solid #eee',
-          borderRadius: '8px',
+          ...sharedStyles.card,
           overflow: 'hidden',
         }}
       >
@@ -412,7 +408,7 @@ export default function ProjectionChart({
               />
               <ReferenceLine
                 y={0}
-                stroke="#999"
+                stroke={ui.color.chartZero}
                 strokeDasharray="3 3"
                 strokeWidth={1}
                 ifOverflow="extendDomain"
@@ -432,7 +428,7 @@ export default function ProjectionChart({
                 <>
                   <ReferenceLine
                     x={selectedChartDate}
-                    stroke="#78909c"
+                    stroke={ui.color.chartSelection}
                     strokeWidth={1}
                   />
                   {accountSummaries.filter(({ isIncluded }) => isIncluded).map(({ account, color }) => {
@@ -446,7 +442,7 @@ export default function ProjectionChart({
                         y={balance}
                         r={4}
                         fill={color}
-                        stroke="#ffffff"
+                        stroke={ui.color.surface}
                         strokeWidth={2}
                         onClick={openCallout}
                         style={{ cursor: calloutOpen ? 'default' : 'pointer' }}
@@ -458,7 +454,7 @@ export default function ProjectionChart({
             </LineChart>
           </ResponsiveContainer>
         ) : (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#999', fontSize: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: ui.color.textMuted, fontSize: '14px' }}>
             {accounts.length > 0 ? 'No accounts included' : 'No account data'}
           </div>
         )}
@@ -467,10 +463,9 @@ export default function ProjectionChart({
             data-testid="chart-balance-callout"
             aria-label={`Projected balances on ${formatDate(selectedChartDate)}`}
             style={{
-              backgroundColor: '#ffffff',
-              border: '1px solid #b9c8d0',
-              borderRadius: '6px',
-              boxShadow: '0 2px 7px rgba(45, 65, 78, 0.24)',
+              ...sharedStyles.card,
+              borderRadius: ui.radius.control,
+              boxShadow: ui.shadow.raised,
               boxSizing: 'border-box',
               left: calloutClosing ? 'calc(100% - 12px)' : calloutLeft,
               maxHeight: '55%',
@@ -497,7 +492,7 @@ export default function ProjectionChart({
                 background: 'transparent',
                 border: 'none',
                 borderRadius: '50%',
-                color: '#607d8b',
+                color: ui.color.textMuted,
                 cursor: 'pointer',
                 display: 'inline-flex',
                 fontSize: '16px',
@@ -517,9 +512,9 @@ export default function ProjectionChart({
             <div
               aria-hidden="true"
               style={{
-                backgroundColor: '#ffffff',
-                borderBottom: '1px solid #b9c8d0',
-                borderRight: '1px solid #b9c8d0',
+                backgroundColor: ui.color.surface,
+                borderBottom: `1px solid ${ui.color.borderStrong}`,
+                borderRight: `1px solid ${ui.color.borderStrong}`,
                 bottom: '-5px',
                 height: '8px',
                 left: '50%',
@@ -531,7 +526,7 @@ export default function ProjectionChart({
             <time
               dateTime={selectedChartDate}
               style={{
-                color: '#405866',
+                color: ui.color.text,
                 display: 'block',
                 fontSize: '12px',
                 fontWeight: 700,
@@ -549,7 +544,7 @@ export default function ProjectionChart({
                   key={account.account_id}
                   style={{
                     alignItems: 'center',
-                    color: '#333',
+                    color: ui.color.text,
                     display: 'flex',
                     fontSize: '12px',
                     gap: '5px',
@@ -590,11 +585,11 @@ export default function ProjectionChart({
             title="Reopen call-out"
             style={{
               alignItems: 'center',
-              backgroundColor: '#f4f8fa',
-              border: '1px solid #78909c',
+               backgroundColor: ui.color.surfaceSelected,
+               border: `1px solid ${ui.color.chartSelection}`,
               borderRadius: '50%',
-              boxShadow: '0 2px 6px rgba(45, 65, 78, 0.22)',
-              color: '#526b7c',
+              boxShadow: ui.shadow.raised,
+               color: ui.color.primary,
               cursor: 'pointer',
               display: 'inline-flex',
               height: '30px',
@@ -649,10 +644,10 @@ export default function ProjectionChart({
                 disabled={isDisabled}
                 onClick={() => selectDisplayMode(view.mode)}
                 style={{
-                  backgroundColor: isActive ? '#405f70' : '#b8cbd3',
-                  border: '1px solid rgba(255, 255, 255, 0.85)',
+                  backgroundColor: isActive ? ui.color.primary : ui.color.borderStrong,
+                  border: `1px solid ${ui.color.surface}`,
                   borderRadius: '50%',
-                  boxShadow: '0 1px 3px rgba(45, 65, 78, 0.28)',
+                  boxShadow: ui.shadow.card,
                   cursor: isDisabled ? 'not-allowed' : 'pointer',
                   height: '8px',
                   opacity: isDisabled ? 0.45 : 1,
@@ -668,9 +663,9 @@ export default function ProjectionChart({
       <div
         style={{
           alignItems: 'center',
-          background: 'linear-gradient(180deg, #f8fbfc 0%, #edf3f6 100%)',
-          borderTop: '1px solid #c8d6dd',
-          boxShadow: '0 7px 12px -10px rgba(45, 65, 78, 0.72)',
+          background: ui.color.surface,
+          borderTop: `1px solid ${ui.color.border}`,
+          boxShadow: ui.shadow.card,
           display: 'flex',
           flexShrink: 0,
           justifyContent: 'center',
@@ -696,7 +691,7 @@ export default function ProjectionChart({
             style={{
               background: 'none',
               border: 'none',
-              color: '#607d8b',
+               color: ui.color.textMuted,
               cursor: previousView.mode === 'summary' && accounts.length === 0 ? 'not-allowed' : 'pointer',
               fontSize: '12px',
               justifySelf: 'start',
@@ -713,7 +708,7 @@ export default function ProjectionChart({
             {previousView.label}
           </button>
           <div style={{ alignItems: 'center', display: 'flex', justifyContent: 'center', minWidth: '120px' }}>
-            <strong style={{ color: '#405866', fontSize: '15px', lineHeight: 1.2 }}>
+             <strong style={{ color: ui.color.text, fontSize: '15px', lineHeight: 1.2 }}>
               {PROJECTION_VIEWS[displayModeIndex].label}
             </strong>
           </div>
@@ -725,7 +720,7 @@ export default function ProjectionChart({
             style={{
               background: 'none',
               border: 'none',
-              color: '#607d8b',
+               color: ui.color.textMuted,
               cursor: nextView.mode === 'summary' && accounts.length === 0 ? 'not-allowed' : 'pointer',
               fontSize: '12px',
               justifySelf: 'end',

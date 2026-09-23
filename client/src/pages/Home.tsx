@@ -8,6 +8,7 @@ import {
   type ActivityItem,
 } from "@/lib/activityBalances";
 import { getDashboardContentPadding } from "@/lib/dashboardLayout";
+import { sharedStyles, ui } from "@/lib/uiTheme";
 import { useLocation } from "wouter";
 import { Info, Trash2 } from "lucide-react";
 
@@ -24,14 +25,11 @@ function ProjectionChartLoading() {
       aria-busy="true"
       style={{
          height: `${CHART_WINDOW_MIN}vh`,
-        backgroundColor: 'white',
-        borderRadius: '8px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+         ...sharedStyles.card,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        border: '1px solid #eee',
-        color: '#666',
+         color: ui.color.textMuted,
         fontSize: '14px'
       }}
     >
@@ -61,7 +59,7 @@ function InfoHint({ active, label, onToggle, testId, text }: InfoHintProps) {
           alignItems: 'center',
           background: 'none',
           border: 'none',
-          color: '#607d8b',
+          color: ui.color.textMuted,
           cursor: 'pointer',
           display: 'inline-flex',
           justifyContent: 'center',
@@ -74,10 +72,10 @@ function InfoHint({ active, label, onToggle, testId, text }: InfoHintProps) {
         <span
           role="tooltip"
           style={{
-            backgroundColor: '#263238',
-            borderRadius: '6px',
-            boxShadow: '0 3px 10px rgba(38, 50, 56, 0.28)',
-            color: 'white',
+            backgroundColor: ui.color.text,
+            borderRadius: ui.radius.control,
+            boxShadow: ui.shadow.raised,
+            color: ui.color.surface,
             fontSize: '12px',
             fontWeight: 400,
             left: '50%',
@@ -943,10 +941,10 @@ const Home = () => {
         top: 0,
         left: 0,
         right: 0,
-        backgroundColor: 'white',
+        backgroundColor: ui.color.surface,
         zIndex: 999,
-        borderBottom: '1px solid #eee',
-        boxShadow: '0 1px 4px rgba(0,0,0,0.08)'
+        borderBottom: `1px solid ${ui.color.border}`,
+        boxShadow: ui.shadow.card
       }}>
         <div style={{
           maxWidth: '600px',
@@ -957,7 +955,7 @@ const Home = () => {
           alignItems: 'center',
           gap: '12px'
         }}>
-          <h1 style={{ margin: 0, fontSize: '20px', whiteSpace: 'nowrap' }}>CashCushion</h1>
+          <h1 style={{ color: ui.color.text, fontSize: '20px', fontWeight: 800, letterSpacing: '-0.03em', margin: 0, whiteSpace: 'nowrap' }}>CashCushion</h1>
           <select
             data-testid="select-company-filter"
             value={companyFilter}
@@ -967,9 +965,8 @@ const Home = () => {
               minWidth: '0',
               padding: '6px 8px',
               fontSize: '13px',
-              borderRadius: '4px',
-              border: '1px solid #ccc',
-              backgroundColor: 'white',
+              ...sharedStyles.input,
+              borderRadius: ui.radius.control,
               overflow: 'hidden',
               textOverflow: 'ellipsis'
             }}
@@ -989,7 +986,7 @@ const Home = () => {
               aria-expanded={profileMenuOpen}
               style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', border: 'none', background: 'transparent', borderRadius: '4px' }}
             >
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke={ui.color.textMuted} strokeWidth="2" strokeLinecap="round">
                 <line x1="3" y1="5" x2="17" y2="5" />
                 <line x1="3" y1="10" x2="17" y2="10" />
                 <line x1="3" y1="15" x2="17" y2="15" />
@@ -1006,15 +1003,14 @@ const Home = () => {
                   position: 'absolute',
                   top: '40px',
                   right: 0,
-                  backgroundColor: 'white',
-                  border: '1px solid #ddd',
-                  borderRadius: '6px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  ...sharedStyles.card,
+                  borderRadius: ui.radius.control,
+                  boxShadow: ui.shadow.raised,
                   zIndex: 1001,
                   minWidth: '200px',
                   overflow: 'hidden'
                 }}>
-                  <div style={{ padding: '12px 14px', borderBottom: '1px solid #eee', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ padding: '12px 14px', borderBottom: `1px solid ${ui.color.border}`, display: 'flex', alignItems: 'center', gap: '10px' }}>
                     {currentUser?.photoURL ? (
                       <img
                         src={currentUser.photoURL}
@@ -1027,7 +1023,7 @@ const Home = () => {
                         width: '32px',
                         height: '32px',
                         borderRadius: '50%',
-                        backgroundColor: '#e0e0e0',
+                        backgroundColor: ui.color.surfaceMuted,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -1039,7 +1035,7 @@ const Home = () => {
                       </div>
                     )}
                     {currentUser?.email && (
-                      <span style={{ fontSize: '12px', color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontSize: '12px', color: ui.color.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {currentUser.email}
                       </span>
                     )}
@@ -1065,18 +1061,18 @@ const Home = () => {
                         padding: '10px 14px',
                         fontSize: '14px',
                         textAlign: 'left',
-                        backgroundColor: 'white',
+                        backgroundColor: ui.color.surface,
                         border: 'none',
                         cursor: 'pointer',
-                        color: item.disabled ? '#999' : '#333'
+                        color: item.disabled ? ui.color.textDisabled : ui.color.text
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f5f5f5')}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = ui.color.surfaceMuted)}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = ui.color.surface)}
                     >
                       {item.label}
                     </button>
                   ))}
-                  <div style={{ borderTop: '1px solid #eee' }} />
+                  <div style={{ borderTop: `1px solid ${ui.color.border}` }} />
                   <button
                     data-testid="button-sign-out"
                     onClick={() => {
@@ -1089,13 +1085,13 @@ const Home = () => {
                       padding: '10px 14px',
                       fontSize: '14px',
                       textAlign: 'left',
-                      backgroundColor: 'white',
+                      backgroundColor: ui.color.surface,
                       border: 'none',
                       cursor: 'pointer',
-                      color: '#d32f2f'
+                      color: ui.color.danger
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f5f5f5')}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = ui.color.dangerSoft)}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = ui.color.surface)}
                   >
                     Sign Out
                   </button>
@@ -1112,9 +1108,9 @@ const Home = () => {
         left: 0,
         right: 0,
         zIndex: 998,
-        backgroundColor: '#f5f5f5',
-        borderBottom: '1px solid #c8d6dd',
-        boxShadow: '0 5px 13px rgba(45, 65, 78, 0.18)',
+        backgroundColor: ui.color.canvas,
+        borderBottom: `1px solid ${ui.color.border}`,
+        boxShadow: ui.shadow.raised,
       }}>
         <div style={{ maxWidth: '600px', margin: '0 auto', padding: '2px 2px 6px' }}>
           <Suspense fallback={<ProjectionChartLoading />}>
@@ -1138,27 +1134,27 @@ const Home = () => {
       </div>
 
       {initialLoading ? (
-        <div aria-busy="true" style={{ padding: '24px 12px', color: '#666', textAlign: 'center' }}>
+        <div aria-busy="true" style={{ padding: '24px 12px', color: ui.color.textMuted, textAlign: 'center' }}>
           Loading your transactions and forecasts…
         </div>
       ) : initialError && mergedItems.length === 0 ? (
-        <div role="alert" style={{ margin: '16px 8px', padding: '16px', borderRadius: '8px', background: '#fff8e1', color: '#6b5300', textAlign: 'center' }}>
+        <div role="alert" style={{ ...sharedStyles.alertWarning, margin: '16px 8px', padding: '16px', textAlign: 'center' }}>
           <p style={{ margin: '0 0 10px' }}>{initialError}</p>
-          <button onClick={loadInitialTransactions} style={{ padding: '7px 12px', border: '1px solid #b08800', borderRadius: '4px', background: 'white', color: '#6b5300', cursor: 'pointer' }}>
+          <button onClick={loadInitialTransactions} style={{ padding: '7px 12px', border: `1px solid ${ui.color.warning}`, borderRadius: ui.radius.small, background: ui.color.surface, color: ui.color.warning, cursor: 'pointer' }}>
             Retry dashboard load
           </button>
         </div>
       ) : mergedItems.length === 0 ? (
-        <div style={{ padding: '32px 18px', textAlign: 'center', color: '#555' }}>
+        <div style={{ padding: '32px 18px', textAlign: 'center', color: ui.color.textMuted }}>
           <p style={{ margin: '0 0 8px', fontWeight: 600 }}>No transactions to show yet.</p>
           <p style={{ margin: 0, fontSize: '14px' }}>Link an account or try refreshing after your bank has synced.</p>
         </div>
       ) : (
         <>
           {initialError && (
-            <div role="alert" style={{ margin: '8px', padding: '12px', borderRadius: '8px', background: '#fff8e1', color: '#6b5300', fontSize: '14px' }}>
+            <div role="alert" style={{ ...sharedStyles.alertWarning, margin: '8px', padding: '12px', fontSize: '14px' }}>
               <div>{initialError}</div>
-              <button onClick={loadInitialTransactions} style={{ marginTop: '8px', padding: '6px 10px', border: '1px solid #b08800', borderRadius: '4px', background: 'white', color: '#6b5300', cursor: 'pointer' }}>
+              <button onClick={loadInitialTransactions} style={{ marginTop: '8px', padding: '6px 10px', border: `1px solid ${ui.color.warning}`, borderRadius: ui.radius.small, background: ui.color.surface, color: ui.color.warning, cursor: 'pointer' }}>
                 Retry dashboard load
               </button>
             </div>
@@ -1237,15 +1233,15 @@ const Home = () => {
                       alignItems: 'center',
                       gap: '8px',
                       margin: '12px 4px 6px',
-                      color: '#777',
+                      color: ui.color.textMuted,
                       fontSize: '10px',
                       fontWeight: 600,
                       letterSpacing: '0.08em'
                     }}
                   >
-                    <span style={{ height: '1px', backgroundColor: '#ddd', flex: 1 }} />
+                    <span style={{ height: '1px', backgroundColor: ui.color.border, flex: 1 }} />
                     ↑ ↑ FORECAST ↑ ↑
-                    <span style={{ height: '1px', backgroundColor: '#ddd', flex: 1 }} />
+                    <span style={{ height: '1px', backgroundColor: ui.color.border, flex: 1 }} />
                   </div>
                 )}
                 {showDateHeader && (
@@ -1260,8 +1256,8 @@ const Home = () => {
                       }
                     }}
                     style={{
-                      backgroundColor: '#f5f5f7',
-                      color: '#666',
+                      backgroundColor: ui.color.surfaceMuted,
+                      color: ui.color.textMuted,
                       display: 'flex',
                       fontSize: '12px',
                       fontWeight: 600,
@@ -1279,7 +1275,7 @@ const Home = () => {
                         style={{
                           background: 'transparent',
                           border: 'none',
-                          color: '#42A5F5',
+                          color: ui.color.primary,
                           cursor: 'pointer',
                           fontSize: '12px',
                           fontWeight: 600,
@@ -1406,10 +1402,11 @@ const Home = () => {
                   boxSizing: 'border-box',
                   padding: '8px',
                   marginBottom: '2px',
-                  backgroundColor: isDropTarget ? '#bbdefb' : isForecast ? '#E3F2FD' : '#fff',
-                  borderRadius: '8px',
-                  boxShadow: isDropTarget ? '0 0 0 3px #1976d2' : '0 1px 3px rgba(0,0,0,0.1)',
-                  borderLeft: isForecast ? 'none' : (isMatched ? '4px solid #4CAF50' : isForecasted ? '4px solid #64B5F6' : '4px solid #F4A916'),
+                  backgroundColor: isDropTarget ? ui.color.primarySoft : isForecast ? ui.color.surfaceForecast : ui.color.surface,
+                  borderRadius: ui.radius.card,
+                  boxShadow: isDropTarget ? `0 0 0 3px ${ui.color.primary}` : ui.shadow.card,
+                  border: `1px solid ${ui.color.border}`,
+                  borderLeft: isForecast ? `1px solid ${ui.color.primarySoft}` : (isMatched ? `4px solid ${ui.color.success}` : isForecasted ? `4px solid ${ui.color.info}` : `4px solid ${ui.color.warning}`),
                   opacity: isDragging ? 0.4 : 1,
                   cursor: isForecast ? 'grab' : canOpenTransactionDetails ? 'pointer' : 'default',
                   userSelect: 'none',
@@ -1429,7 +1426,7 @@ const Home = () => {
                       width: '40px',
                       height: '40px',
                       borderRadius: '50%',
-                      backgroundColor: '#e0e0e0',
+                      backgroundColor: ui.color.surfaceMuted,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1454,7 +1451,7 @@ const Home = () => {
                         width: '40px',
                         height: '40px',
                         borderRadius: '50%',
-                        backgroundColor: '#e0e0e0',
+                        backgroundColor: ui.color.surfaceMuted,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -1481,10 +1478,10 @@ const Home = () => {
                 </div>
                 
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 600, color: isForecast ? '#42A5F5' : (isPositive ? 'green' : 'inherit') }}>
+                  <div style={{ fontWeight: 700, color: isForecast ? ui.color.primary : (isPositive ? ui.color.success : ui.color.danger) }}>
                     {amountDisplay}
                   </div>
-                  <div style={{ fontSize: '12px', color: '#666' }}>
+                  <div style={{ fontSize: '12px', color: ui.color.textMuted }}>
                     {isForecast
                       ? (forecastBalance != null
                         ? <span aria-label={`Projected balance on ${formatDate(date)}: ${formatCurrency(forecastBalance)}`}>{formatCurrency(forecastBalance)}</span>
@@ -1503,14 +1500,14 @@ const Home = () => {
           <div ref={sentinelRef} style={{ textAlign: 'center', padding: '20px' }}>
             {loading && <p aria-live="polite">Loading older transactions…</p>}
             {paginationError && (
-              <div role="alert" style={{ color: '#a33' }}>
+              <div role="alert" style={{ color: ui.color.danger }}>
                 <p>{paginationError}</p>
-                <button onClick={loadMoreTransactions} style={{ padding: '6px 10px', border: '1px solid #a33', borderRadius: '4px', background: 'white', color: '#a33', cursor: 'pointer' }}>
+                <button onClick={loadMoreTransactions} style={{ padding: '6px 10px', border: `1px solid ${ui.color.danger}`, borderRadius: ui.radius.small, background: ui.color.surface, color: ui.color.danger, cursor: 'pointer' }}>
                   Try again
                 </button>
               </div>
             )}
-            {!hasMore && <p style={{ color: '#666' }}>No more transactions</p>}
+            {!hasMore && <p style={{ color: ui.color.textMuted }}>No more transactions</p>}
           </div>
         </>
       )}
@@ -1522,10 +1519,10 @@ const Home = () => {
           top: dragPos.y - 25,
           width: '200px',
           padding: '8px 12px',
-          backgroundColor: '#42A5F5',
-          color: 'white',
-          borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+          backgroundColor: ui.color.primary,
+          color: ui.color.surface,
+          borderRadius: ui.radius.control,
+          boxShadow: ui.shadow.raised,
           pointerEvents: 'none',
           zIndex: 2000,
           fontSize: '13px',
@@ -1547,7 +1544,7 @@ const Home = () => {
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
+          backgroundColor: ui.color.overlay,
           display: 'flex',
            alignItems: 'flex-start',
           justifyContent: 'center',
@@ -1565,10 +1562,9 @@ const Home = () => {
             aria-labelledby="forecast-dialog-title"
             tabIndex={-1}
             style={{
-            backgroundColor: 'white',
-             border: '1px solid #cbd9df',
-             borderRadius: '14px',
-             boxShadow: '0 18px 42px rgba(38, 50, 56, 0.28)',
+              ...sharedStyles.card,
+              borderRadius: ui.radius.modal,
+              boxShadow: ui.shadow.modal,
              boxSizing: 'border-box',
              margin: 'auto 0',
              maxWidth: '640px',
@@ -1576,7 +1572,7 @@ const Home = () => {
              width: 'calc(100% - 24px)',
           }}>
             {actionError && (
-              <div role="alert" style={{ marginBottom: '16px', padding: '10px 12px', borderRadius: '6px', background: '#fef2f2', color: '#b91c1c', fontSize: '14px' }}>
+              <div role="alert" style={{ ...sharedStyles.alertError, marginBottom: '16px', padding: '10px 12px', fontSize: '14px' }}>
                 {actionError}
               </div>
             )}
@@ -1588,9 +1584,9 @@ const Home = () => {
                   const { display: transactionAmount, isPositive } = formatAmount(selectedTransaction.amount);
                   return (
                     <div style={{
-                       backgroundColor: '#eef5f7',
-                       border: '1px solid #d1e0e6',
-                       borderRadius: '12px',
+                       backgroundColor: ui.color.surfaceSelected,
+                        border: `1px solid ${ui.color.primarySoft}`,
+                        borderRadius: ui.radius.card,
                       display: 'flex',
                       alignItems: 'center',
                       gap: '12px',
@@ -1608,7 +1604,7 @@ const Home = () => {
                           width: '48px',
                           height: '48px',
                           borderRadius: '50%',
-                          backgroundColor: '#e0e0e0',
+                          backgroundColor: ui.color.surfaceMuted,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -1621,7 +1617,7 @@ const Home = () => {
                       )}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <h2 id="forecast-dialog-title" style={{
-                          color: '#263238',
+                          color: ui.color.text,
                           margin: 0,
                           fontSize: '18px',
                           fontWeight: 700,
@@ -1632,16 +1628,16 @@ const Home = () => {
                           {transactionName}
                         </h2>
                         {selectedTransaction.merchant_name && selectedTransaction.counterparty_name && selectedTransaction.merchant_name !== selectedTransaction.counterparty_name && (
-                          <div style={{ fontSize: '13px', color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <div style={{ fontSize: '13px', color: ui.color.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {selectedTransaction.counterparty_name}
                           </div>
                         )}
                       </div>
                       <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <div style={{ fontWeight: 600, color: isPositive ? 'green' : 'inherit' }}>
+                        <div style={{ fontWeight: 700, color: isPositive ? ui.color.success : ui.color.danger }}>
                           {transactionAmount}
                         </div>
-                        <div style={{ fontSize: '14px', color: '#666' }}>
+                        <div style={{ fontSize: '14px', color: ui.color.textMuted }}>
                           {formatDate(selectedTransaction.date)}
                         </div>
                       </div>
@@ -1657,7 +1653,7 @@ const Home = () => {
                           border: 'none',
                           fontSize: '20px',
                           cursor: 'pointer',
-                          color: '#666',
+                          color: ui.color.textMuted,
                           padding: '4px',
                           lineHeight: 1
                         }}
@@ -1686,11 +1682,11 @@ const Home = () => {
                   style={{
                     width: '100%',
                     padding: '11px 14px',
-                    background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)',
-                    color: 'white',
+                    background: ui.color.primary,
+                    color: ui.color.surface,
                     border: 'none',
-                    borderRadius: '8px',
-                    boxShadow: '0 2px 5px rgba(25, 118, 210, 0.3)',
+                    borderRadius: ui.radius.control,
+                    boxShadow: ui.shadow.card,
                     cursor: 'pointer',
                     fontWeight: 700,
                     fontSize: '14px',
@@ -1706,7 +1702,7 @@ const Home = () => {
                     if (acct) {
                       return (
                         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
-                          <span style={{ color: '#666' }}>Account</span>
+                          <span style={{ color: ui.color.textMuted }}>Account</span>
                           <span style={{ fontWeight: 500 }}>{acct.name} {acct.mask}</span>
                         </div>
                       );
@@ -1722,8 +1718,8 @@ const Home = () => {
                     );
                     return (
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
-                        <span style={{ color: '#666' }}>Forecasted</span>
-                        <span style={{ fontWeight: 500, color: hasForecast ? 'green' : '#999' }}>
+                        <span style={{ color: ui.color.textMuted }}>Forecasted</span>
+                        <span style={{ fontWeight: 500, color: hasForecast ? ui.color.success : ui.color.textDisabled }}>
                           {hasForecast ? 'True' : 'False'}
                         </span>
                       </div>
@@ -1734,7 +1730,7 @@ const Home = () => {
                     if (!matchedForecast) return null;
                     return (
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' }}>
-                        <span style={{ color: '#4CAF50', fontWeight: 600 }}>Matched</span>
+                        <span style={{ color: ui.color.success, fontWeight: 600 }}>Matched</span>
                         <button
                           data-testid="button-undo-match"
                           onClick={async () => {
@@ -1750,9 +1746,9 @@ const Home = () => {
                             padding: '4px 12px',
                             fontSize: '13px',
                             backgroundColor: 'transparent',
-                            color: '#e53935',
-                            border: '1px solid #e53935',
-                            borderRadius: '4px',
+                            color: ui.color.danger,
+                            border: `1px solid ${ui.color.danger}`,
+                            borderRadius: ui.radius.small,
                             cursor: 'pointer',
                             fontWeight: 500
                           }}
@@ -1783,13 +1779,13 @@ const Home = () => {
                           border: 'none',
                           fontSize: '18px',
                           cursor: 'pointer',
-                          color: '#666',
+                          color: ui.color.textMuted,
                           padding: '4px'
                         }}
                         aria-label="Back to transaction details"
                       >←</button>
                     )}
-                    <h2 id="forecast-dialog-title" style={{ color: '#263238', fontSize: '18px', margin: 0 }}>Add Forecast</h2>
+                    <h2 id="forecast-dialog-title" style={{ color: ui.color.text, fontSize: '18px', margin: 0 }}>Add Forecast</h2>
                   </div>
                   <button
                     aria-label="Close forecast form"
@@ -1803,7 +1799,7 @@ const Home = () => {
                       display: 'inline-flex',
                       fontSize: '25px',
                       cursor: 'pointer',
-                      color: '#666',
+                      color: ui.color.textMuted,
                       height: '40px',
                       justifyContent: 'center',
                       lineHeight: 1,
@@ -1820,9 +1816,10 @@ const Home = () => {
                     return (
                       <div style={{
                         alignItems: 'center',
-                        backgroundColor: '#E3F2FD',
-                        borderRadius: '8px',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                        backgroundColor: ui.color.surfaceForecast,
+                        border: `1px solid ${ui.color.primarySoft}`,
+                        borderRadius: ui.radius.card,
+                        boxShadow: ui.shadow.card,
                         display: 'flex',
                         gap: '12px',
                         minHeight: '68px',
@@ -1840,7 +1837,7 @@ const Home = () => {
                             width: '40px',
                             height: '40px',
                             borderRadius: '50%',
-                            backgroundColor: '#e0e0e0',
+                            backgroundColor: ui.color.surfaceMuted,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -1863,10 +1860,10 @@ const Home = () => {
                           {transactionName}
                         </div>
                         <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                          <div style={{ color: isPositive ? 'green' : '#263238', fontSize: '16px', fontWeight: 600 }}>
+                          <div style={{ color: isPositive ? ui.color.success : ui.color.danger, fontSize: '16px', fontWeight: 700 }}>
                             {transactionAmount}
                           </div>
-                          <div style={{ color: '#666', fontSize: '14px' }}>
+                          <div style={{ color: ui.color.textMuted, fontSize: '14px' }}>
                             {formatDate(selectedTransaction.date)}
                           </div>
                         </div>
@@ -1888,8 +1885,8 @@ const Home = () => {
                       style={{
                         width: '100%',
                         padding: '8px',
-                        borderRadius: '4px',
-                        border: '1px solid #ccc',
+                        ...sharedStyles.input,
+                        borderRadius: ui.radius.control,
                         boxSizing: 'border-box'
                       }}
                     />
@@ -1905,10 +1902,10 @@ const Home = () => {
                         style={{
                           width: '100%',
                           padding: '8px',
-                          borderRadius: '4px',
-                          border: '1px solid #ccc',
+                          ...sharedStyles.input,
+                          borderRadius: ui.radius.control,
                           boxSizing: 'border-box',
-                          backgroundColor: 'white'
+                          backgroundColor: ui.color.surface
                         }}
                       >
                         <option value="" disabled>Select an account</option>
@@ -1923,14 +1920,14 @@ const Home = () => {
                 )}
 
                 <div style={{ marginBottom: '16px' }}>
-                  <label style={{ color: '#607d8b', display: 'block', fontSize: '15px', fontWeight: 600, marginBottom: '6px' }}>Type</label>
+                  <label style={{ color: ui.color.textMuted, display: 'block', fontSize: '15px', fontWeight: 600, marginBottom: '6px' }}>Type</label>
                   <div
                     role="group"
                     aria-label="Forecast type"
                     style={{
                       alignItems: 'center',
-                      backgroundColor: '#e8eff2',
-                      border: '1px solid #cbd9df',
+                      backgroundColor: ui.color.surfaceMuted,
+                      border: `1px solid ${ui.color.border}`,
                       borderRadius: '999px',
                       boxSizing: 'border-box',
                       display: 'flex',
@@ -1945,10 +1942,10 @@ const Home = () => {
                       onClick={() => setForecastType('single')}
                       style={{
                         alignItems: 'center',
-                        backgroundColor: forecastType === 'single' ? '#42A5F5' : 'transparent',
+                        backgroundColor: forecastType === 'single' ? ui.color.primary : 'transparent',
                         border: 'none',
                         borderRadius: '999px',
-                        color: forecastType === 'single' ? 'white' : '#52636b',
+                        color: forecastType === 'single' ? ui.color.surface : ui.color.textMuted,
                         cursor: 'pointer',
                         display: 'flex',
                         flex: 1,
@@ -1968,10 +1965,10 @@ const Home = () => {
                       onClick={() => setForecastType('monthly')}
                       style={{
                         alignItems: 'center',
-                        backgroundColor: forecastType === 'monthly' ? '#42A5F5' : 'transparent',
+                        backgroundColor: forecastType === 'monthly' ? ui.color.primary : 'transparent',
                         border: 'none',
                         borderRadius: '999px',
-                        color: forecastType === 'monthly' ? 'white' : '#52636b',
+                        color: forecastType === 'monthly' ? ui.color.surface : ui.color.textMuted,
                         cursor: 'pointer',
                         display: 'flex',
                         flex: 1,
@@ -1991,10 +1988,10 @@ const Home = () => {
                       onClick={() => setForecastType('every_x_days')}
                       style={{
                         alignItems: 'center',
-                        backgroundColor: forecastType === 'every_x_days' ? '#42A5F5' : 'transparent',
+                        backgroundColor: forecastType === 'every_x_days' ? ui.color.primary : 'transparent',
                         border: 'none',
                         borderRadius: '999px',
-                        color: forecastType === 'every_x_days' ? 'white' : '#52636b',
+                        color: forecastType === 'every_x_days' ? ui.color.surface : ui.color.textMuted,
                         cursor: 'pointer',
                         display: 'flex',
                         flex: 1,
@@ -2012,7 +2009,7 @@ const Home = () => {
                 </div>
 
                 {forecastType === 'every_x_days' && (
-                  <div style={{ alignItems: 'center', color: '#607d8b', display: 'flex', flexWrap: 'wrap', fontSize: '15px', fontWeight: 600, gap: '6px', marginTop: '10px' }}>
+                  <div style={{ alignItems: 'center', color: ui.color.textMuted, display: 'flex', flexWrap: 'wrap', fontSize: '15px', fontWeight: 600, gap: '6px', marginTop: '10px' }}>
                     <span>Every</span>
                     <span style={{ display: 'inline-flex', flex: '0 0 calc(2ch + 16px)', maxWidth: 'calc(2ch + 16px)', minWidth: 'calc(2ch + 16px)' }}>
                       <input
@@ -2025,11 +2022,8 @@ const Home = () => {
                           width: '100%',
                           height: '38px',
                           padding: '6px 4px',
-                          borderRadius: '8px',
-                          border: '1px solid #cbd9df',
-                          backgroundColor: '#f8fbfc',
+                          ...sharedStyles.input,
                           boxSizing: 'border-box',
-                          color: '#263238',
                           fontFamily: 'inherit',
                           fontSize: '16px',
                           textAlign: 'center'
@@ -2051,11 +2045,8 @@ const Home = () => {
                             width: '100%',
                             height: '38px',
                             padding: '6px 4px',
-                            borderRadius: '8px',
-                            border: '1px solid #cbd9df',
-                            backgroundColor: '#f8fbfc',
+                            ...sharedStyles.input,
                             boxSizing: 'border-box',
-                            color: '#263238',
                             fontFamily: 'inherit',
                             fontSize: '16px',
                             textAlign: 'center'
@@ -2069,7 +2060,7 @@ const Home = () => {
 
                 {forecastType === 'monthly' && (
                   <div style={{ marginTop: '10px' }}>
-                    <label style={{ color: '#607d8b', display: 'block', fontSize: '15px', fontWeight: 600, marginBottom: '6px' }}>
+                    <label style={{ color: ui.color.textMuted, display: 'block', fontSize: '15px', fontWeight: 600, marginBottom: '6px' }}>
                       Number of Months
                     </label>
                     <select
@@ -2080,11 +2071,8 @@ const Home = () => {
                         width: '100%',
                         height: '38px',
                         padding: '8px 10px',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd9df',
-                        backgroundColor: '#f8fbfc',
+                        ...sharedStyles.input,
                         boxSizing: 'border-box',
-                        color: '#263238',
                         fontFamily: 'inherit',
                         fontSize: '16px'
                       }}
@@ -2097,13 +2085,11 @@ const Home = () => {
                 )}
 
                 <div style={{ alignItems: 'center', display: 'grid', gap: '12px', gridTemplateColumns: '96px minmax(0, 280px)', marginTop: '14px', minWidth: 0 }}>
-                  <label htmlFor="input-forecast-date" style={{ color: '#607d8b', fontSize: '15px', fontWeight: 600 }}>
+                  <label htmlFor="input-forecast-date" style={{ color: ui.color.textMuted, fontSize: '15px', fontWeight: 600 }}>
                     {forecastType === 'single' ? 'Date' : 'Starting Date'}
                   </label>
                   <div style={{
-                    backgroundColor: '#f8fbfc',
-                    border: '1px solid #cbd9df',
-                    borderRadius: '8px',
+                    ...sharedStyles.input,
                     boxSizing: 'border-box',
                     minWidth: 0,
                     padding: '8px 10px 8px 26px',
@@ -2124,7 +2110,7 @@ const Home = () => {
                         border: 'none',
                         backgroundColor: 'transparent',
                         boxSizing: 'border-box',
-                        color: '#263238',
+                        color: ui.color.text,
                         fontFamily: 'inherit',
                         fontSize: '16px'
                       }}
@@ -2133,7 +2119,7 @@ const Home = () => {
                 </div>
                 
                 <div style={{ alignItems: 'center', display: 'grid', gap: '12px', gridTemplateColumns: '96px minmax(0, 280px)', marginTop: '14px', minWidth: 0 }}>
-                  <span style={{ alignItems: 'center', color: '#607d8b', display: 'inline-flex', fontSize: '15px', fontWeight: 600, gap: '5px' }}>
+                  <span style={{ alignItems: 'center', color: ui.color.textMuted, display: 'inline-flex', fontSize: '15px', fontWeight: 600, gap: '5px' }}>
                     Cash flow
                     <InfoHint
                       active={activeInfoTip === 'cashFlow'}
@@ -2148,8 +2134,8 @@ const Home = () => {
                     aria-label="Forecast cash-flow direction"
                     style={{
                       alignItems: 'center',
-                      backgroundColor: '#e8eff2',
-                      border: '1px solid #cbd9df',
+                      backgroundColor: ui.color.surfaceMuted,
+                      border: `1px solid ${ui.color.border}`,
                       borderRadius: '999px',
                       boxSizing: 'border-box',
                       display: 'flex',
@@ -2164,10 +2150,10 @@ const Home = () => {
                       aria-pressed={forecastDirection === 'expense'}
                       style={{
                         alignItems: 'center',
-                        backgroundColor: forecastDirection === 'expense' ? '#37474f' : 'transparent',
+                        backgroundColor: forecastDirection === 'expense' ? ui.color.danger : 'transparent',
                         border: 'none',
                         borderRadius: '999px',
-                        color: forecastDirection === 'expense' ? 'white' : '#52636b',
+                        color: forecastDirection === 'expense' ? ui.color.surface : ui.color.textMuted,
                         cursor: 'pointer',
                         display: 'flex',
                         flex: 1,
@@ -2187,10 +2173,10 @@ const Home = () => {
                       aria-pressed={forecastDirection === 'income'}
                       style={{
                         alignItems: 'center',
-                        backgroundColor: forecastDirection === 'income' ? '#2e7d32' : 'transparent',
+                        backgroundColor: forecastDirection === 'income' ? ui.color.success : 'transparent',
                         border: 'none',
                         borderRadius: '999px',
-                        color: forecastDirection === 'income' ? 'white' : '#52636b',
+                        color: forecastDirection === 'income' ? ui.color.surface : ui.color.textMuted,
                         cursor: 'pointer',
                         display: 'flex',
                         flex: 1,
@@ -2208,7 +2194,7 @@ const Home = () => {
                 </div>
 
                 <div style={{ alignItems: 'center', display: 'grid', gap: '12px', gridTemplateColumns: '96px minmax(0, 280px)', marginTop: '14px', minWidth: 0 }}>
-                  <label htmlFor="input-forecast-amount" style={{ color: '#607d8b', fontSize: '15px', fontWeight: 600 }}>
+                  <label htmlFor="input-forecast-amount" style={{ color: ui.color.textMuted, fontSize: '15px', fontWeight: 600 }}>
                     Amount <span aria-hidden="true">*</span>
                   </label>
                   <div style={{ minWidth: 0, width: '100%' }}>
@@ -2226,11 +2212,8 @@ const Home = () => {
                         minWidth: 0,
                         height: '38px',
                         padding: '8px 10px',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd9df',
-                        backgroundColor: '#f8fbfc',
+                        ...sharedStyles.input,
                         boxSizing: 'border-box',
-                        color: '#263238',
                         fontFamily: 'inherit',
                         fontSize: '16px',
                         textAlign: 'center'
@@ -2260,7 +2243,7 @@ const Home = () => {
                       <span style={{
                         position: 'absolute',
                         top: 0, left: 0, right: 0, bottom: 0,
-                        backgroundColor: autoExtend ? '#42A5F5' : '#ccc',
+                        backgroundColor: autoExtend ? ui.color.primary : ui.color.borderStrong,
                         borderRadius: '12px',
                         transition: 'background-color 0.2s'
                       }} />
@@ -2270,13 +2253,13 @@ const Home = () => {
                         left: autoExtend ? '22px' : '2px',
                         width: '20px',
                         height: '20px',
-                        backgroundColor: 'white',
+                        backgroundColor: ui.color.surface,
                         borderRadius: '50%',
                         transition: 'left 0.2s',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                        boxShadow: ui.shadow.card
                       }} />
                     </label>
-                    <span style={{ alignItems: 'center', color: '#52636b', display: 'inline-flex', fontSize: '14px', gap: '5px' }}>
+                    <span style={{ alignItems: 'center', color: ui.color.textMuted, display: 'inline-flex', fontSize: '14px', gap: '5px' }}>
                       Auto extend
                       <InfoHint
                         active={activeInfoTip === 'autoExtend'}
@@ -2361,8 +2344,7 @@ const Home = () => {
                     style={{
                       flex: 1,
                       padding: '10px 16px',
-                      backgroundColor: '#42A5F5',
-                      color: 'white',
+                      ...sharedStyles.primaryButton,
                       border: 'none',
                       borderRadius: '6px',
                       cursor: saving ? 'not-allowed' : 'pointer',
@@ -2399,10 +2381,10 @@ const Home = () => {
                       onClick={handleDeleteEditedForecast}
                       style={{
                         alignItems: 'center',
-                        backgroundColor: '#eef1f3',
-                        border: '1px solid #c5cdd2',
-                        borderRadius: '7px',
-                        color: '#5f6b72',
+                        backgroundColor: ui.color.surfaceMuted,
+                        border: `1px solid ${ui.color.borderStrong}`,
+                        borderRadius: ui.radius.control,
+                        color: ui.color.textMuted,
                         cursor: saving ? 'not-allowed' : 'pointer',
                         display: 'inline-flex',
                         height: '34px',
@@ -2414,7 +2396,7 @@ const Home = () => {
                     >
                       <Trash2 size={17} strokeWidth={2} aria-hidden="true" />
                     </button>
-                    <h2 id="forecast-dialog-title" style={{ color: '#263238', fontSize: '18px', margin: 0 }}>Edit Forecast</h2>
+                    <h2 id="forecast-dialog-title" style={{ color: ui.color.text, fontSize: '18px', margin: 0 }}>Edit Forecast</h2>
                   </div>
                   <button
                     data-testid="button-close-edit-forecast"
@@ -2430,7 +2412,7 @@ const Home = () => {
                       justifyContent: 'center',
                       lineHeight: 1,
                       cursor: 'pointer',
-                      color: '#666',
+                      color: ui.color.textMuted,
                       padding: 0,
                       width: '40px'
                     }}
@@ -2453,9 +2435,10 @@ const Home = () => {
                         boxSizing: 'border-box',
                         padding: '8px',
                         marginBottom: '14px',
-                        backgroundColor: '#E3F2FD',
-                        borderRadius: '8px',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                        backgroundColor: ui.color.surfaceForecast,
+                        border: `1px solid ${ui.color.primarySoft}`,
+                        borderRadius: ui.radius.card,
+                        boxShadow: ui.shadow.card,
                         cursor: 'default',
                         userSelect: 'none'
                       }}
@@ -2471,7 +2454,7 @@ const Home = () => {
                           width: '40px',
                           height: '40px',
                           borderRadius: '50%',
-                          backgroundColor: '#e0e0e0',
+                          backgroundColor: ui.color.surfaceMuted,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -2495,10 +2478,10 @@ const Home = () => {
                       </div>
 
                       <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <div style={{ fontWeight: 600, color: '#42A5F5' }}>
+                        <div style={{ fontWeight: 700, color: ui.color.primary }}>
                           {forecastAmountDisplay}
                         </div>
-                        <div style={{ fontSize: '12px', color: '#666' }}>
+                        <div style={{ fontSize: '12px', color: ui.color.textMuted }}>
                           {projectedBalance != null
                             ? <span aria-label={`Projected balance on ${formatDate(editingForecast.date)}: ${formatCurrency(projectedBalance)}`}>{formatCurrency(projectedBalance)}</span>
                             : <span aria-label="Projected balance unavailable">—</span>}
@@ -2509,7 +2492,7 @@ const Home = () => {
                 })()}
 
                 <div style={{ alignItems: 'center', display: 'grid', gap: '12px', gridTemplateColumns: '96px minmax(0, 280px)', marginTop: '0', minWidth: 0 }}>
-                  <label htmlFor="input-edit-forecast-date" style={{ color: '#607d8b', fontSize: '15px', fontWeight: 600 }}>Date</label>
+                  <label htmlFor="input-edit-forecast-date" style={{ color: ui.color.textMuted, fontSize: '15px', fontWeight: 600 }}>Date</label>
                   <div
                     style={{
                       width: '100%',
@@ -2517,9 +2500,7 @@ const Home = () => {
                       maxWidth: '100%',
                       height: '38px',
                       padding: '8px 10px 8px 26px',
-                      borderRadius: '8px',
-                      border: '1px solid #cbd9df',
-                      backgroundColor: '#f8fbfc',
+                      ...sharedStyles.input,
                       boxSizing: 'border-box',
                       display: 'flex',
                       alignItems: 'center'
@@ -2539,7 +2520,7 @@ const Home = () => {
                         border: 'none',
                         backgroundColor: 'transparent',
                         boxSizing: 'border-box',
-                        color: '#263238',
+                        color: ui.color.text,
                         fontFamily: 'inherit',
                         fontSize: '16px'
                       }}
@@ -2548,7 +2529,7 @@ const Home = () => {
                 </div>
                 
                 <div style={{ alignItems: 'center', display: 'grid', gap: '12px', gridTemplateColumns: '96px minmax(0, 280px)', marginTop: '14px', minWidth: 0 }}>
-                  <label htmlFor="input-edit-forecast-amount" style={{ color: '#607d8b', fontSize: '15px', fontWeight: 600 }}>Amount</label>
+                  <label htmlFor="input-edit-forecast-amount" style={{ color: ui.color.textMuted, fontSize: '15px', fontWeight: 600 }}>Amount</label>
                   <div style={{ minWidth: 0, width: '100%' }}>
                     <input
                       id="input-edit-forecast-amount"
@@ -2564,11 +2545,8 @@ const Home = () => {
                         minWidth: 0,
                         height: '38px',
                         padding: '8px 10px',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd9df',
-                        backgroundColor: '#f8fbfc',
+                        ...sharedStyles.input,
                         boxSizing: 'border-box',
-                        color: '#263238',
                         fontFamily: 'inherit',
                         fontSize: '16px',
                         textAlign: 'center'
@@ -2578,13 +2556,13 @@ const Home = () => {
                 </div>
 
                 <div style={{ alignItems: 'center', display: 'grid', gap: '12px', gridTemplateColumns: '96px minmax(0, 280px)', marginTop: '14px', minWidth: 0 }}>
-                  <span style={{ color: '#607d8b', fontSize: '15px', fontWeight: 600 }}>Cash flow</span>
+                  <span style={{ color: ui.color.textMuted, fontSize: '15px', fontWeight: 600 }}>Cash flow</span>
                   <div
                     role="group"
                     aria-label="Forecast cash-flow direction"
                     style={{
-                      backgroundColor: '#e8eff2',
-                      border: '1px solid #cbd9df',
+                      backgroundColor: ui.color.surfaceMuted,
+                      border: `1px solid ${ui.color.border}`,
                       borderRadius: '999px',
                       display: 'flex',
                       gap: '3px',
@@ -2599,11 +2577,11 @@ const Home = () => {
                       onClick={() => setForecastDirection('expense')}
                       aria-pressed={forecastDirection === 'expense'}
                       style={{
-                        backgroundColor: forecastDirection === 'expense' ? '#37474f' : 'transparent',
+                        backgroundColor: forecastDirection === 'expense' ? ui.color.danger : 'transparent',
                         border: 'none',
                         borderRadius: '999px',
-                        boxShadow: forecastDirection === 'expense' ? '0 1px 2px rgba(38, 50, 56, 0.28)' : 'none',
-                        color: forecastDirection === 'expense' ? 'white' : '#52636b',
+                        boxShadow: forecastDirection === 'expense' ? ui.shadow.card : 'none',
+                        color: forecastDirection === 'expense' ? ui.color.surface : ui.color.textMuted,
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
@@ -2624,11 +2602,11 @@ const Home = () => {
                       onClick={() => setForecastDirection('income')}
                       aria-pressed={forecastDirection === 'income'}
                       style={{
-                        backgroundColor: forecastDirection === 'income' ? '#2e7d32' : 'transparent',
+                        backgroundColor: forecastDirection === 'income' ? ui.color.success : 'transparent',
                         border: 'none',
                         borderRadius: '999px',
-                        boxShadow: forecastDirection === 'income' ? '0 1px 2px rgba(38, 50, 56, 0.28)' : 'none',
-                        color: forecastDirection === 'income' ? 'white' : '#52636b',
+                        boxShadow: forecastDirection === 'income' ? ui.shadow.card : 'none',
+                        color: forecastDirection === 'income' ? ui.color.surface : ui.color.textMuted,
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
@@ -2663,8 +2641,7 @@ const Home = () => {
                       style={{
                         flex: 1,
                         padding: '10px 16px',
-                        backgroundColor: '#42A5F5',
-                        color: 'white',
+                        ...sharedStyles.primaryButton,
                         border: 'none',
                         borderRadius: '6px',
                         cursor: saving ? 'not-allowed' : 'pointer',
@@ -2681,13 +2658,13 @@ const Home = () => {
                       role="group"
                       aria-label={`${seriesActionPrompt === 'save' ? 'Save' : 'Delete'} forecast scope`}
                       style={{
-                        backgroundColor: seriesActionPrompt === 'delete' ? '#fff7f7' : '#f5f9fb',
-                        border: `1px solid ${seriesActionPrompt === 'delete' ? '#efc7c7' : '#d5e1e6'}`,
-                        borderRadius: '8px',
+                        backgroundColor: seriesActionPrompt === 'delete' ? ui.color.dangerSoft : ui.color.surfaceSelected,
+                        border: `1px solid ${seriesActionPrompt === 'delete' ? ui.color.dangerBorder : ui.color.primarySoft}`,
+                        borderRadius: ui.radius.control,
                         padding: '10px'
                       }}
                     >
-                      <div style={{ color: '#455a64', fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>
+                      <div style={{ color: ui.color.text, fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>
                         {seriesActionPrompt === 'save' ? 'Where should these changes apply?' : 'What do you want to delete?'}
                       </div>
                       <div style={{ display: 'grid', gap: '8px', gridTemplateColumns: '1fr 1fr' }}>
@@ -2702,10 +2679,7 @@ const Home = () => {
                             }
                           }}
                           style={{
-                            backgroundColor: 'white',
-                            border: '1px solid #9dafb7',
-                            borderRadius: '6px',
-                            color: '#37474f',
+                            ...sharedStyles.secondaryButton,
                             cursor: 'pointer',
                             fontWeight: 600,
                             padding: '9px 10px'
@@ -2724,10 +2698,10 @@ const Home = () => {
                             }
                           }}
                           style={{
-                            backgroundColor: seriesActionPrompt === 'delete' ? '#b71c1c' : '#1976d2',
+                            backgroundColor: seriesActionPrompt === 'delete' ? ui.color.danger : ui.color.primary,
                             border: 'none',
-                            borderRadius: '6px',
-                            color: 'white',
+                            borderRadius: ui.radius.control,
+                            color: ui.color.surface,
                             cursor: 'pointer',
                             fontWeight: 600,
                             padding: '9px 10px'
@@ -2740,7 +2714,7 @@ const Home = () => {
                   )}
 
                   {confirmingDelete && (
-                    <div role="alert" style={{ padding: '10px', background: '#fef2f2', color: '#991b1b', borderRadius: '6px', fontSize: '13px' }}>
+                    <div role="alert" style={{ ...sharedStyles.alertError, padding: '10px', fontSize: '13px' }}>
                       {confirmingDelete === 'series'
                         ? 'This will permanently delete every forecast in this series.'
                         : 'This will permanently delete this forecast.'}
