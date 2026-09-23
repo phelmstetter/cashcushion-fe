@@ -2328,6 +2328,7 @@ const Home = () => {
                       display: 'flex',
                       gap: '3px',
                       height: '38px',
+                      alignItems: 'center',
                       boxSizing: 'border-box',
                       padding: '3px'
                     }}
@@ -2343,10 +2344,15 @@ const Home = () => {
                         boxShadow: forecastDirection === 'expense' ? '0 1px 2px rgba(38, 50, 56, 0.28)' : 'none',
                         color: forecastDirection === 'expense' ? 'white' : '#52636b',
                         cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                         flex: 1,
                         fontSize: '15px',
                         fontWeight: 600,
-                        padding: '7px 10px',
+                        height: '30px',
+                        lineHeight: '20px',
+                        padding: '0 10px',
                         transition: 'background-color 0.15s, color 0.15s'
                       }}
                     >
@@ -2363,10 +2369,15 @@ const Home = () => {
                         boxShadow: forecastDirection === 'income' ? '0 1px 2px rgba(38, 50, 56, 0.28)' : 'none',
                         color: forecastDirection === 'income' ? 'white' : '#52636b',
                         cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                         flex: 1,
                         fontSize: '15px',
                         fontWeight: 600,
-                        padding: '7px 10px',
+                        height: '30px',
+                        lineHeight: '20px',
+                        padding: '0 10px',
                         transition: 'background-color 0.15s, color 0.15s'
                       }}
                     >
