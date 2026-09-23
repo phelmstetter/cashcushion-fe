@@ -1287,32 +1287,55 @@ const Home = () => {
                   setDragPos(null);
                   setDropTargetId(null);
                 } : undefined}
-                onClick={isForecast && !draggingForecast ? () => {
-                  const fc = item.data as Forecast;
-                  setEditingForecast(fc);
-                  setConfirmingDelete(null);
-                  setSeriesActionPrompt(null);
-                  setForecastDate(fc.date);
-                  setForecastAmount(Math.abs(fc.amount).toString());
-                  setForecastDirection(fc.amount >= 0 ? 'expense' : 'income');
-                  setModalView('editForecast');
-                } : undefined}
-                role={isForecast ? 'button' : undefined}
-                tabIndex={isForecast ? 0 : undefined}
-                aria-label={isForecast ? `Edit ${displayName} ${amountDisplay} forecast` : undefined}
-                onKeyDown={isForecast ? (event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    const fc = item.data as Forecast;
-                    setEditingForecast(fc);
-                    setConfirmingDelete(null);
-                    setSeriesActionPrompt(null);
-                    setForecastDate(fc.date);
-                    setForecastAmount(Math.abs(fc.amount).toString());
-                    setForecastDirection(fc.amount >= 0 ? 'expense' : 'income');
-                    setModalView('editForecast');
-                  }
-                } : undefined}
+                onClick={
+                  isForecast && !draggingForecast
+                    ? () => {
+                      const fc = item.data as Forecast;
+                      setEditingForecast(fc);
+                      setConfirmingDelete(null);
+                      setSeriesActionPrompt(null);
+                      setForecastDate(fc.date);
+                      setForecastAmount(Math.abs(fc.amount).toString());
+                      setForecastDirection(fc.amount >= 0 ? 'expense' : 'income');
+                      setModalView('editForecast');
+                    }
+                    : canOpenTransactionDetails
+                      ? openTransactionDetails
+                      : undefined
+                }
+                role={isForecast || canOpenTransactionDetails ? 'button' : undefined}
+                tabIndex={isForecast || canOpenTransactionDetails ? 0 : undefined}
+                aria-label={
+                  isForecast
+                    ? `Edit ${displayName} ${amountDisplay} forecast`
+                    : canOpenTransactionDetails
+                      ? `View details for ${displayName}`
+                      : undefined
+                }
+                onKeyDown={
+                  isForecast
+                    ? (event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        const fc = item.data as Forecast;
+                        setEditingForecast(fc);
+                        setConfirmingDelete(null);
+                        setSeriesActionPrompt(null);
+                        setForecastDate(fc.date);
+                        setForecastAmount(Math.abs(fc.amount).toString());
+                        setForecastDirection(fc.amount >= 0 ? 'expense' : 'income');
+                        setModalView('editForecast');
+                      }
+                    }
+                    : canOpenTransactionDetails
+                      ? (event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          openTransactionDetails();
+                        }
+                      }
+                      : undefined
+                }
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -1326,7 +1349,7 @@ const Home = () => {
                   boxShadow: isDropTarget ? '0 0 0 3px #1976d2' : '0 1px 3px rgba(0,0,0,0.1)',
                   borderLeft: isForecast ? 'none' : (isMatched ? '4px solid #4CAF50' : isForecasted ? '4px solid #64B5F6' : '4px solid #F4A916'),
                   opacity: isDragging ? 0.4 : 1,
-                  cursor: isForecast ? 'grab' : 'default',
+                  cursor: isForecast ? 'grab' : canOpenTransactionDetails ? 'pointer' : 'default',
                   userSelect: 'none',
                   transition: 'background-color 0.15s, box-shadow 0.15s',
                   touchAction: draggingForecast ? 'none' : 'auto'
@@ -1354,53 +1377,34 @@ const Home = () => {
                       {getInitials(displayName)}
                     </div>
                   )
-                ) : transactionForModal && (
-                  <button
-                    data-testid={`button-details-${(item.data as Transaction).id}`}
-                    aria-label={`View details for ${displayName}`}
-                    title="View transaction details"
-                    onClick={() => {
-                      setSelectedTransaction(transactionForModal);
-                      setModalView('details');
-                    }}
-                    style={{
-                      width: '44px',
-                      height: '44px',
-                      padding: '2px',
-                      border: '1px solid #b9c1c9',
-                      borderRadius: '50%',
-                      background: 'linear-gradient(145deg, #ffffff 0%, #e2e7eb 100%)',
-                      boxShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.95), 0 2px 4px rgba(54, 65, 74, 0.22)',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0
-                    }}
-                  >
-                    {logoUrl ? (
-                      <img
-                        src={logoUrl}
-                        alt=""
-                        style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }}
-                      />
-                    ) : (
-                      <span style={{
-                        width: '36px',
-                        height: '36px',
+                ) : transactionForModal ? (
+                  logoUrl ? (
+                    <img
+                      data-testid={`transaction-icon-${(item.data as Transaction).id}`}
+                      src={logoUrl}
+                      alt={displayName}
+                      style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                    />
+                  ) : (
+                    <div
+                      data-testid={`transaction-icon-${(item.data as Transaction).id}`}
+                      style={{
+                        width: '40px',
+                        height: '40px',
                         borderRadius: '50%',
                         backgroundColor: '#e0e0e0',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         fontSize: '14px',
-                        fontWeight: 'bold'
-                      }}>
-                        {getInitials(displayName)}
-                      </span>
-                    )}
-                  </button>
-                )}
+                        fontWeight: 'bold',
+                        flexShrink: 0
+                      }}
+                    >
+                      {getInitials(displayName)}
+                    </div>
+                  )
+                ) : null}
                 
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ 
