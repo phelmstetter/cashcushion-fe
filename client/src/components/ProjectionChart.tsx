@@ -591,7 +591,16 @@ export default function ProjectionChart({
                           >
                             {accountLabel(account)}
                           </strong>
-                          <span style={{ alignItems: 'center', display: 'inline-flex', gap: '5px', justifyContent: 'flex-start', marginTop: '2px' }}>
+                          <span
+                            style={{
+                              alignItems: 'center',
+                              display: 'inline-flex',
+                              gap: '5px',
+                              justifyContent: 'flex-start',
+                              marginTop: '5px',
+                              padding: '2px 6px',
+                            }}
+                          >
                             <input
                               type="checkbox"
                               checked={isIncluded}
