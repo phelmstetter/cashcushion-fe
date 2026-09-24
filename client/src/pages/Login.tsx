@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { GoogleAuthProvider, signInWithPopup, signInWithRedirect } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
 const Login = () => {
@@ -15,16 +15,17 @@ const Login = () => {
       await signInWithPopup(auth, provider);
     } catch (err: unknown) {
       const e = err as { code?: string; message?: string };
-      console.error("Google sign-in failed:", e.code, e.message);
-
       if (e.code === "auth/popup-blocked") {
-        setError("Safari blocked the sign-in window. Allow pop-ups for this site and try again.");
-      } else if (e.code === "auth/popup-closed-by-user") {
-        setError("The sign-in window was closed before sign-in finished. Please try again.");
+        try {
+          await signInWithRedirect(auth, provider);
+        } catch {
+          setError("We couldn’t start Google sign-in. Please allow popups or try again.");
+          setLoading(false);
+        }
       } else {
         setError("We couldn’t sign you in. Please try again.");
+        setLoading(false);
       }
-      setLoading(false);
     }
   };
 

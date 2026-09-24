@@ -1,3 +1,2 @@
 - [Replit npm registry breaks external CI lockfiles](npm-registry-external-ci.md) — npm install here bakes an internal-only proxy URL into package-lock.json, breaking `npm ci` on Cloud Build/GitHub Actions/etc.
 - [Deferred Vite dependencies](vite-lazy-chunks.md) — explicit manual chunks can be module-preloaded even when their consumer is lazy; verify generated HTML when deferring large libraries.
-- [Firebase auth on Replit domains](firebase-auth-replit-domains.md) — avoid redirect sign-in unless the Firebase auth helper is same-origin; Safari blocks its cross-site redirect state.
