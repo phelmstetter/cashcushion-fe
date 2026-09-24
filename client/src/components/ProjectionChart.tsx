@@ -572,7 +572,7 @@ export default function ProjectionChart({
                         boxSizing: 'border-box',
                         padding: '12px 10px',
                         textAlign: 'left',
-                        verticalAlign: 'middle',
+                        verticalAlign: 'top',
                       }}
                     >
                       <span style={{ alignItems: 'center', display: 'flex', gap: '8px', minWidth: 0 }}>
@@ -583,7 +583,7 @@ export default function ProjectionChart({
                               display: 'block',
                               fontSize: '16px',
                               fontWeight: 700,
-                              lineHeight: 1.25,
+                              lineHeight: 1.2,
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap',
@@ -628,7 +628,7 @@ export default function ProjectionChart({
                         borderLeft: `1px solid ${ui.color.border}`,
                         boxSizing: 'border-box',
                         padding: '12px 10px',
-                        verticalAlign: 'middle',
+                        verticalAlign: 'top',
                         whiteSpace: 'normal',
                       }}
                     >
@@ -676,7 +676,7 @@ export default function ProjectionChart({
                         borderLeft: `1px solid ${ui.color.border}`,
                         boxSizing: 'border-box',
                         padding: '12px 10px',
-                        verticalAlign: 'middle',
+                        verticalAlign: 'top',
                         whiteSpace: 'normal',
                       }}
                     >
