@@ -12,10 +12,12 @@ const Login = () => {
     setLoading(true);
 
     try {
+      // Popup is the fast path — no full-page redirect, no cross-origin issues.
       await signInWithPopup(auth, provider);
     } catch (err: unknown) {
       const e = err as { code?: string; message?: string };
       if (e.code === "auth/popup-blocked") {
+        // Browser blocked the popup (common on mobile) — fall back to redirect.
         try {
           await signInWithRedirect(auth, provider);
         } catch {
