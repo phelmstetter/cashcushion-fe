@@ -1,0 +1,35 @@
+Work in this frontend repository only. Fix the forecast rules and frontend compatibility described below. You cannot see the separate Python backend repository, so use this description as the contract. Make focused changes, run tests and the TypeScript check, and do not deploy.
+
+Backend contract:
+
+* The backend extends recurring forecasts by writing these fields to Firestore forecast documents: extend (boolean), extended (boolean), and extended_from_forecast_id (string).
+* The backend may remove the older auto_extend field when migrating a forecast.
+* The backend field names must remain exactly as written above.
+* The backend now writes both item_id and plaid_item_id on account documents. No account or Plaid changes are needed here.
+
+Tasks:
+
+1. Fix firestore.rules.
+    * A signed-in owner must still be able to read, create, edit, reconcile, and delete their own forecasts.
+    * An owner must be able to edit normal fields such as date and amount on a forecast that already contains the backend lifecycle fields.
+    * Browser clients must not be able to create, change, or remove extend, extended, or extended_from_forecast_id. Those fields are managed by the backend.
+    * Keep the existing auto_extend field permitted for older client-created forecasts.
+    * Do not give another user access to a forecast.
+2. Update client/src/lib/firebase.ts.
+    * Add the backend lifecycle fields to the Forecast type.
+    * Make getForecasts() retain those fields when reading Firestore.
+    * When the UI needs to know whether a series auto-extends, use extend if present; otherwise use the older auto_extend value.
+    * Do not remove or overwrite backend lifecycle fields during a normal forecast edit.
+3. Fix manual matching.
+    * The current Firestore rule checks that the transaction belongs to the signed-in user. Also require the transaction’s account_id to equal the forecast’s account_id.
+    * A match to a different user’s transaction or a different account must fail.
+    * Keep valid same-account matching and unmatching working.
+    * Show a useful error in the UI if a manual match is rejected.
+4. Add focused Firestore rules tests for:
+    * Owner reads and edits a forecast containing backend lifecycle fields.
+    * Owner cannot create, change, or remove backend lifecycle fields.
+    * Another user cannot read or edit that forecast.
+    * Existing client forecast creation still works.
+    * Valid same-account matching and unmatching work; cross-account matching fails.
+
+Keep this task focused. Do not build LLM chat, change Plaid flows, rename backend fields, or deploy. Report files changed, commands run, test results, and any remaining incompatibility you find.

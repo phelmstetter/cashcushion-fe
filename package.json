@@ -12,6 +12,7 @@
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
     "@google-cloud/pubsub": "^6.1.0",
     "@google-cloud/secret-manager": "^6.1.1",
     "@hookform/resolvers": "^3.10.0",
@@ -54,6 +55,7 @@
     "express-session": "^1.18.1",
     "firebase": "^12.19.0",
     "firebase-admin": "^14.4.0",
+    "firebase-tools": "^15.31.0",
     "framer-motion": "^11.13.1",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.453.0",
