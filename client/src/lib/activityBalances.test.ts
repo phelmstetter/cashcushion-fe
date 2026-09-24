@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  buildActivityItems,
   getForecastBalances,
+  getMatchedTransactionIds,
   getTransactionBalances,
+  getVisibleForecasts,
   sortActivityItems,
   type ActivityItem,
 } from "./activityBalances";
@@ -92,4 +95,28 @@ test("same-day forecasts show each account's earlier projected balance on lower 
   assert.equal(balances.get("savings-expense"), 175);
   assert.equal(balances.get("checking-income"), 70);
   assert.equal(balances.get("checking-expense"), 60);
+});
+
+test("matching a forecast keeps the actual visible and marks its transaction as matched", () => {
+  const actual = transaction("actual", "checking", 35);
+  const matchedForecast = {
+    ...forecast("matched-forecast", "checking", 35),
+    matched_transaction_id: actual.id,
+  };
+  const pendingForecast = forecast("pending-forecast", "checking", 25);
+
+  const activityItems = buildActivityItems(
+    [actual],
+    [matchedForecast, pendingForecast]
+  );
+
+  assert.deepEqual(
+    activityItems.map((item) => `${item.type}:${item.data.id}`),
+    ["forecast:pending-forecast", "transaction:actual"]
+  );
+  assert.deepEqual(
+    getVisibleForecasts([matchedForecast, pendingForecast]).map((item) => item.id),
+    ["pending-forecast"]
+  );
+  assert.equal(getMatchedTransactionIds([matchedForecast]).has(actual.id), true);
 });

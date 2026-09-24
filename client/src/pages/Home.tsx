@@ -2,9 +2,11 @@ import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, laz
 import { signOut } from "firebase/auth";
 import { auth, getTransactions, Transaction, saveForecast, saveSeriesForecasts, saveDayIntervalForecasts, updateForecast, updateSeriesForecasts, deleteForecast, deleteSeriesForecasts, getForecasts, Forecast, reconcileForecast, unreconcileForecast, getAccounts, Account } from "@/lib/firebase";
 import {
+  buildActivityItems,
   getForecastBalances,
+  getMatchedTransactionIds,
   getTransactionBalances,
-  sortActivityItems,
+  getVisibleForecasts,
   type ActivityItem,
 } from "@/lib/activityBalances";
 import { getDashboardContentPadding } from "@/lib/dashboardLayout";
@@ -439,6 +441,18 @@ const Home = () => {
     return found;
   };
 
+  const matchForecastToTransaction = useCallback(async (
+    forecastId: string,
+    transactionId: string
+  ) => {
+    await reconcileForecast(forecastId, transactionId);
+    setForecasts((current) => current.map((forecast) =>
+      forecast.id === forecastId
+        ? { ...forecast, matched_transaction_id: transactionId }
+        : forecast
+    ));
+  }, []);
+
   const cancelLongPress = () => {
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
@@ -489,12 +503,7 @@ const Home = () => {
 
       if (draggingForecast.id && target) {
         try {
-          await reconcileForecast(draggingForecast.id, target);
-          setForecasts(prev =>
-            prev.map(f =>
-              f.id === draggingForecast.id ? { ...f, matched_transaction_id: target } : f
-            )
-          );
+          await matchForecastToTransaction(draggingForecast.id, target);
         } catch (error: any) {
           console.error('Error reconciling forecast:', error);
           setActionError('We couldn’t match that forecast. Please try again.');
@@ -518,7 +527,7 @@ const Home = () => {
       window.removeEventListener('touchend', onEnd);
       window.removeEventListener('mouseup', onEnd);
     };
-  }, [draggingForecast]);
+  }, [draggingForecast, matchForecastToTransaction]);
 
   const formatAmount = (amount: number) => {
     const flippedAmount = -amount;
@@ -651,10 +660,7 @@ const Home = () => {
 
   const handleDeleteEditedForecast = () => {
     if (saving || !editingForecast) return;
-    if (confirmingDelete) {
-      void deleteEditedForecast(confirmingDelete === 'series' ? 'series' : 'individual');
-      return;
-    }
+    if (confirmingDelete) return;
     if (editingForecast.series_id) {
       setSeriesActionPrompt('delete');
     } else {
@@ -663,7 +669,7 @@ const Home = () => {
   };
 
   const visibleForecasts = useMemo(
-    () => forecasts.filter((forecast) => !forecast.matched_transaction_id),
+    () => getVisibleForecasts(forecasts),
     [forecasts]
   );
 
@@ -742,10 +748,10 @@ const Home = () => {
     [chartData]
   );
 
-  const allActivityItems = useMemo<ActivityItem[]>(() => sortActivityItems([
-    ...visibleForecasts.map(f => ({ type: 'forecast' as const, data: f })),
-    ...transactions.map(t => ({ type: 'transaction' as const, data: t })),
-  ]), [visibleForecasts, transactions]);
+  const allActivityItems = useMemo<ActivityItem[]>(
+    () => buildActivityItems(transactions, forecasts),
+    [transactions, forecasts]
+  );
 
   const mergedItems = useMemo(
     () => allActivityItems.filter((item) => {
@@ -787,13 +793,10 @@ const Home = () => {
     orderedActivityDateHeadersRef.current = headers;
   }, [activityDates]);
 
-  const matchedTransactionIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const f of forecasts) {
-      if (f.matched_transaction_id) ids.add(f.matched_transaction_id);
-    }
-    return ids;
-  }, [forecasts]);
+  const matchedTransactionIds = useMemo(
+    () => getMatchedTransactionIds(forecasts),
+    [forecasts]
+  );
 
   const transactionBalances = useMemo(
     () => getTransactionBalances(accounts, allActivityItems),
@@ -1202,7 +1205,7 @@ const Home = () => {
               const tx = item.data as Transaction;
               const merchantId = tx.merchant_entity_id;
               const txName = tx.merchant_name || tx.counterparty_name;
-              return forecasts.some(f =>
+              return visibleForecasts.some(f =>
                 (merchantId && f.merchant_entity_id === merchantId) ||
                 (txName && f.name === txName)
               );
@@ -1306,6 +1309,8 @@ const Home = () => {
                   }
                   if (!isForecast && el) {
                     transactionRefs.current.set((item.data as Transaction).id, el);
+                  } else if (!isForecast) {
+                    transactionRefs.current.delete((item.data as Transaction).id);
                   }
                 }}
                 onTouchStart={isForecast ? (e) => handleLongPressStart(item.data as Forecast, e) : undefined}
@@ -1336,12 +1341,7 @@ const Home = () => {
                   const transactionId = (item.data as Transaction).id;
                   if (!forecastId) return;
                   try {
-                    await reconcileForecast(forecastId, transactionId);
-                    setForecasts((current) => current.map((forecast) =>
-                      forecast.id === forecastId
-                        ? { ...forecast, matched_transaction_id: transactionId }
-                        : forecast
-                    ));
+                    await matchForecastToTransaction(forecastId, transactionId);
                   } catch (error) {
                     console.error('Error reconciling forecast:', error);
                     setActionError('We couldn’t match that forecast. Please try again.');
@@ -1487,6 +1487,21 @@ const Home = () => {
                   }}>
                     {displayName}
                   </div>
+                  {isMatched && (
+                    <div
+                      aria-label="Matched: True"
+                      data-testid={`transaction-matched-${(item.data as Transaction).id}`}
+                      role="status"
+                      style={{
+                        color: ui.color.success,
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        marginTop: '3px',
+                      }}
+                    >
+                      Matched: True
+                    </div>
+                  )}
                 </div>
                 
                 <div style={{ textAlign: 'right' }}>
@@ -1724,7 +1739,7 @@ const Home = () => {
                   {(() => {
                     const merchantId = selectedTransaction.merchant_entity_id;
                     const txName = selectedTransaction.merchant_name || selectedTransaction.counterparty_name;
-                    const hasForecast = forecasts.some(f =>
+                    const hasForecast = visibleForecasts.some(f =>
                       (merchantId && f.merchant_entity_id === merchantId) ||
                       (txName && f.name === txName)
                     );
@@ -1739,34 +1754,43 @@ const Home = () => {
                   })()}
                   {(() => {
                     const matchedForecast = forecasts.find(f => f.matched_transaction_id === selectedTransaction.id);
-                    if (!matchedForecast) return null;
+                    const isMatched = Boolean(matchedForecast);
                     return (
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' }}>
-                        <span style={{ ...forecastFieldLabelStyle, color: ui.color.success }}>Matched</span>
-                        <button
-                          data-testid="button-undo-match"
-                          onClick={async () => {
-                            try {
-                              await unreconcileForecast(matchedForecast.id!);
-                              const updatedForecasts = await getForecasts(auth.currentUser!.uid);
-                              setForecasts(updatedForecasts);
-                            } catch (error) {
-                              console.error('Error undoing match:', error);
-                            }
-                          }}
-                          style={{
-                            padding: '4px 12px',
-                            fontSize: '13px',
-                            backgroundColor: 'transparent',
-                            color: ui.color.danger,
-                            border: `1px solid ${ui.color.danger}`,
-                            borderRadius: ui.radius.small,
-                            cursor: 'pointer',
-                            fontWeight: 500
-                          }}
-                        >
-                          Undo
-                        </button>
+                        <span style={{ ...forecastFieldLabelStyle, color: isMatched ? ui.color.success : ui.color.textMuted }}>
+                          Matched
+                        </span>
+                        <div style={{ alignItems: 'center', display: 'flex', gap: '12px' }}>
+                          <span style={{ ...forecastControlTextStyle, color: isMatched ? ui.color.success : ui.color.textDisabled, fontWeight: 500 }}>
+                            {isMatched ? 'True' : 'False'}
+                          </span>
+                          {matchedForecast && (
+                            <button
+                              data-testid="button-undo-match"
+                              onClick={async () => {
+                                try {
+                                  await unreconcileForecast(matchedForecast.id!);
+                                  const updatedForecasts = await getForecasts(auth.currentUser!.uid);
+                                  setForecasts(updatedForecasts);
+                                } catch (error) {
+                                  console.error('Error undoing match:', error);
+                                }
+                              }}
+                              style={{
+                                padding: '4px 12px',
+                                fontSize: '13px',
+                                backgroundColor: 'transparent',
+                                color: ui.color.danger,
+                                border: `1px solid ${ui.color.danger}`,
+                                borderRadius: ui.radius.small,
+                                cursor: 'pointer',
+                                fontWeight: 500
+                              }}
+                            >
+                              Undo
+                            </button>
+                          )}
+                        </div>
                       </div>
                     );
                   })()}
@@ -2371,19 +2395,9 @@ const Home = () => {
                   <div style={{ alignItems: 'center', display: 'flex', gap: '8px' }}>
                     <button
                       data-testid="button-delete-this-forecast"
-                      aria-label={
-                        confirmingDelete === 'series'
-                          ? 'Confirm delete entire forecast series'
-                          : confirmingDelete === 'one'
-                            ? 'Confirm delete this forecast'
-                            : 'Delete forecast'
-                      }
-                      title={
-                        confirmingDelete
-                          ? 'Confirm deletion'
-                          : 'Delete forecast'
-                      }
-                      disabled={saving}
+                      aria-label="Delete forecast"
+                      title="Delete forecast"
+                      disabled={saving || Boolean(confirmingDelete)}
                       onClick={handleDeleteEditedForecast}
                       style={{
                         alignItems: 'center',
@@ -2391,11 +2405,11 @@ const Home = () => {
                         border: `1px solid ${ui.color.borderStrong}`,
                         borderRadius: ui.radius.control,
                         color: ui.color.textMuted,
-                        cursor: saving ? 'not-allowed' : 'pointer',
+                        cursor: saving || confirmingDelete ? 'not-allowed' : 'pointer',
                         display: 'inline-flex',
                         height: '34px',
                         justifyContent: 'center',
-                        opacity: saving ? 0.6 : 1,
+                        opacity: saving || confirmingDelete ? 0.6 : 1,
                         padding: 0,
                         width: '34px'
                       }}
@@ -2720,10 +2734,52 @@ const Home = () => {
                   )}
 
                   {confirmingDelete && (
-                    <div role="alert" style={{ ...sharedStyles.alertError, padding: '10px', fontSize: '13px' }}>
-                      {confirmingDelete === 'series'
-                        ? 'This will permanently delete every forecast in this series.'
-                        : 'This will permanently delete this forecast.'}
+                    <div
+                      role="alert"
+                      data-testid="forecast-delete-confirmation"
+                      style={{ ...sharedStyles.alertError, padding: '10px', fontSize: '13px' }}
+                    >
+                      <div>
+                        {confirmingDelete === 'series'
+                          ? 'This will permanently delete every forecast in this series.'
+                          : 'This will permanently delete this forecast.'}
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '10px' }}>
+                        <button
+                          type="button"
+                          data-testid="button-cancel-delete"
+                          disabled={saving}
+                          onClick={() => setConfirmingDelete(null)}
+                          style={{
+                            ...sharedStyles.secondaryButton,
+                            cursor: saving ? 'not-allowed' : 'pointer',
+                            fontWeight: 600,
+                            padding: '7px 12px',
+                          }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          data-testid="button-confirm-delete"
+                          disabled={saving}
+                          onClick={() => {
+                            void deleteEditedForecast(confirmingDelete === 'series' ? 'series' : 'individual');
+                          }}
+                          style={{
+                            backgroundColor: ui.color.danger,
+                            border: 'none',
+                            borderRadius: ui.radius.control,
+                            color: ui.color.surface,
+                            cursor: saving ? 'not-allowed' : 'pointer',
+                            fontWeight: 600,
+                            opacity: saving ? 0.6 : 1,
+                            padding: '7px 12px',
+                          }}
+                        >
+                          {saving ? 'Deleting…' : 'Delete'}
+                        </button>
+                      </div>
                     </div>
                   )}
 

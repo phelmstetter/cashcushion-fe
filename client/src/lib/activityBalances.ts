@@ -6,6 +6,18 @@ export type ActivityItem =
 
 const getActivityItemId = (item: ActivityItem) => item.data.id ?? "";
 
+export function getVisibleForecasts(forecasts: Forecast[]): Forecast[] {
+  return forecasts.filter((forecast) => !forecast.matched_transaction_id);
+}
+
+export function getMatchedTransactionIds(forecasts: Forecast[]): Set<string> {
+  return new Set(
+    forecasts
+      .map((forecast) => forecast.matched_transaction_id)
+      .filter((transactionId): transactionId is string => Boolean(transactionId))
+  );
+}
+
 /**
  * Orders activity exactly as it appears in the dashboard. The ID tie-breaker
  * matches the Firestore queries, so balance calculations remain stable when
@@ -22,6 +34,16 @@ export function sortActivityItems(items: ActivityItem[]): ActivityItem[] {
 
     return getActivityItemId(second).localeCompare(getActivityItemId(first));
   });
+}
+
+export function buildActivityItems(
+  transactions: Transaction[],
+  forecasts: Forecast[]
+): ActivityItem[] {
+  return sortActivityItems([
+    ...getVisibleForecasts(forecasts).map((data) => ({ type: "forecast" as const, data })),
+    ...transactions.map((data) => ({ type: "transaction" as const, data })),
+  ]);
 }
 
 export function getTransactionBalances(
