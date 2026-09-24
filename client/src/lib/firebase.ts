@@ -252,16 +252,24 @@ export interface Forecast {
   forecast_type?: 'single' | 'monthly' | 'every_x_days' | null;
   forecast_interval?: number | null;
   auto_extend?: boolean;
+  extend?: boolean;
+  extended?: boolean;
+  extended_from_forecast_id?: string;
 }
 
-export async function saveForecast(forecast: Forecast): Promise<string> {
+type ClientForecastInput = Omit<
+  Forecast,
+  'id' | 'extend' | 'extended' | 'extended_from_forecast_id'
+>;
+
+export async function saveForecast(forecast: ClientForecastInput): Promise<string> {
   const forecastsRef = collection(db, 'forecasts');
   const docRef = await addDoc(forecastsRef, forecast);
   return docRef.id;
 }
 
 export async function saveSeriesForecasts(
-  baseForecast: Omit<Forecast, 'id' | 'date'>,
+  baseForecast: Omit<Forecast, 'id' | 'date' | 'extend' | 'extended' | 'extended_from_forecast_id'>,
   startDate: string,
   monthCount: number
 ): Promise<string> {
@@ -288,7 +296,7 @@ export async function saveSeriesForecasts(
 }
 
 export async function saveDayIntervalForecasts(
-  baseForecast: Omit<Forecast, 'id' | 'date'>,
+  baseForecast: Omit<Forecast, 'id' | 'date' | 'extend' | 'extended' | 'extended_from_forecast_id'>,
   startDate: string,
   dayInterval: number,
   count: number
@@ -349,6 +357,7 @@ export async function getForecasts(userId: string): Promise<Forecast[]> {
   const forecasts: Forecast[] = [];
   querySnapshot.forEach((doc) => {
     const data = doc.data();
+    const extend = typeof data.extend === 'boolean' ? data.extend : undefined;
     forecasts.push({
       id: doc.id,
       user_id: data.user_id,
@@ -363,7 +372,14 @@ export async function getForecasts(userId: string): Promise<Forecast[]> {
       logo_url: data.logo_url || null,
       forecast_type: data.forecast_type || 'single',
       forecast_interval: data.forecast_interval ?? null,
-      auto_extend: Boolean(data.auto_extend)
+      // The backend's `extend` flag is authoritative after migration. Older
+      // client-created forecasts still use `auto_extend`.
+      auto_extend: extend ?? (typeof data.auto_extend === 'boolean' ? data.auto_extend : false),
+      extend,
+      extended: typeof data.extended === 'boolean' ? data.extended : undefined,
+      extended_from_forecast_id: typeof data.extended_from_forecast_id === 'string'
+        ? data.extended_from_forecast_id
+        : undefined
     });
   });
   return forecasts;
@@ -391,7 +407,7 @@ const MAX_BATCH_OPERATIONS = 400;
 
 async function writeForecastsInBatches(
   forecastsRef: ReturnType<typeof collection>,
-  forecasts: Omit<Forecast, 'id'>[]
+  forecasts: Omit<Forecast, 'id' | 'extend' | 'extended' | 'extended_from_forecast_id'>[]
 ): Promise<void> {
   for (let index = 0; index < forecasts.length; index += MAX_BATCH_OPERATIONS) {
     const batch = writeBatch(db);

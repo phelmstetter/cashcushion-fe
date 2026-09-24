@@ -1,2 +1,3 @@
 - [Replit npm registry breaks external CI lockfiles](npm-registry-external-ci.md) — npm install here bakes an internal-only proxy URL into package-lock.json, breaking `npm ci` on Cloud Build/GitHub Actions/etc.
 - [Deferred Vite dependencies](vite-lazy-chunks.md) — explicit manual chunks can be module-preloaded even when their consumer is lazy; verify generated HTML when deferring large libraries.
+- [Firestore rules emulator Java](firestore-rules-emulator-java.md) — Firebase CLI 15's Firestore emulator needs Java 21; an existing Java 17 can shadow it on PATH.

@@ -16,6 +16,15 @@ import { Info, Trash2 } from "lucide-react";
 
 const LONG_PRESS_MS = 500;
 const CHART_WINDOW_MIN = 33;
+const getManualMatchErrorMessage = (error: unknown) => {
+  const code = typeof error === 'object' && error !== null && 'code' in error
+    ? error.code
+    : undefined;
+  if (typeof code === 'string' && (code === 'permission-denied' || code.endsWith('/permission-denied'))) {
+    return 'Matching was rejected. Confirm you own the transaction and that it’s from the same account as the forecast.';
+  }
+  return 'We couldn’t match that forecast. Please try again.';
+};
 const forecastFieldLabelStyle = {
   color: ui.color.textMuted,
   fontFamily: 'inherit',
@@ -506,7 +515,7 @@ const Home = () => {
           await matchForecastToTransaction(draggingForecast.id, target);
         } catch (error: any) {
           console.error('Error reconciling forecast:', error);
-          setActionError('We couldn’t match that forecast. Please try again.');
+          setActionError(getManualMatchErrorMessage(error));
         }
       }
 
@@ -1344,7 +1353,7 @@ const Home = () => {
                     await matchForecastToTransaction(forecastId, transactionId);
                   } catch (error) {
                     console.error('Error reconciling forecast:', error);
-                    setActionError('We couldn’t match that forecast. Please try again.');
+                    setActionError(getManualMatchErrorMessage(error));
                   } finally {
                     setDraggingForecast(null);
                     setDragPos(null);
