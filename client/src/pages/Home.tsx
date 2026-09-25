@@ -1497,19 +1497,13 @@ const Home = () => {
                     {displayName}
                   </div>
                   {isMatched && (
-                    <div
-                      aria-label="Matched: True"
+                    <span
+                      className="sr-only"
                       data-testid={`transaction-matched-${(item.data as Transaction).id}`}
                       role="status"
-                      style={{
-                        color: ui.color.success,
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        marginTop: '3px',
-                      }}
                     >
-                      Matched: True
-                    </div>
+                      Transaction matched
+                    </span>
                   )}
                 </div>
                 
