@@ -1,6 +1,8 @@
 import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, lazy, Suspense } from "react";
 import { signOut } from "firebase/auth";
-import { auth, getTransactions, Transaction, saveForecast, saveSeriesForecasts, saveDayIntervalForecasts, updateForecast, updateSeriesForecasts, deleteForecast, deleteSeriesForecasts, getForecasts, Forecast, reconcileForecast, unreconcileForecast, getAccounts, Account } from "@/lib/firebase";
+import { auth, getTransactions, Transaction, saveForecast, saveSeriesForecasts, saveDayIntervalForecasts, updateForecast, updateSeriesForecasts, deleteForecast, deleteSeriesForecasts, getForecasts, Forecast, getAccounts, Account } from "@/lib/firebase";
+import { reconciliationApi } from "@/lib/manualReconciliation";
+import { createLatestReconciliationRefresh, runManualReconciliation, type ReconciliationAction } from "@/lib/reconciliation";
 import {
   buildActivityItems,
   getForecastBalances,
@@ -16,15 +18,6 @@ import { Info, Trash2 } from "lucide-react";
 
 const LONG_PRESS_MS = 500;
 const CHART_WINDOW_MIN = 33;
-const getManualMatchErrorMessage = (error: unknown) => {
-  const code = typeof error === 'object' && error !== null && 'code' in error
-    ? error.code
-    : undefined;
-  if (typeof code === 'string' && (code === 'permission-denied' || code.endsWith('/permission-denied'))) {
-    return 'Matching was rejected. Confirm you own the transaction and that it’s from the same account as the forecast.';
-  }
-  return 'We couldn’t match that forecast. Please try again.';
-};
 const forecastFieldLabelStyle = {
   color: ui.color.textMuted,
   fontFamily: 'inherit',
@@ -154,10 +147,18 @@ const Home = () => {
   const [chartNavigationTarget, setChartNavigationTarget] = useState<{ date: string; requestId: number } | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [forecasts, setForecasts] = useState<Forecast[]>([]);
+  const [pendingForecastIds, setPendingForecastIds] = useState<Set<string>>(new Set());
+  const pendingForecastIdsRef = useRef<Set<string>>(new Set());
+  const [replacementForecast, setReplacementForecast] = useState<Forecast | null>(null);
+  const replacementChipRef = useRef<HTMLDivElement | null>(null);
   const [draggingForecast, setDraggingForecast] = useState<Forecast | null>(null);
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const cursorRef = useRef<{ date: string; id: string } | null>(null);
+  const forecastRefreshRef = useRef(createLatestReconciliationRefresh<Forecast[]>());
+  const transactionGenerationRef = useRef(0);
+  const transactionRefreshingRef = useRef(false);
+  const reconciliationErrorSequenceRef = useRef(0);
   const loadingRef = useRef(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -209,6 +210,14 @@ const Home = () => {
   };
 
   const isModalOpen = Boolean(selectedTransaction || editingForecast || addingStandaloneForecast);
+
+  useEffect(() => {
+    if (!replacementForecast) return;
+    const frame = requestAnimationFrame(() =>
+      replacementChipRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [replacementForecast]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -268,6 +277,17 @@ const Home = () => {
     ));
   };
 
+  const refreshForecastsFromServer = useCallback(async () => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) throw new Error('Session ended');
+    await forecastRefreshRef.current(
+      () => getForecasts(uid),
+      (latest) => {
+        if (auth.currentUser?.uid === uid) setForecasts(latest);
+      },
+    );
+  }, []);
+
   const loadInitialTransactions = async () => {
     const userId = auth.currentUser?.uid;
     if (!userId) {
@@ -324,18 +344,21 @@ const Home = () => {
   };
 
   const loadMoreTransactions = async (): Promise<boolean> => {
-    if (loadingRef.current || !hasMoreRef.current) return false;
+    if (loadingRef.current || transactionRefreshingRef.current || !hasMoreRef.current) return false;
     
     const userId = auth.currentUser?.uid;
     if (!userId) return false;
+    const generation = transactionGenerationRef.current;
     
     loadingRef.current = true;
     setLoading(true);
     setPaginationError(null);
     try {
       const result = await getTransactions(userId, cursorRef.current);
+      if (generation !== transactionGenerationRef.current || auth.currentUser?.uid !== userId) return false;
       if (result.transactions.length > 0) {
         setTransactions(prev => {
+          if (generation !== transactionGenerationRef.current) return prev;
           const existingIds = new Set(prev.map((transaction) => transaction.id));
           const nextPage = result.transactions.filter((transaction) => !existingIds.has(transaction.id));
           return nextPage.length ? [...prev, ...nextPage] : prev;
@@ -352,6 +375,7 @@ const Home = () => {
         return false;
       }
     } catch (error) {
+      if (generation !== transactionGenerationRef.current) return false;
       console.error("Error loading more:", error);
       setPaginationError('We couldn’t load older transactions. Try again.');
       return false;
@@ -450,17 +474,56 @@ const Home = () => {
     return found;
   };
 
-  const matchForecastToTransaction = useCallback(async (
-    forecastId: string,
-    transactionId: string
-  ) => {
-    await reconcileForecast(forecastId, transactionId);
-    setForecasts((current) => current.map((forecast) =>
-      forecast.id === forecastId
-        ? { ...forecast, matched_transaction_id: transactionId }
-        : forecast
-    ));
-  }, []);
+  const handleReconciliation = useCallback(async (action: ReconciliationAction) => {
+    if (pendingForecastIdsRef.current.has(action.forecastId)) return;
+    const errorSequence = ++reconciliationErrorSequenceRef.current;
+    const outcome = await runManualReconciliation(action, {
+      api: reconciliationApi,
+      pending: pendingForecastIdsRef.current,
+      setPending: (forecastId, value) => {
+        setPendingForecastIds((current) => {
+          const next = new Set(current);
+          if (value) next.add(forecastId);
+          else next.delete(forecastId);
+          return next;
+        });
+      },
+      setError: (message) => {
+        if (errorSequence === reconciliationErrorSequenceRef.current) setActionError(message);
+      },
+      refreshForecasts: refreshForecastsFromServer,
+      refreshTransactions: async () => {
+        const uid = auth.currentUser?.uid;
+        if (!uid) throw new Error('Session ended');
+        const generation = ++transactionGenerationRef.current;
+        transactionRefreshingRef.current = true;
+        try {
+          const result = await getTransactions(uid, null, Math.max(20, transactions.length));
+          if (generation !== transactionGenerationRef.current || auth.currentUser?.uid !== uid) return;
+          setTransactions(result.transactions);
+          cursorRef.current = result.lastDate && result.lastId
+            ? { date: result.lastDate, id: result.lastId }
+            : null;
+          hasMoreRef.current = result.hasMore;
+          setHasMore(result.hasMore);
+        } finally {
+          if (generation === transactionGenerationRef.current) {
+            transactionRefreshingRef.current = false;
+            reobserveSentinel();
+          }
+        }
+      },
+    });
+    if (outcome === 'success' && action.action === 'match') {
+      setReplacementForecast((current) => current?.id === action.forecastId ? null : current);
+    }
+  }, [transactions.length, refreshForecastsFromServer]);
+
+  const matchForecastToTransaction = useCallback(
+    (forecastId: string, transactionId: string) =>
+      handleReconciliation({ action: 'match', forecastId, transactionId }),
+    [handleReconciliation],
+  );
 
   const cancelLongPress = () => {
     if (longPressTimerRef.current) {
@@ -470,7 +533,7 @@ const Home = () => {
   };
 
   const handleLongPressStart = (forecast: Forecast, e: React.TouchEvent | React.MouseEvent) => {
-    if (!forecast.id) return;
+    if (!forecast.id || pendingForecastIdsRef.current.has(forecast.id)) return;
     const pos = getClientPos(e);
     dragStartPosRef.current = pos;
 
@@ -511,12 +574,7 @@ const Home = () => {
       const target = findDropTarget(pos.x, pos.y);
 
       if (draggingForecast.id && target) {
-        try {
-          await matchForecastToTransaction(draggingForecast.id, target);
-        } catch (error: any) {
-          console.error('Error reconciling forecast:', error);
-          setActionError(getManualMatchErrorMessage(error));
-        }
+        await matchForecastToTransaction(draggingForecast.id, target);
       }
 
       setDraggingForecast(null);
@@ -622,8 +680,7 @@ const Home = () => {
           amount: signedForecastAmount()
         });
       }
-      const updatedForecasts = await getForecasts(auth.currentUser.uid);
-      setForecasts(updatedForecasts);
+      await refreshForecastsFromServer();
       resetEditingForecast();
     } catch (error: any) {
       console.error(`Error updating ${scope === 'series' ? 'series' : 'forecast'}:`, error);
@@ -650,8 +707,7 @@ const Home = () => {
       } else {
         await deleteForecast(editingForecast.id);
       }
-      const updatedForecasts = await getForecasts(auth.currentUser.uid);
-      setForecasts(updatedForecasts);
+      await refreshForecastsFromServer();
       resetEditingForecast();
     } catch (error: any) {
       console.error(`Error deleting ${scope === 'series' ? 'series' : 'forecast'}:`, error);
@@ -1157,6 +1213,44 @@ const Home = () => {
         </div>
       </div>
 
+      {actionError && !isModalOpen && (
+        <div role="alert" style={{ ...sharedStyles.alertError, margin: '8px', padding: '12px', fontSize: '14px' }}>
+          {actionError}
+        </div>
+      )}
+      {replacementForecast?.id && (
+        <div ref={replacementChipRef} style={{ ...sharedStyles.card, margin: '8px', padding: '12px', borderRadius: ui.radius.card }}>
+          <div style={{ fontSize: '13px', color: ui.color.textMuted, marginBottom: '8px' }}>
+            Drag this forecast onto the correct transaction to replace its match.
+          </div>
+          <div
+            draggable={!pendingForecastIds.has(replacementForecast.id)}
+            onDragStart={(event) => {
+              if (!replacementForecast.id) return;
+              cancelLongPress();
+              event.dataTransfer.setData('text/plain', replacementForecast.id);
+              setDraggingForecast(replacementForecast);
+            }}
+            onDragEnd={() => {
+              setDraggingForecast(null);
+              setDropTargetId(null);
+            }}
+            onTouchStart={(event) => handleLongPressStart(replacementForecast, event)}
+            onTouchEnd={!draggingForecast ? cancelLongPress : undefined}
+            onMouseDown={(event) => handleLongPressStart(replacementForecast, event)}
+            onMouseUp={!draggingForecast ? cancelLongPress : undefined}
+            role="status"
+            aria-label={`Drag ${replacementForecast.name} to replace its match`}
+            style={{ display: 'inline-block', padding: '8px 12px', border: `1px solid ${ui.color.primary}`, borderRadius: ui.radius.small, color: ui.color.primary, cursor: 'grab' }}
+          >
+            {replacementForecast.name}
+          </div>
+          <button onClick={() => setReplacementForecast(null)} style={{ marginLeft: '12px', border: 0, background: 'transparent', color: ui.color.textMuted, cursor: 'pointer' }}>
+            Cancel
+          </button>
+        </div>
+      )}
+
       {initialLoading ? (
         <div aria-busy="true" style={{ padding: '24px 12px', color: ui.color.textMuted, textAlign: 'center' }}>
           Loading your transactions and forecasts…
@@ -1330,7 +1424,7 @@ const Home = () => {
                 draggable={isForecast}
                 onDragStart={isForecast ? (event) => {
                   const forecast = item.data as Forecast;
-                  if (!forecast.id) {
+                   if (!forecast.id || pendingForecastIdsRef.current.has(forecast.id)) {
                     event.preventDefault();
                     return;
                   }
@@ -1351,15 +1445,13 @@ const Home = () => {
                   if (!forecastId) return;
                   try {
                     await matchForecastToTransaction(forecastId, transactionId);
-                  } catch (error) {
-                    console.error('Error reconciling forecast:', error);
-                    setActionError(getManualMatchErrorMessage(error));
                   } finally {
                     setDraggingForecast(null);
                     setDragPos(null);
                     setDropTargetId(null);
                   }
                 } : undefined}
+                 aria-busy={isForecast && pendingForecastIds.has((item.data as Forecast).id ?? '')}
                 onDragEnd={isForecast ? () => {
                   cancelLongPress();
                   setDraggingForecast(null);
@@ -1768,30 +1860,39 @@ const Home = () => {
                             {isMatched ? 'True' : 'False'}
                           </span>
                           {matchedForecast && (
-                            <button
-                              data-testid="button-undo-match"
-                              onClick={async () => {
-                                try {
-                                  await unreconcileForecast(matchedForecast.id!);
-                                  const updatedForecasts = await getForecasts(auth.currentUser!.uid);
-                                  setForecasts(updatedForecasts);
-                                } catch (error) {
-                                  console.error('Error undoing match:', error);
-                                }
-                              }}
-                              style={{
-                                padding: '4px 12px',
-                                fontSize: '13px',
-                                backgroundColor: 'transparent',
-                                color: ui.color.danger,
-                                border: `1px solid ${ui.color.danger}`,
-                                borderRadius: ui.radius.small,
-                                cursor: 'pointer',
-                                fontWeight: 500
-                              }}
-                            >
-                              Undo
-                            </button>
+                             <>
+                               <button
+                                 onClick={() => {
+                                   setReplacementForecast(matchedForecast);
+                                   closeModal();
+                                 }}
+                                 disabled={!matchedForecast.id || pendingForecastIds.has(matchedForecast.id)}
+                                 style={{ padding: '4px 8px', border: `1px solid ${ui.color.primary}`, borderRadius: ui.radius.small, background: 'transparent', color: ui.color.primary, cursor: 'pointer' }}
+                               >
+                                 Replace
+                               </button>
+                               <button
+                                 data-testid="button-undo-match"
+                                 onClick={() => {
+                                   if (matchedForecast.id) {
+                                     void handleReconciliation({ action: 'unmatch', forecastId: matchedForecast.id });
+                                   }
+                                 }}
+                                 disabled={!matchedForecast.id || pendingForecastIds.has(matchedForecast.id)}
+                                 style={{
+                                   padding: '4px 12px',
+                                   fontSize: '13px',
+                                   backgroundColor: 'transparent',
+                                   color: ui.color.danger,
+                                   border: `1px solid ${ui.color.danger}`,
+                                   borderRadius: ui.radius.small,
+                                   cursor: 'pointer',
+                                   fontWeight: 500
+                                 }}
+                               >
+                                 {matchedForecast.id && pendingForecastIds.has(matchedForecast.id) ? 'Working…' : 'Undo'}
+                               </button>
+                             </>
                           )}
                         </div>
                       </div>
@@ -2354,8 +2455,7 @@ const Home = () => {
                           });
                         }
 
-                        const updatedForecasts = await getForecasts(auth.currentUser.uid);
-                        setForecasts(updatedForecasts);
+                        await refreshForecastsFromServer();
                         setSelectedTransaction(null);
                         setAddingStandaloneForecast(false);
                         setStandaloneForecastName('');

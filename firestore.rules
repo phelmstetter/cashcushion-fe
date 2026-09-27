@@ -7,7 +7,8 @@ service cloud.firestore {
                'user_id', 'name', 'merchant_entity_id', 'date', 'amount',
                'created_at', 'matched_transaction_id', 'series_id', 'account_id',
                'logo_url', 'forecast_type', 'forecast_interval', 'auto_extend',
-               'extend', 'extended', 'extended_from_forecast_id'
+                'extend', 'extended', 'extended_from_forecast_id',
+                'match_source', 'match_engine_version', 'match_confidence_score'
              ])
              && data.user_id is string
              && data.name is string
@@ -39,33 +40,29 @@ service cloud.firestore {
       ]);
     }
 
-    function hasNoMatchChanges() {
-      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
-        'matched_transaction_id'
+    function hasNoBackendReconciliationFields(data) {
+      return !data.keys().hasAny([
+        'matched_transaction_id', 'match_source', 'match_engine_version',
+        'match_confidence_score'
       ]);
     }
 
-    function isSameOwnerAccountTransaction(transactionId) {
-      return get(/databases/$(database)/documents/transactions/$(transactionId)).data.user_id == request.auth.uid
-             && resource.data.account_id is string
-             && get(/databases/$(database)/documents/transactions/$(transactionId)).data.account_id == resource.data.account_id;
+    function hasNoBackendReconciliationChanges() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'matched_transaction_id', 'match_source', 'match_engine_version',
+        'match_confidence_score'
+      ]);
     }
 
-    // Existing forecasts may predate the current validation schema. Allow a
-    // user to reconcile one of those records without granting broader edits:
-    // only the match field can change, and it must point to that user's own
-    // transaction on the same account (or be cleared).
-    function isValidReconciliationUpdate() {
-      return request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['matched_transaction_id'])
-             && request.resource.data.keys().hasAny(['matched_transaction_id'])
-             && (
-                 request.resource.data.matched_transaction_id == null
-                 || (
-                   request.resource.data.matched_transaction_id is string
-                   && isSameOwnerAccountTransaction(request.resource.data.matched_transaction_id)
-                 )
-               );
+    function hasNoMatchedAccountChange() {
+      return !resource.data.keys().hasAny(['matched_transaction_id'])
+             || resource.data.matched_transaction_id == null
+             || request.resource.data.account_id == resource.data.account_id;
+    }
+
+    function isUnmatchedForecast() {
+      return !resource.data.keys().hasAny(['matched_transaction_id'])
+             || resource.data.matched_transaction_id == null;
     }
 
     match /users/{userId} {
@@ -96,22 +93,20 @@ service cloud.firestore {
       allow create: if request.auth != null
                     && request.auth.uid == request.resource.data.user_id
                     && hasNoBackendLifecycleFields(request.resource.data)
+                    && hasNoBackendReconciliationFields(request.resource.data)
                     && isValidForecast(request.resource.data);
 
       allow update: if request.auth != null
                     && resource.data.user_id == request.auth.uid
                     && request.resource.data.user_id == resource.data.user_id
-                    && (
-                      (
-                        isValidForecast(request.resource.data)
-                        && hasNoBackendLifecycleChanges()
-                        && hasNoMatchChanges()
-                      )
-                      || isValidReconciliationUpdate()
-                    );
+                    && isValidForecast(request.resource.data)
+                    && hasNoBackendLifecycleChanges()
+                    && hasNoBackendReconciliationChanges()
+                    && hasNoMatchedAccountChange();
 
       allow delete: if request.auth != null
-                    && resource.data.user_id == request.auth.uid;
+                    && resource.data.user_id == request.auth.uid
+                    && isUnmatchedForecast();
     }
 
     match /removed_accounts/{tombstoneId} {
@@ -133,5 +128,8 @@ service cloud.firestore {
       // Account details, balances, owner IDs, and Plaid metadata are
       // bank-managed. Only Firebase Admin SDK code may write them.
     }
+
+    // Learning/evidence documents are server-owned. No client write rule is
+    // granted for these collections (or any other unmatched path).
   }
 }

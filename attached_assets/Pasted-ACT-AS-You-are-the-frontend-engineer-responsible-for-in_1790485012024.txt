@@ -1,0 +1,1431 @@
+ACT AS:
+
+You are the frontend engineer responsible for integrating CashCushion
+Reconciliation Engine v2 into the production CashCushion frontend.
+
+You are working ONLY in the CashCushion frontend repository.
+
+Your job is to update the existing production manual forecast-to-transaction
+reconciliation UI so manual matching, replacement, and unmatching use the new
+authoritative backend Reconciliation v2 API.
+
+You do NOT have access to the backend repository.
+
+That is expected.
+
+Do not ask for backend repository access.
+
+The complete backend API contract you need is embedded in this prompt under:
+
+"AUTHORITATIVE BACKEND CONTRACT"
+
+Treat that contract as authoritative.
+
+==================================================
+PRIMARY ENGINEERING PRINCIPLE
+==================================================
+
+The browser communicates USER INTENT.
+
+The backend owns RECONCILIATION TRUTH.
+
+The frontend should say:
+
+"Match Forecast F to Transaction T."
+
+or:
+
+"Unmatch Forecast F."
+
+The frontend must NOT independently manipulate the authoritative reconciliation
+relationship.
+
+Conceptually:
+
+User action
+    |
+    v
+Frontend
+    |
+    | authenticated reconciliation request
+    v
+Backend API
+    |
+    | validation + Firestore transaction
+    v
+Authoritative Firestore state
+    |
+    v
+Frontend reflects resulting state
+
+==================================================
+IMPORTANT CONSTRAINTS
+==================================================
+
+- Do not deploy anything.
+- Do not redesign the application.
+- Do not create a second reconciliation UI.
+- Preserve the existing drag/drop reconciliation UX where practical.
+- Do not make unrelated UI changes.
+- Do not duplicate backend reconciliation logic.
+- Do not calculate reconciliation confidence in the browser.
+- Do not normalize descriptions for reconciliation in the browser.
+- Do not create learned aliases in the browser.
+- Do not write learning records from the browser.
+- Do not manipulate transaction claim state from the browser.
+- Do not weaken Firestore security rules.
+- Do not hard-code a guessed backend URL.
+- Do not trust locally cached reconciliation state over a backend conflict.
+- Do not remove existing tests just to get a green test suite.
+- Prefer focused changes over architectural rewrites.
+
+==================================================
+TASK 1 — INSPECT THE EXISTING FRONTEND FIRST
+==================================================
+
+Before modifying code, inspect the existing production implementation.
+
+Locate:
+
+1. Forecast rendering.
+2. Transaction rendering.
+3. Manual drag/drop reconciliation behavior.
+4. Existing code that writes matched_transaction_id.
+5. Existing manual unmatch behavior.
+6. Existing rematch/replacement behavior, if any.
+7. Firebase initialization.
+8. Firebase Auth usage.
+9. Firestore access helpers.
+10. Forecast loading/parsing.
+11. Transaction loading/parsing.
+12. Realtime Firestore listeners or refresh behavior.
+13. Existing error/toast/message infrastructure.
+14. Existing pending/loading patterns.
+15. firestore.rules.
+16. Firestore rule tests.
+17. Existing test framework.
+18. Existing environment/configuration conventions.
+
+Do not assume file paths.
+
+Do not create replacement infrastructure when appropriate infrastructure
+already exists.
+
+==================================================
+TASK 2 — AUTHORITATIVE BACKEND CONTRACT
+==================================================
+
+The backend implementation is complete.
+
+Implement against the following contract.
+
+Do not invent different endpoint behavior.
+
+--------------------------------------------------
+ENDPOINT
+--------------------------------------------------
+
+The backend exposes one HTTP Cloud Function:
+
+manual-reconciliation-api
+
+The deployed function URL must be supplied to the frontend through frontend
+configuration/environment variables.
+
+DO NOT hard-code a guessed Cloud Function URL.
+
+Use the frontend repository's existing environment-variable convention.
+
+For a Vite application, this will generally require a VITE_-prefixed variable
+unless the existing project already provides another appropriate mechanism.
+
+If no suitable variable exists, add one and document it.
+
+Conceptually:
+
+VITE_MANUAL_RECONCILIATION_API_URL
+
+This name is an example unless an existing naming convention makes another
+name clearly preferable.
+
+--------------------------------------------------
+AUTHENTICATION
+--------------------------------------------------
+
+Obtain a current Firebase ID token from the currently authenticated Firebase
+user.
+
+Send:
+
+Authorization: Bearer <Firebase ID token>
+
+Also send:
+
+Content-Type: application/json
+
+DO NOT use:
+
+X-Firebase-ID-Token
+
+DO NOT send user_id as reconciliation identity.
+
+The backend verifies the Firebase ID token using Firebase Admin and derives the
+authoritative acting user ID from the verified token.
+
+--------------------------------------------------
+MANUAL MATCH
+--------------------------------------------------
+
+HTTP:
+
+POST <manual-reconciliation-function-url>
+
+Headers:
+
+Authorization: Bearer <Firebase ID token>
+Content-Type: application/json
+
+Body:
+
+{
+  "action": "match",
+  "forecast_id": "FORECAST_DOCUMENT_ID",
+  "transaction_id": "TRANSACTION_DOCUMENT_ID"
+}
+
+Successful response has the following general shape:
+
+{
+  "ok": true,
+  "status": "matched",
+  "forecast_id": "FORECAST_DOCUMENT_ID",
+  "transaction_id": "TRANSACTION_DOCUMENT_ID",
+  "match_source": "manual",
+  "replaced_transaction_id": null,
+  "claim_released": false,
+  "learning_recorded": true
+}
+
+Some response values vary depending on whether an existing relationship was
+replaced.
+
+--------------------------------------------------
+REPLACEMENT / REMATCH
+--------------------------------------------------
+
+IMPORTANT:
+
+The same match endpoint performs atomic replacement.
+
+Example:
+
+Current state:
+
+Forecast F -> Transaction A
+
+User drops Transaction B onto Forecast F.
+
+DO NOT do:
+
+unmatch(F)
+then
+match(F, B)
+
+Instead make ONE request:
+
+{
+  "action": "match",
+  "forecast_id": "F",
+  "transaction_id": "B"
+}
+
+The backend atomically handles:
+
+- validating F and B
+- rejecting conflicting transaction claims
+- releasing A when safe
+- claiming B
+- changing F -> B
+- correcting/rejecting the old learned relationship
+- confirming the new manual relationship
+
+The frontend must use this single-request replacement behavior.
+
+--------------------------------------------------
+MANUAL UNMATCH
+--------------------------------------------------
+
+HTTP:
+
+POST <manual-reconciliation-function-url>
+
+Headers:
+
+Authorization: Bearer <Firebase ID token>
+Content-Type: application/json
+
+Body:
+
+{
+  "action": "unmatch",
+  "forecast_id": "FORECAST_DOCUMENT_ID"
+}
+
+A normal successful response includes:
+
+{
+  "ok": true,
+  "status": "unmatched",
+  ...
+}
+
+If already unmatched, success may contain:
+
+{
+  "ok": true,
+  "status": "already_unmatched",
+  ...
+}
+
+Do NOT send transaction_id for unmatch.
+
+The backend determines the currently matched transaction from authoritative
+Firestore state.
+
+--------------------------------------------------
+ERROR FORMAT
+--------------------------------------------------
+
+Backend errors have this shape:
+
+{
+  "ok": false,
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Human-readable message"
+  }
+}
+
+Relevant status/error combinations:
+
+400:
+- invalid_request
+- invalid_action
+
+401:
+- unauthenticated
+
+403:
+- ownership_denied
+
+404:
+- forecast_not_found
+- transaction_not_found
+
+409:
+- account_mismatch
+- transaction_already_claimed
+- concurrent_conflict
+- invalid_existing_match
+
+405:
+- method_not_allowed
+
+503:
+- authentication_unavailable
+
+500:
+- internal_error
+
+Treat transaction_already_claimed and concurrent_conflict as expected
+concurrency outcomes.
+
+They are not application crashes.
+
+Do not automatically overwrite the server result.
+
+Do not blindly retry the conflicting relationship.
+
+Refresh affected reconciliation state.
+
+--------------------------------------------------
+CORS
+--------------------------------------------------
+
+The backend uses an explicit origin allowlist.
+
+The backend does NOT use:
+
+Access-Control-Allow-Origin: *
+
+The backend environment variable is:
+
+MANUAL_RECONCILIATION_ALLOWED_ORIGINS
+
+The deployed frontend's exact browser origin must be configured there.
+
+If local development produces a CORS error, report the exact frontend origin
+that needs to be added to backend configuration.
+
+DO NOT work around CORS by:
+
+- using no-cors fetch mode
+- disabling browser security
+- creating an insecure proxy
+- removing authentication
+- falling back to direct Firestore reconciliation writes
+
+--------------------------------------------------
+BACKEND-OWNED STATE
+--------------------------------------------------
+
+The backend owns these reconciliation fields:
+
+matched_transaction_id
+match_source
+match_engine_version
+match_confidence_score
+reconciliation_claimed
+
+The backend also exclusively owns:
+
+- description normalization
+- automatic match scoring
+- transaction claiming
+- one-to-one enforcement
+- learned aliases
+- reconciliation feedback
+- global reconciliation evidence
+- positive manual learning
+- correction/rejection learning
+
+The frontend may READ appropriate backend-generated fields.
+
+The frontend must NOT directly WRITE them.
+
+==================================================
+TASK 3 — CREATE A SMALL RECONCILIATION API ADAPTER
+==================================================
+
+Do not scatter raw fetch calls throughout UI components.
+
+Create or use a focused reconciliation API/service module.
+
+Conceptually expose:
+
+manualMatch(forecastId, transactionId)
+
+manualUnmatch(forecastId)
+
+Use names consistent with the existing project.
+
+The adapter should:
+
+1. Obtain the current Firebase authenticated user.
+2. Fail cleanly if no authenticated user exists.
+3. Obtain a current Firebase ID token.
+4. Read the configured manual reconciliation API URL.
+5. Send Authorization: Bearer <token>.
+6. Send Content-Type: application/json.
+7. POST the documented JSON payload.
+8. Parse JSON success responses.
+9. Parse structured backend errors.
+10. Return/throw structured information the UI can handle.
+
+Do not send:
+
+- user_id
+- account_id
+- amount
+- date
+- merchant_entity_id
+- description normalization
+- match_source
+- confidence
+- claim state
+- learning state
+
+The backend obtains authoritative data itself.
+
+==================================================
+TASK 4 — REPLACE DIRECT MANUAL-MATCH FIRESTORE WRITES
+==================================================
+
+Find the existing production manual matching implementation.
+
+If it currently does something conceptually like:
+
+updateDoc(forecastRef, {
+    matched_transaction_id: transactionId
+})
+
+replace that behavior.
+
+The new flow must call the reconciliation API adapter.
+
+Conceptually:
+
+await manualMatch(forecast.id, transaction.id)
+
+Do NOT directly set:
+
+matched_transaction_id
+match_source
+match_engine_version
+match_confidence_score
+reconciliation_claimed
+
+from the browser.
+
+==================================================
+TASK 5 — PRESERVE DRAG/DROP UX
+==================================================
+
+Preserve the existing drag/drop reconciliation interaction unless a small
+change is necessary for correctness.
+
+Desired behavior:
+
+User drags Transaction T onto Forecast F.
+
+Frontend sends:
+
+manualMatch(F, T)
+
+Backend validates and commits.
+
+Frontend reflects authoritative result.
+
+Do not duplicate backend matching validation.
+
+In particular, the frontend should NOT reject an explicit manual match because:
+
+- names look different
+- dates differ
+- amounts differ
+
+unless an existing purely presentational UX already warns the user without
+preventing the request.
+
+Manual matching is an explicit user assertion.
+
+The backend remains responsible for ownership/account/claim invariants.
+
+==================================================
+TASK 6 — USE ATOMIC BACKEND REPLACEMENT
+==================================================
+
+If Forecast F is already matched to Transaction A and the user drops
+Transaction B onto F:
+
+call:
+
+manualMatch(F, B)
+
+ONE TIME.
+
+Do NOT:
+
+manualUnmatch(F)
+manualMatch(F, B)
+
+The backend supports atomic replacement specifically to prevent an unnecessary
+intermediate unmatched state and to preserve learning/claim correctness.
+
+==================================================
+TASK 7 — REPLACE DIRECT UNMATCH WRITES
+==================================================
+
+Find the current production unmatch behavior.
+
+If it currently does something conceptually like:
+
+updateDoc(forecastRef, {
+    matched_transaction_id: null
+})
+
+or:
+
+deleteField(matched_transaction_id)
+
+replace it.
+
+Use:
+
+manualUnmatch(forecast.id)
+
+Do not send transaction_id.
+
+Do not directly release reconciliation_claimed.
+
+Do not manipulate learning records.
+
+The backend owns all of that.
+
+==================================================
+TASK 8 — PENDING / OPTIMISTIC UI
+==================================================
+
+Do not permanently commit a reconciliation relationship in local UI before the
+backend accepts it.
+
+A temporary pending visual state is acceptable.
+
+Recommended flow:
+
+1. User initiates match.
+2. Mark that specific reconciliation operation pending.
+3. Prevent accidental duplicate submission for the same operation.
+4. Call backend.
+5. Backend succeeds.
+6. Allow authoritative Firestore state/listeners to update UI or perform the
+   smallest necessary refresh.
+7. Clear pending state.
+
+On failure:
+
+1. Clear pending state.
+2. Preserve/restore prior relationship display.
+3. Show useful error.
+4. Refresh authoritative state when appropriate.
+
+Do not globally freeze the whole application for one reconciliation operation.
+
+==================================================
+TASK 9 — CONCURRENCY / CLAIM CONFLICTS
+==================================================
+
+The backend protects one-to-one transaction ownership.
+
+Example:
+
+Browser displays Transaction T as available.
+
+Before the user finishes dragging T, automatic reconciliation claims:
+
+Forecast A -> Transaction T
+
+User attempts:
+
+Forecast B -> Transaction T
+
+Backend returns:
+
+409 transaction_already_claimed
+
+Expected frontend behavior:
+
+- do not display B -> T as successful
+- clear pending state
+- show a concise useful message
+- refresh affected reconciliation data
+
+Suggested user-facing meaning:
+
+"This transaction was matched while you were making this change. Reconciliation
+data has been refreshed."
+
+Exact wording may follow existing product style.
+
+Similarly handle:
+
+409 concurrent_conflict
+
+as stale/concurrent state requiring refresh.
+
+Do not automatically retry either conflict.
+
+==================================================
+TASK 10 — ERROR HANDLING
+==================================================
+
+Use existing toast/message/error infrastructure where possible.
+
+Map errors appropriately.
+
+401 unauthenticated:
+
+The user's authentication may have expired.
+
+Do not expose raw backend details.
+
+404 forecast_not_found:
+
+Refresh forecast state.
+
+404 transaction_not_found:
+
+Refresh transaction state.
+
+403 ownership_denied:
+
+Do not reveal information about another user's data.
+
+Show a generic inability-to-complete message.
+
+409 account_mismatch:
+
+Tell the user the transaction cannot be matched to that forecast.
+
+409 transaction_already_claimed:
+
+Explain that the transaction has already been matched and refresh state.
+
+409 concurrent_conflict:
+
+Explain that reconciliation state changed and refresh.
+
+409 invalid_existing_match:
+
+Refresh authoritative state and show a generic reconciliation-state error.
+
+503 authentication_unavailable:
+
+Tell the user reconciliation is temporarily unavailable.
+
+500 internal_error:
+
+Show a generic failure.
+
+NETWORK ERROR:
+
+Keep existing relationship state.
+Clear pending state.
+Allow retry.
+
+Do not show:
+
+- stack traces
+- Firebase internals
+- raw HTML errors
+- sensitive backend details
+
+==================================================
+TASK 11 — AUTHENTICATION DETAILS
+==================================================
+
+Use the existing Firebase Auth instance.
+
+Obtain the ID token from the currently authenticated user.
+
+Do not store ID tokens in:
+
+- Firestore
+- localStorage
+- reconciliation documents
+- logs
+
+Do not create a separate authentication system.
+
+Do not send user_id as authoritative identity.
+
+The backend derives UID from the verified Firebase token.
+
+==================================================
+TASK 12 — STATE REFRESH
+==================================================
+
+After successful or conflicting reconciliation operations, make sure the UI
+eventually reflects authoritative backend state.
+
+Use existing Firestore realtime listeners/state architecture wherever
+possible.
+
+Do not create a second parallel state-management system.
+
+If listeners already update forecasts and transactions, prefer them.
+
+If explicit refresh is necessary, refresh the smallest relevant data set.
+
+The resulting UI must correctly reflect:
+
+- forecast match state
+- transaction availability
+- replacement relationships
+- unmatching
+- existing filtering behavior
+
+==================================================
+TASK 13 — LEGACY DOCUMENT COMPATIBILITY
+==================================================
+
+Existing forecasts may contain:
+
+matched_transaction_id
+
+without:
+
+match_source
+match_engine_version
+match_confidence_score
+
+These are valid legacy documents.
+
+Do not make rendering dependent on new provenance fields existing.
+
+Do not migrate historical documents from the browser.
+
+Do not break old matched forecasts.
+
+==================================================
+TASK 14 — FIRESTORE SECURITY RULES
+==================================================
+
+Review firestore.rules.
+
+Because manual reconciliation is now server-mediated, browser clients should
+not need permission to directly mutate backend-owned reconciliation fields.
+
+Protect backend-owned forecast fields including:
+
+matched_transaction_id
+match_source
+match_engine_version
+match_confidence_score
+
+Protect backend-owned transaction claim state including:
+
+reconciliation_claimed
+
+Browser clients must also not directly create/update/delete backend-owned
+learning collections such as:
+
+user_reconciliation_feedback
+reconciliation_profiles
+global_reconciliation_evidence
+global_reconciliation_contributions
+
+Use the actual collection names/schema present in the repository where known.
+
+IMPORTANT:
+
+Do not break legitimate forecast editing.
+
+Users must still be able to modify normal user-editable forecast fields.
+
+Inspect the existing schema and rules.
+
+Preserve normal operations such as applicable:
+
+- forecast name edits
+- amount edits
+- date edits
+- recurrence configuration
+- auto-extension settings
+- other existing user-editable fields
+
+Do not blindly replace the entire rules file.
+
+Modify it narrowly.
+
+==================================================
+TASK 15 — DO NOT IMPLEMENT LEARNING IN FRONTEND
+==================================================
+
+Never implement browser logic such as:
+
+if names look similar:
+    create alias
+
+or:
+
+write reconciliation feedback
+
+or:
+
+increment global evidence
+
+or:
+
+normalize descriptions for matching
+
+or:
+
+calculate reconciliation confidence
+
+or:
+
+release transaction claim
+
+or:
+
+set match provenance
+
+These are backend responsibilities.
+
+Frontend responsibility is:
+
+USER INTENT + DISPLAY.
+
+==================================================
+TASK 16 — MATCH PROVENANCE
+==================================================
+
+The frontend may READ:
+
+match_source
+
+Possible known values include:
+
+manual
+auto
+
+Legacy documents may have no match_source.
+
+The frontend may also read:
+
+match_engine_version
+match_confidence_score
+
+if existing application behavior needs them.
+
+Do not add a major UI feature around confidence/provenance as part of this
+task.
+
+Do not directly write these fields.
+
+==================================================
+TASK 17 — FIRESTORE RULE TESTS
+==================================================
+
+Add or update Firestore emulator/rule tests.
+
+At minimum verify:
+
+A. Browser cannot directly create/change/remove:
+
+matched_transaction_id
+
+B. Browser cannot directly create/change/remove:
+
+match_source
+
+C. Browser cannot directly create/change/remove:
+
+match_engine_version
+
+D. Browser cannot directly create/change/remove:
+
+match_confidence_score
+
+E. Browser cannot directly modify:
+
+reconciliation_claimed
+
+F. Browser cannot directly create/update/delete reconciliation learning/global
+evidence records.
+
+G. Authenticated owner CAN still perform legitimate normal forecast edits.
+
+H. User A cannot modify User B's forecast.
+
+I. Existing legitimate forecast creation still works.
+
+J. Legacy forecast documents remain readable.
+
+Do not weaken ownership protections.
+
+==================================================
+TASK 18 — FRONTEND BEHAVIOR TESTS
+==================================================
+
+Use the existing frontend testing framework.
+
+Add meaningful tests around the production reconciliation path.
+
+At minimum cover:
+
+TEST 1 — MANUAL MATCH REQUEST
+
+User initiates Transaction T -> Forecast F.
+
+Expected backend request:
+
+{
+  "action": "match",
+  "forecast_id": "F",
+  "transaction_id": "T"
+}
+
+Verify frontend does NOT directly write matched_transaction_id.
+
+TEST 2 — AUTHENTICATION
+
+Verify request includes:
+
+Authorization: Bearer <Firebase ID token>
+
+Verify request does NOT use X-Firebase-ID-Token.
+
+Verify request does NOT rely on request-body user_id.
+
+TEST 3 — SUCCESSFUL MATCH
+
+Backend returns success.
+
+Expected:
+
+pending state clears
+UI/listener/refresh path can reflect authoritative state
+
+TEST 4 — ATOMIC REPLACEMENT
+
+Forecast F is already matched to A.
+
+User drops B onto F.
+
+Expected:
+
+ONE backend match request:
+
+match(F, B)
+
+Expected NOT to call unmatch(F) first.
+
+TEST 5 — MANUAL UNMATCH
+
+User unmatches F.
+
+Expected request:
+
+{
+  "action": "unmatch",
+  "forecast_id": "F"
+}
+
+Verify transaction_id is not required.
+
+Verify frontend does NOT directly clear matched_transaction_id.
+
+TEST 6 — TRANSACTION CLAIM CONFLICT
+
+Backend returns:
+
+409 transaction_already_claimed
+
+Expected:
+
+rejected relationship is not shown as committed
+pending state clears
+useful message appears
+authoritative reconciliation state refreshes
+
+TEST 7 — CONCURRENT CONFLICT
+
+Backend returns:
+
+409 concurrent_conflict
+
+Expected:
+
+no blind retry
+pending clears
+state refreshes
+
+TEST 8 — NETWORK FAILURE
+
+Expected:
+
+prior valid UI state remains
+pending clears
+user may retry
+
+TEST 9 — UNAUTHENTICATED
+
+No current Firebase user or backend returns 401.
+
+Expected:
+
+operation fails cleanly
+no direct Firestore fallback
+
+TEST 10 — LEGACY FORECAST
+
+Forecast has:
+
+matched_transaction_id
+
+but no provenance fields.
+
+Expected:
+
+renders correctly.
+
+==================================================
+TASK 19 — CONFIGURATION
+==================================================
+
+The manual reconciliation API URL must be configurable.
+
+Use existing project conventions.
+
+Do not hard-code a guessed URL.
+
+If adding an environment variable, document:
+
+- variable name
+- expected value
+- where it is consumed
+- local development setup
+- production setup expectation
+
+Do not commit secrets.
+
+The Cloud Function URL itself is not a secret, but configuration should still
+be environment-driven.
+
+If the API URL is missing, fail clearly rather than silently falling back to
+direct Firestore reconciliation writes.
+
+==================================================
+TASK 20 — CORS INTEGRATION NOTE
+==================================================
+
+The backend must explicitly allow the frontend origin.
+
+Determine the origin used by the existing local frontend environment.
+
+Report it in your final implementation report.
+
+For example:
+
+http://localhost:5173
+
+ONLY report the actual origin/configuration you determine from this project.
+
+Do not change backend configuration because you do not have backend access.
+
+If production frontend origin can be determined confidently from existing
+frontend configuration, report it too.
+
+Otherwise explicitly state that the production origin must be supplied during
+deployment.
+
+==================================================
+TASK 21 — PRESERVE EXISTING PRODUCT BEHAVIOR
+==================================================
+
+Do not regress unrelated functionality.
+
+Preserve:
+
+- forecast creation
+- forecast editing
+- forecast extension
+- recurring forecasts
+- transaction display
+- transaction filtering
+- account filtering
+- projection chart behavior
+- balance calculations
+- Plaid-related frontend behavior
+- Firebase authentication
+- existing responsive/mobile behavior
+
+This is a reconciliation integration task.
+
+It is NOT a UI redesign.
+
+==================================================
+TASK 22 — VERIFY THE COMPLETE FRONTEND
+==================================================
+
+Inspect package.json and use the actual scripts provided by the repository.
+
+Run all applicable:
+
+- type checking
+- lint/check
+- frontend tests
+- reconciliation tests
+- Firestore rules tests
+- production build
+
+Do not assume command names if package.json provides different ones.
+
+Do not delete tests.
+
+Do not weaken assertions simply to make them pass.
+
+Fix regressions caused by your changes.
+
+Do not deploy.
+
+==================================================
+EXPECTED END-STATE ARCHITECTURE
+==================================================
+
+The final implementation should approximately behave like this:
+
+                 USER
+                  |
+                  | drag/drop
+                  v
+        +--------------------+
+        | CashCushion UI     |
+        +--------------------+
+                  |
+                  | manualMatch(F,T)
+                  v
+        +--------------------+
+        | Reconciliation API |
+        | frontend adapter   |
+        +--------------------+
+                  |
+                  | Firebase ID token
+                  | Authorization: Bearer
+                  | POST JSON
+                  v
+        +--------------------+
+        | Backend Manual     |
+        | Reconciliation API |
+        +--------------------+
+                  |
+                  | authoritative transaction
+                  v
+        +--------------------+
+        | Firestore          |
+        |                    |
+        | match              |
+        | transaction claim  |
+        | provenance         |
+        | learning           |
+        +--------------------+
+                  |
+                  | authoritative state
+                  v
+        +--------------------+
+        | Existing frontend  |
+        | listeners/state    |
+        +--------------------+
+
+The frontend must NOT create a second path around this architecture.
+
+==================================================
+EXAMPLES TO REFERENCE
+==================================================
+
+EXAMPLE A — NORMAL MANUAL MATCH
+
+Before:
+
+Forecast:
+F = "Monthly Rent"
+unmatched
+
+Transaction:
+T = "Naylor Property"
+available
+
+User drags T onto F.
+
+Frontend:
+
+manualMatch("F", "T")
+
+HTTP body:
+
+{
+  "action": "match",
+  "forecast_id": "F",
+  "transaction_id": "T"
+}
+
+Backend succeeds.
+
+Frontend reflects:
+
+F -> T
+
+Frontend does not write matched_transaction_id itself.
+
+--------------------------------------------------
+
+EXAMPLE B — REPLACEMENT
+
+Before:
+
+F -> A
+
+User decides B is the correct transaction.
+
+Frontend sends ONE request:
+
+{
+  "action": "match",
+  "forecast_id": "F",
+  "transaction_id": "B"
+}
+
+Do NOT send unmatch first.
+
+Backend handles A -> B atomically.
+
+--------------------------------------------------
+
+EXAMPLE C — CONCURRENT AUTO MATCH
+
+Frontend currently displays T as available.
+
+Before user finishes dragging:
+
+automatic reconciliation claims:
+
+A -> T
+
+User attempts:
+
+B -> T
+
+Backend:
+
+409 transaction_already_claimed
+
+Frontend:
+
+- does not show B -> T as successful
+- clears pending state
+- informs user
+- refreshes authoritative data
+
+--------------------------------------------------
+
+EXAMPLE D — UNMATCH
+
+Before:
+
+F -> T
+
+User chooses unmatch.
+
+Frontend sends:
+
+{
+  "action": "unmatch",
+  "forecast_id": "F"
+}
+
+Frontend does NOT:
+
+- send transaction_id
+- clear matched_transaction_id directly
+- clear reconciliation_claimed
+- manipulate learning
+
+--------------------------------------------------
+
+EXAMPLE E — EXPIRED SESSION
+
+User attempts manual match.
+
+No valid Firebase authentication is available.
+
+Frontend:
+
+- does not attempt direct Firestore reconciliation as fallback
+- clears pending state
+- informs user authentication is required/refreshed as appropriate
+
+--------------------------------------------------
+
+EXAMPLE F — LEGACY MATCH
+
+Firestore forecast:
+
+{
+  ...
+  "matched_transaction_id": "T"
+}
+
+but does not contain:
+
+match_source
+match_engine_version
+match_confidence_score
+
+Frontend continues rendering the match normally.
+
+==================================================
+FINAL IMPLEMENTATION REPORT
+==================================================
+
+When implementation and local verification are complete, report:
+
+1. Files changed.
+
+2. Where the old direct Firestore manual-match implementation existed.
+
+3. Where the old direct Firestore unmatch implementation existed.
+
+4. The reconciliation API adapter/service you created or modified.
+
+5. The environment variable/configuration used for the backend API URL.
+
+6. How Firebase ID tokens are obtained.
+
+7. Confirmation that Authorization uses:
+
+   Bearer <Firebase ID token>
+
+8. Confirmation that user_id is not trusted/sent as reconciliation identity.
+
+9. How drag/drop manual matching now works.
+
+10. How atomic replacement works.
+
+11. How manual unmatch works.
+
+12. How pending state is handled.
+
+13. How transaction_already_claimed is handled.
+
+14. How concurrent_conflict is handled.
+
+15. How authentication/network/server failures are handled.
+
+16. How authoritative state refresh works.
+
+17. Firestore security rule changes.
+
+18. Confirmation that browser writes to backend-owned reconciliation fields are
+    blocked.
+
+19. Confirmation that normal user-owned forecast edits still work.
+
+20. Legacy document compatibility.
+
+21. Frontend tests added/updated.
+
+22. Firestore rule tests added/updated.
+
+23. Exact test/check/build commands run.
+
+24. Test/check/build results.
+
+25. Local frontend origin that backend CORS must allow.
+
+26. Production frontend origin if determinable from repository configuration.
+
+27. Anything that must be configured before deployment.
+
+28. Any assumptions made.
+
+29. Anything intentionally deferred.
+
+==================================================
+STOP CONDITIONS
+==================================================
+
+STOP after implementation and local verification.
+
+DO NOT DEPLOY.
+
+DO NOT modify backend code.
+
+DO NOT invent an alternative backend API.
+
+DO NOT restore direct Firestore reconciliation writes as a workaround.
+
+If a backend integration problem is discovered that cannot be solved while
+respecting the contract above, document the exact incompatibility instead of
+working around the backend's ownership or transaction guarantees.

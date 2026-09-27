@@ -64,6 +64,14 @@ beforeEach(async () => {
     await setDoc(doc(db, "forecasts", "migrated-forecast"), {
       ...baseForecast,
       ...backendLifecycleFields,
+      matched_transaction_id: "same-account-transaction",
+      match_source: "manual",
+      match_engine_version: 2,
+      match_confidence_score: 0.9,
+    });
+    await setDoc(doc(db, "forecasts", "legacy-matched"), {
+      ...baseForecast,
+      matched_transaction_id: "same-account-transaction",
     });
     await setDoc(doc(db, "transactions", "same-account-transaction"), {
       user_id: ownerId,
@@ -86,7 +94,7 @@ beforeEach(async () => {
   });
 });
 
-test("an owner can read, edit, and delete a forecast with backend lifecycle fields", async () => {
+test("an owner can edit normal matched fields but cannot move or delete an active match", async () => {
   const db = testEnv.authenticatedContext(ownerId).firestore();
   const forecastRef = doc(db, "forecasts", "migrated-forecast");
 
@@ -98,11 +106,19 @@ test("an owner can read, edit, and delete a forecast with backend lifecycle fiel
   await assertSucceeds(updateDoc(forecastRef, {
     date: "2026-10-01",
     amount: 1600,
+    name: "Updated rent",
+    forecast_type: "every_x_days",
+    forecast_interval: 30,
+    auto_extend: true,
   }));
 
   const afterEdit = await assertSucceeds(getDoc(forecastRef));
   assert.equal(afterEdit.data()?.date, "2026-10-01");
   assert.equal(afterEdit.data()?.amount, 1600);
+  assert.equal(afterEdit.data()?.forecast_type, "every_x_days");
+  assert.equal(afterEdit.data()?.auto_extend, true);
+  assert.equal(afterEdit.data()?.matched_transaction_id, "same-account-transaction");
+  assert.equal(afterEdit.data()?.match_source, "manual");
   assert.deepEqual(
     {
       extend: afterEdit.data()?.extend,
@@ -112,7 +128,12 @@ test("an owner can read, edit, and delete a forecast with backend lifecycle fiel
     backendLifecycleFields,
   );
 
-  await assertSucceeds(deleteDoc(forecastRef));
+  await assertFails(updateDoc(forecastRef, { account_id: "checking-b" }));
+  await assertFails(deleteDoc(forecastRef));
+  const unmatchedRef = doc(db, "forecasts", "owner-forecast");
+  await assertSucceeds(setDoc(unmatchedRef, baseForecast));
+  await assertSucceeds(updateDoc(unmatchedRef, { account_id: "checking-b" }));
+  await assertSucceeds(deleteDoc(unmatchedRef));
 });
 
 test("browser clients cannot create, add, change, or remove backend lifecycle fields", async () => {
@@ -169,21 +190,68 @@ test("an owner can still create a legacy client forecast with auto_extend", asyn
   }));
 });
 
-test("matching requires the owner's same-account transaction; unmatching remains allowed", async () => {
+test("browser clients cannot directly create, add, change, or remove any reconciliation field", async () => {
   const db = testEnv.authenticatedContext(ownerId).firestore();
-  const forecastRef = doc(db, "forecasts", "migrated-forecast");
+  const fields = [
+    ["matched_transaction_id", "same-account-transaction", "different-account-transaction"],
+    ["match_source", "manual", "auto"],
+    ["match_engine_version", 2, 3],
+    ["match_confidence_score", 0.9, 0.5],
+  ] as const;
 
-  await assertSucceeds(updateDoc(forecastRef, {
-    matched_transaction_id: "same-account-transaction",
-  }));
-  await assertSucceeds(updateDoc(forecastRef, {
+  for (const [index, [field, initialValue, changedValue]] of fields.entries()) {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "forecasts", `no-reconciliation-${index}`), baseForecast);
+    });
+    await assertFails(setDoc(doc(db, "forecasts", `create-reconciliation-${index}`), {
+      ...baseForecast, [field]: initialValue,
+    }));
+    await assertFails(updateDoc(doc(db, "forecasts", `no-reconciliation-${index}`), {
+      [field]: initialValue,
+    }));
+    await assertFails(updateDoc(doc(db, "forecasts", "migrated-forecast"), {
+      [field]: changedValue,
+    }));
+    await assertFails(updateDoc(doc(db, "forecasts", "migrated-forecast"), {
+      [field]: deleteField(),
+    }));
+  }
+  await assertFails(updateDoc(doc(db, "forecasts", "migrated-forecast"), {
     matched_transaction_id: null,
   }));
+});
 
-  await assertFails(updateDoc(forecastRef, {
-    matched_transaction_id: "different-account-transaction",
+test("transactions and learning/evidence collections cannot be changed by browser clients", async () => {
+  const db = testEnv.authenticatedContext(ownerId).firestore();
+  await assertFails(setDoc(doc(db, "transactions", "new-claim"), {
+    user_id: ownerId, account_id: "checking-a", reconciliation_claimed: true,
   }));
-  await assertFails(updateDoc(forecastRef, {
-    matched_transaction_id: "other-user-transaction",
+  await assertFails(updateDoc(doc(db, "transactions", "same-account-transaction"), {
+    reconciliation_claimed: true,
   }));
+  await assertFails(deleteDoc(doc(db, "transactions", "same-account-transaction")));
+
+  for (const name of [
+    "user_reconciliation_feedback",
+    "reconciliation_profiles",
+    "global_reconciliation_evidence",
+    "global_reconciliation_contributions",
+  ]) {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), name, "existing"), { user_id: ownerId });
+    });
+    await assertFails(setDoc(doc(db, name, "new"), { user_id: ownerId }));
+    await assertFails(updateDoc(doc(db, name, "existing"), { status: "changed" }));
+    await assertFails(deleteDoc(doc(db, name, "existing")));
+  }
+});
+
+test("an owner can read and edit a legacy matched forecast without provenance fields", async () => {
+  const db = testEnv.authenticatedContext(ownerId).firestore();
+  const forecastRef = doc(db, "forecasts", "legacy-matched");
+  assert.equal((await assertSucceeds(getDoc(forecastRef))).data()?.matched_transaction_id, "same-account-transaction");
+  await assertSucceeds(updateDoc(forecastRef, { name: "Updated rent", amount: 1550 }));
+  const result = await assertSucceeds(getDoc(forecastRef));
+  assert.equal(result.data()?.matched_transaction_id, "same-account-transaction");
+  assert.equal(result.data()?.match_source, undefined);
 });

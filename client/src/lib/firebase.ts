@@ -246,6 +246,9 @@ export interface Forecast {
   amount: number;
   created_at: string;
   matched_transaction_id?: string | null;
+  match_source?: string | null;
+  match_engine_version?: string | number | null;
+  match_confidence_score?: number | null;
   series_id?: string | null;
   account_id?: string | null;
   logo_url?: string | null;
@@ -260,6 +263,7 @@ export interface Forecast {
 type ClientForecastInput = Omit<
   Forecast,
   'id' | 'extend' | 'extended' | 'extended_from_forecast_id'
+    | 'matched_transaction_id' | 'match_source' | 'match_engine_version' | 'match_confidence_score'
 >;
 
 export async function saveForecast(forecast: ClientForecastInput): Promise<string> {
@@ -269,14 +273,14 @@ export async function saveForecast(forecast: ClientForecastInput): Promise<strin
 }
 
 export async function saveSeriesForecasts(
-  baseForecast: Omit<Forecast, 'id' | 'date' | 'extend' | 'extended' | 'extended_from_forecast_id'>,
+  baseForecast: Omit<ClientForecastInput, 'date'>,
   startDate: string,
   monthCount: number
 ): Promise<string> {
   const seriesId = crypto.randomUUID ? crypto.randomUUID() : `series_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   const forecastsRef = collection(db, 'forecasts');
 
-  const forecasts: Omit<Forecast, 'id'>[] = [];
+  const forecasts: ClientForecastInput[] = [];
   for (let i = 0; i < monthCount; i++) {
     const d = new Date(startDate + 'T00:00:00');
     d.setMonth(d.getMonth() + i);
@@ -296,7 +300,7 @@ export async function saveSeriesForecasts(
 }
 
 export async function saveDayIntervalForecasts(
-  baseForecast: Omit<Forecast, 'id' | 'date' | 'extend' | 'extended' | 'extended_from_forecast_id'>,
+  baseForecast: Omit<ClientForecastInput, 'date'>,
   startDate: string,
   dayInterval: number,
   count: number
@@ -304,7 +308,7 @@ export async function saveDayIntervalForecasts(
   const seriesId = crypto.randomUUID ? crypto.randomUUID() : `series_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   const forecastsRef = collection(db, 'forecasts');
 
-  const forecasts: Omit<Forecast, 'id'>[] = [];
+  const forecasts: ClientForecastInput[] = [];
   for (let i = 0; i < count; i++) {
     const d = new Date(startDate + 'T00:00:00');
     d.setDate(d.getDate() + (dayInterval * i));
@@ -367,6 +371,9 @@ export async function getForecasts(userId: string): Promise<Forecast[]> {
       amount: data.amount,
       created_at: data.created_at,
       matched_transaction_id: data.matched_transaction_id || null,
+      match_source: typeof data.match_source === 'string' ? data.match_source : null,
+      match_engine_version: data.match_engine_version ?? null,
+      match_confidence_score: typeof data.match_confidence_score === 'number' ? data.match_confidence_score : null,
       series_id: data.series_id || null,
       account_id: data.account_id || null,
       logo_url: data.logo_url || null,
@@ -407,7 +414,7 @@ const MAX_BATCH_OPERATIONS = 400;
 
 async function writeForecastsInBatches(
   forecastsRef: ReturnType<typeof collection>,
-  forecasts: Omit<Forecast, 'id' | 'extend' | 'extended' | 'extended_from_forecast_id'>[]
+  forecasts: ClientForecastInput[]
 ): Promise<void> {
   for (let index = 0; index < forecasts.length; index += MAX_BATCH_OPERATIONS) {
     const batch = writeBatch(db);
@@ -429,18 +436,4 @@ async function writeInBatches<T extends { ref: ReturnType<typeof doc> }>(
     }
     await batch.commit();
   }
-}
-
-export async function reconcileForecast(forecastId: string, transactionId: string): Promise<void> {
-  const forecastRef = doc(db, 'forecasts', forecastId);
-  await updateDoc(forecastRef, {
-    matched_transaction_id: transactionId
-  });
-}
-
-export async function unreconcileForecast(forecastId: string): Promise<void> {
-  const forecastRef = doc(db, 'forecasts', forecastId);
-  await updateDoc(forecastRef, {
-    matched_transaction_id: null
-  });
 }
